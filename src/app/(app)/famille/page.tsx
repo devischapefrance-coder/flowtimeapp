@@ -79,7 +79,19 @@ export default function FamillePage() {
       supabase.from("addresses").select("*").eq("family_id", familyId),
       supabase.from("device_locations").select("*").eq("family_id", familyId),
     ]);
-    if (m.data) setMembers(m.data as Member[]);
+    if (m.data) {
+      const roleOrder: Record<string, number> = {
+        "grand-pere": 0, "grand-mere": 1,
+        papa: 2, maman: 3,
+        ado_garcon: 4, ado_fille: 5,
+        fils: 6, fille: 7,
+        bebe: 8, autre: 9,
+      };
+      const sorted = [...(m.data as Member[])].sort(
+        (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
+      );
+      setMembers(sorted);
+    }
     if (c.data) setContacts(c.data as Contact[]);
     if (a.data) setAddresses(a.data as Address[]);
     if (d.data) setDevices(d.data as DeviceLocation[]);
