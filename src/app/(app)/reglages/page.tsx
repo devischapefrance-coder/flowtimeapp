@@ -30,6 +30,12 @@ export default function ReglagesPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
+  const [familyModal, setFamilyModal] = useState(false);
+  const [joinCode, setJoinCode] = useState("");
+  const [joinError, setJoinError] = useState("");
+  const [joinSuccess, setJoinSuccess] = useState("");
+  const [codeCopied, setCodeCopied] = useState(false);
+
   async function saveProfile() {
     if (!profile) return;
     setSaving(true);
@@ -85,6 +91,43 @@ export default function ReglagesPage() {
     router.push("/");
   }
 
+  function getMyFamilyCode() {
+    return profile?.family_id?.slice(0, 8).toUpperCase() || "";
+  }
+
+  function copyFamilyCode() {
+    navigator.clipboard.writeText(getMyFamilyCode());
+    setCodeCopied(true);
+    setTimeout(() => setCodeCopied(false), 3000);
+  }
+
+  async function joinFamily() {
+    setJoinError("");
+    setJoinSuccess("");
+    if (!profile || !joinCode.trim()) return;
+    const code = joinCode.trim().toLowerCase();
+
+    // Find a profile whose family_id starts with this code
+    const { data } = await supabase
+      .from("profiles")
+      .select("family_id")
+      .ilike("family_id", `${code}%`)
+      .neq("id", profile.id)
+      .limit(1);
+
+    if (!data || data.length === 0) {
+      return setJoinError("Code famille introuvable. Vérifie le code et réessaie.");
+    }
+
+    const targetFamilyId = data[0].family_id;
+
+    // Update my profile to join this family
+    await supabase.from("profiles").update({ family_id: targetFamilyId }).eq("id", profile.id);
+    setJoinSuccess("Tu as rejoint la famille ! Recharge l'app pour voir les changements.");
+    setJoinCode("");
+    refreshProfile();
+  }
+
   async function signOut() {
     await supabase.auth.signOut();
     router.push("/");
@@ -136,6 +179,32 @@ export default function ReglagesPage() {
             className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
             style={{ left: geoEnabled ? 26 : 4 }}
           />
+        </button>
+      </div>
+
+      {/* Famille */}
+      <p className="label mt-4">Famille</p>
+      <div className="card">
+        <p className="text-sm font-bold mb-1">Mon code famille</p>
+        <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
+          Partage ce code pour que tes proches rejoignent ta famille
+        </p>
+        <div className="flex items-center gap-2 mb-3">
+          <div
+            className="flex-1 text-center py-3 rounded-xl font-extrabold text-lg tracking-[4px]"
+            style={{ background: "var(--surface2)", color: "var(--accent)", fontFamily: "monospace" }}
+          >
+            {getMyFamilyCode()}
+          </div>
+          <button
+            className="btn btn-secondary !w-auto !px-4 !py-3"
+            onClick={copyFamilyCode}
+          >
+            {codeCopied ? "✓" : "📋"}
+          </button>
+        </div>
+        <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>
+          Rejoindre une autre famille
         </button>
       </div>
 
@@ -194,6 +263,30 @@ export default function ReglagesPage() {
           <input type="password" placeholder="Nouveau mot de passe" value={newPassword} onChange={(e) => setNewPassword(e.target.value)} />
           <input type="password" placeholder="Confirmer" value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} />
           <button className="btn btn-primary" onClick={changePassword}>Confirmer</button>
+        </div>
+      </Modal>
+
+      <Modal open={familyModal} onClose={() => { setFamilyModal(false); setJoinError(""); setJoinSuccess(""); setJoinCode(""); }} title="Rejoindre une famille">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm" style={{ color: "var(--dim)" }}>
+            Entre le code famille partagé par un proche pour rejoindre sa famille.
+          </p>
+          {joinError && <p className="text-xs font-bold" style={{ color: "var(--red)" }}>{joinError}</p>}
+          {joinSuccess && <p className="text-xs font-bold" style={{ color: "var(--green)" }}>{joinSuccess}</p>}
+          <input
+            placeholder="Code famille (8 caractères)"
+            value={joinCode}
+            onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
+            maxLength={8}
+            className="!text-center !text-lg !tracking-[4px] !font-extrabold"
+            style={{ fontFamily: "monospace" }}
+          />
+          <button className="btn btn-primary" onClick={joinFamily} disabled={joinCode.length < 8}>
+            Rejoindre cette famille
+          </button>
+          <p className="text-[10px] text-center" style={{ color: "var(--faint)" }}>
+            Attention : tu quitteras ta famille actuelle
+          </p>
         </div>
       </Modal>
 
