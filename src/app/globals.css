@@ -1,26 +1,132 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
-
-@media (prefers-color-scheme: dark) {
+@layer base {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --bg: #1C1510;
+    --surface: #241D16;
+    --surface2: #2E251D;
+    --accent: #FF8C42;
+    --accent-glow: rgba(255, 140, 66, 0.15);
+    --teal: #3DD6C8;
+    --warm: #FFD166;
+    --red: #FF6B6B;
+    --green: #6BCB77;
+    --lavender: #B39DDB;
+    --text: #FFF5EB;
+    --dim: rgba(255, 245, 235, 0.55);
+    --faint: rgba(255, 245, 235, 0.25);
+  }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    max-width: 430px;
+    margin: 0 auto;
+    min-height: 100dvh;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  input, textarea, select {
+    background: var(--surface2) !important;
+    border: 1.5px solid rgba(255, 255, 255, 0.06);
+    border-radius: 12px;
+    color: var(--text) !important;
+    padding: 12px 14px;
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, textarea:focus, select:focus {
+    border-color: var(--accent);
+  }
+
+  input::placeholder, textarea::placeholder {
+    color: var(--faint) !important;
+  }
+
+  input:-webkit-autofill,
+  input:-webkit-autofill:hover,
+  input:-webkit-autofill:focus {
+    -webkit-box-shadow: 0 0 0 50px var(--surface2) inset !important;
+    -webkit-text-fill-color: var(--text) !important;
+    transition: background-color 5000s ease-in-out 0s;
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+@layer components {
+  .btn {
+    display: block;
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    text-align: center;
+    border: none;
+    text-decoration: none;
+    transition: transform 0.15s, opacity 0.15s;
+  }
+
+  .btn-primary {
+    background: linear-gradient(135deg, var(--accent), #FFA559);
+    color: #fff;
+    box-shadow: 0 4px 20px var(--accent-glow);
+  }
+
+  .btn-primary:hover {
+    transform: translateY(-1px);
+  }
+
+  .btn-primary:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+  }
+
+  .btn-secondary {
+    background: var(--surface2);
+    color: var(--text);
+    border: 1.5px solid rgba(255, 255, 255, 0.06);
+  }
+
+  .btn-danger {
+    background: transparent;
+    color: var(--red);
+    border: 1.5px solid var(--red);
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid rgba(255, 255, 255, 0.04);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 10px;
+  }
+
+  .label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--dim);
+    margin-bottom: 10px;
+  }
+
+  .animate-in {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
 }
