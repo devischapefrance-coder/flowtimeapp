@@ -7,14 +7,19 @@ const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
 );
 
-webpush.setVapidDetails(
-  "mailto:flowtime@example.com",
-  process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY!,
-  process.env.VAPID_PRIVATE_KEY!
-);
+function getWebPush() {
+  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  if (!publicKey || !privateKey) {
+    throw new Error("VAPID keys not configured");
+  }
+  webpush.setVapidDetails("mailto:flowtime@example.com", publicKey, privateKey);
+  return webpush;
+}
 
 export async function POST(req: NextRequest) {
   try {
+    const push = getWebPush();
     const { title, body, userId, familyId } = await req.json();
     if (!title) {
       return NextResponse.json({ error: "Missing title" }, { status: 400 });
@@ -50,7 +55,7 @@ export async function POST(req: NextRequest) {
     let sent = 0;
     for (const sub of subs) {
       try {
-        await webpush.sendNotification(
+        await push.sendNotification(
           { endpoint: sub.endpoint, keys: sub.keys },
           payload
         );
