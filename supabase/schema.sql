@@ -81,6 +81,20 @@ CREATE TABLE wellbeing_sessions (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Localisation des appareils familiaux (temps réel)
+CREATE TABLE device_locations (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE,
+  device_name TEXT NOT NULL DEFAULT 'Mon appareil',
+  emoji TEXT DEFAULT '📱',
+  lat DOUBLE PRECISION NOT NULL,
+  lng DOUBLE PRECISION NOT NULL,
+  accuracy DOUBLE PRECISION,
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ===========================================
 -- Row Level Security (RLS)
 -- ===========================================
@@ -91,6 +105,7 @@ ALTER TABLE contacts ENABLE ROW LEVEL SECURITY;
 ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellbeing_sessions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE device_locations ENABLE ROW LEVEL SECURITY;
 
 -- Profiles : lecture/modif de son propre profil uniquement
 CREATE POLICY "Own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -120,4 +135,9 @@ CREATE POLICY "Family events" ON events FOR ALL USING (
 -- Bien-être : accès à ses propres sessions uniquement
 CREATE POLICY "Own wellbeing" ON wellbeing_sessions FOR ALL USING (
   user_id = auth.uid()
+);
+
+-- Localisations : accès par famille
+CREATE POLICY "Family device locations" ON device_locations FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
 );

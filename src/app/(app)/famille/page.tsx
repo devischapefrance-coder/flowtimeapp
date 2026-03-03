@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import Modal from "@/components/Modal";
-import type { Member, Contact, Address } from "@/lib/types";
+import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
@@ -32,7 +32,10 @@ export default function FamillePage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
+  const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const [mapFull, setMapFull] = useState(false);
+  const [sharingLocation, setSharingLocation] = useState(false);
+  const [showFamilyCode, setShowFamilyCode] = useState(false);
 
   // Modal states
   const [memberModal, setMemberModal] = useState<Member | null | "new">(null);
@@ -46,14 +49,16 @@ export default function FamillePage() {
 
   const load = useCallback(async () => {
     if (!familyId) return;
-    const [m, c, a] = await Promise.all([
+    const [m, c, a, d] = await Promise.all([
       supabase.from("members").select("*").eq("family_id", familyId),
       supabase.from("contacts").select("*").eq("family_id", familyId),
       supabase.from("addresses").select("*").eq("family_id", familyId),
+      supabase.from("device_locations").select("*").eq("family_id", familyId),
     ]);
     if (m.data) setMembers(m.data as Member[]);
     if (c.data) setContacts(c.data as Contact[]);
     if (a.data) setAddresses(a.data as Address[]);
+    if (d.data) setDevices(d.data as DeviceLocation[]);
   }, [familyId]);
 
   useEffect(() => { load(); }, [load]);
@@ -201,6 +206,76 @@ export default function FamillePage() {
     }
   }
 
+  // Device location sharing
+  async function toggleLocationSharing() {
+    if (!familyId || !profile) return;
+
+    if (sharingLocation) {
+      // Stop sharing — delete device location
+      await supabase.from("device_locations").delete().eq("user_id", profile.id);
+      setSharingLocation(false);
+      load();
+      return;
+    }
+
+    // Start sharing
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        const existing = devices.find((d) => d.user_id === profile.id);
+        const data = {
+          family_id: familyId,
+          user_id: profile.id,
+          device_name: profile.first_name || "Mon appareil",
+          emoji: profile.emoji || "📱",
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          updated_at: new Date().toISOString(),
+        };
+        if (existing) {
+          await supabase.from("device_locations").update(data).eq("id", existing.id);
+        } else {
+          await supabase.from("device_locations").insert(data);
+        }
+        setSharingLocation(true);
+        load();
+      },
+      () => alert("Impossible d'accéder à la géolocalisation"),
+      { enableHighAccuracy: true }
+    );
+  }
+
+  // Auto-update location every 30s when sharing
+  useEffect(() => {
+    if (!sharingLocation || !profile) return;
+    const interval = setInterval(() => {
+      navigator.geolocation.getCurrentPosition(async (pos) => {
+        await supabase.from("device_locations").update({
+          lat: pos.coords.latitude,
+          lng: pos.coords.longitude,
+          accuracy: pos.coords.accuracy,
+          updated_at: new Date().toISOString(),
+        }).eq("user_id", profile.id);
+      }, () => {}, { enableHighAccuracy: true });
+    }, 30000);
+    return () => clearInterval(interval);
+  }, [sharingLocation, profile]);
+
+  // Check if already sharing
+  useEffect(() => {
+    if (profile && devices.some((d) => d.user_id === profile.id)) {
+      setSharingLocation(true);
+    }
+  }, [profile, devices]);
+
+  function copyFamilyCode() {
+    if (!familyId) return;
+    const code = familyId.slice(0, 8).toUpperCase();
+    navigator.clipboard.writeText(code);
+    setShowFamilyCode(true);
+    setTimeout(() => setShowFamilyCode(false), 3000);
+  }
+
   // Map markers
   const mapMarkers = addresses
     .filter((a) => a.lat && a.lng)
@@ -217,6 +292,16 @@ export default function FamillePage() {
     : mapMarkers.length > 0
       ? [mapMarkers[0].lat, mapMarkers[0].lng]
       : [46.2044, 5.226];
+
+  const deviceMapMarkers = devices.map((d) => ({
+    lat: d.lat,
+    lng: d.lng,
+    emoji: d.emoji,
+    name: d.device_name,
+    color: "#3DD6C8",
+    type: "device" as const,
+    updatedAt: d.updated_at,
+  }));
 
   const filledAddresses = addresses.filter((a) => a.address).length;
 
@@ -298,18 +383,67 @@ export default function FamillePage() {
       ))}
       <button className="btn btn-secondary mt-1 mb-6" onClick={() => openAddressModal("new")}>＋ Ajouter une adresse</button>
 
-      {/* MINI CARTE */}
-      {mapMarkers.length > 0 && (
-        <div className="mb-4">
-          <p className="label">Carte</p>
-          <MapViewDynamic
-            markers={mapMarkers}
-            center={mapCenter}
-            height="200px"
-            onMapClick={() => setMapFull(true)}
-          />
+      {/* LOCALISATION */}
+      <p className="label">Localisation famille</p>
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-bold">Partager ma position</p>
+            <p className="text-[11px]" style={{ color: "var(--dim)" }}>
+              {sharingLocation ? "Position partagée en temps réel" : "Désactivé"}
+            </p>
+          </div>
+          <button
+            className="w-12 h-7 rounded-full relative transition-colors"
+            style={{ background: sharingLocation ? "var(--teal)" : "var(--surface2)" }}
+            onClick={toggleLocationSharing}
+          >
+            <span
+              className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
+              style={{ left: sharingLocation ? 26 : 4 }}
+            />
+          </button>
         </div>
-      )}
+
+        {devices.length > 0 && (
+          <div className="flex flex-col gap-2 mb-3">
+            {devices.map((d) => {
+              const ago = Math.round((Date.now() - new Date(d.updated_at).getTime()) / 60000);
+              return (
+                <div key={d.id} className="flex items-center gap-2 text-xs">
+                  <span className="text-base">{d.emoji}</span>
+                  <span className="font-bold">{d.device_name}</span>
+                  <span style={{ color: "var(--dim)" }}>· {ago < 1 ? "à l'instant" : `il y a ${ago} min`}</span>
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: ago < 5 ? "var(--green)" : ago < 30 ? "var(--warm)" : "var(--red)" }} />
+                </div>
+              );
+            })}
+          </div>
+        )}
+
+        <button className="btn btn-secondary text-xs !py-2" onClick={copyFamilyCode}>
+          {showFamilyCode
+            ? `✓ Code copié : ${familyId?.slice(0, 8).toUpperCase()}`
+            : "📋 Copier le code famille"}
+        </button>
+        <p className="text-[10px] mt-2" style={{ color: "var(--faint)" }}>
+          Partagez ce code pour que vos proches rejoignent votre famille
+        </p>
+      </div>
+
+      {/* MINI CARTE */}
+      <div className="mb-4 mt-4">
+        <p className="label">Carte</p>
+        <MapViewDynamic
+          markers={[...mapMarkers, ...deviceMapMarkers]}
+          center={mapCenter}
+          height="220px"
+          onMapClick={() => setMapFull(true)}
+        />
+        <p className="text-[10px] text-center mt-2" style={{ color: "var(--faint)" }}>
+          Appuie pour ouvrir en plein écran
+        </p>
+      </div>
 
       {/* CARTE PLEIN ECRAN */}
       {mapFull && (
@@ -317,6 +451,7 @@ export default function FamillePage() {
           markers={mapMarkers}
           center={mapCenter}
           onClose={() => setMapFull(false)}
+          deviceMarkers={deviceMapMarkers}
         />
       )}
 
