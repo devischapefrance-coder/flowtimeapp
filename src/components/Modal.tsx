@@ -21,14 +21,14 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
   return (
     <div
       className="fixed inset-0 flex items-end justify-center"
-      style={{ zIndex: 600, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)" }}
+      style={{ zIndex: 600, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)" }}
       onClick={onClose}
     >
       <div
-        className="w-full animate-in"
+        className="w-full modal-slide-up"
         style={{
           maxWidth: 430,
-          maxHeight: "85dvh",
+          maxHeight: "85vh",
           background: "var(--surface-solid)",
           borderRadius: "24px 24px 0 0",
           padding: "24px 20px",
