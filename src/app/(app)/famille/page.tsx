@@ -10,17 +10,33 @@ import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
 
-const MEMBER_EMOJIS = [
-  // Personnes
-  "👨","👩","👦","👧","👶","🧔","👱‍♂️","👱‍♀️","👴","👵","🧑","🧒",
-  "👨‍🦰","👩‍🦰","👨‍🦱","👩‍🦱","👨‍🦳","👩‍🦳","🧑‍🦲","👸","🤴","🧑‍🍼",
-  // Activités
-  "⚽","🎨","🎵","🎮","📚","🏊","💃","🏀","🎸","💪",
-  // Animaux
-  "🐱","🐶","🦊","🐻","🐼","🦋","🌟",
+const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
+  { key: "papa", label: "Papa", defaultEmoji: "👨" },
+  { key: "maman", label: "Maman", defaultEmoji: "👩" },
+  { key: "fils", label: "Fils", defaultEmoji: "👦" },
+  { key: "fille", label: "Fille", defaultEmoji: "👧" },
+  { key: "ado_garcon", label: "Ado (garçon)", defaultEmoji: "🧑" },
+  { key: "ado_fille", label: "Ado (fille)", defaultEmoji: "👩" },
+  { key: "bebe", label: "Bébé", defaultEmoji: "👶" },
+  { key: "grand-pere", label: "Grand-père", defaultEmoji: "👴" },
+  { key: "grand-mere", label: "Grand-mère", defaultEmoji: "👵" },
+  { key: "autre", label: "Autre", defaultEmoji: "🧑" },
 ];
+
+const ROLE_EMOJIS: Record<string, string[]> = {
+  papa:        ["👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🧑‍🦲","🤴","🧑","💪","👔","🏋️‍♂️"],
+  maman:       ["👩","👱‍♀️","👩‍🦰","👩‍🦱","👩‍🦳","👸","🧑‍🍼","💃","👠","🌸","🦋"],
+  fils:        ["👦","🧒","⚽","🎮","🏀","🚴‍♂️","🎸","🏊‍♂️","🤖","🦸‍♂️","🐶"],
+  fille:       ["👧","🧒","🎨","🩰","🦋","🌸","📚","🎀","🧸","🦄","🐱"],
+  ado_garcon:  ["🧑","👦","🎮","⚽","🎸","🏀","🎧","📱","🛹","🏄‍♂️","💻"],
+  ado_fille:   ["👩","👧","🎧","📱","🎨","💃","📚","🎤","🧘‍♀️","🌟","💅"],
+  bebe:        ["👶","🧒","🍼","🧒","🧸","🐣","🌈","⭐","🎀","👣","😴"],
+  "grand-pere":["👴","🧓","👨‍🦳","🎩","📰","♟️","🎣","🌳","☕","🏌️‍♂️"],
+  "grand-mere":["👵","🧓","👩‍🦳","🧶","🌺","☕","🍰","📖","🪴","🌷"],
+  autre:       ["🧑","👤","😊","🌟","💫","🎭","🙂","✨","🦊","🐻","🐼"],
+};
+
 const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
-const ROLES = ["parent","enfant","bébé","ado","grand-parent","autre"];
 const ADDRESS_EMOJIS = ["🏠","🏫","💼","⚽","🏥","👶","👴","🏪","🎭","🏖️"];
 const CONTACT_RELATIONS = ["nounou","voisin","médecin","école","urgence","famille","autre"];
 const DEFAULT_ADDRESSES = [
@@ -110,7 +126,7 @@ export default function FamillePage() {
   // MEMBER CRUD
   function openMemberModal(m: Member | "new") {
     if (m === "new") {
-      setForm({ name: "", role: "enfant", emoji: "👦", color: "#3DD6C8" });
+      setForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8" });
     } else {
       setForm({ name: m.name, role: m.role, emoji: m.emoji, color: m.color });
     }
@@ -324,7 +340,7 @@ export default function FamillePage() {
           <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl" style={{ background: "var(--surface2)" }}>{m.emoji}</div>
           <div className="flex-1">
             <p className="font-bold text-sm">{m.name}</p>
-            <p className="text-xs" style={{ color: "var(--dim)" }}>{m.role}</p>
+            <p className="text-xs" style={{ color: "var(--dim)" }}>{ROLES.find((r) => r.key === m.role)?.label || m.role}</p>
           </div>
           <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
         </div>
@@ -467,12 +483,25 @@ export default function FamillePage() {
       <Modal open={memberModal !== null} onClose={() => setMemberModal(null)} title={memberModal === "new" ? "Nouveau membre" : "Modifier le membre"}>
         <div className="flex flex-col gap-3">
           <input placeholder="Nom" value={(form.name as string) || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
-          <select value={(form.role as string) || "enfant"} onChange={(e) => setForm({ ...form, role: e.target.value })}>
-            {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
+          <p className="label">Role</p>
+          <div className="flex flex-wrap gap-2">
+            {ROLES.map((r) => (
+              <button
+                key={r.key}
+                className="px-3 py-2 rounded-xl text-xs font-bold transition-colors"
+                style={{
+                  background: form.role === r.key ? "var(--accent)" : "var(--surface2)",
+                  color: form.role === r.key ? "#fff" : "var(--text)",
+                }}
+                onClick={() => setForm({ ...form, role: r.key, emoji: r.defaultEmoji })}
+              >
+                {r.defaultEmoji} {r.label}
+              </button>
+            ))}
+          </div>
           <p className="label mt-2">Emoji</p>
           <div className="flex flex-wrap gap-2">
-            {MEMBER_EMOJIS.map((e) => (
+            {(ROLE_EMOJIS[(form.role as string) || "autre"] || ROLE_EMOJIS.autre).map((e) => (
               <button key={e} className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: form.emoji === e ? "var(--accent)" : "var(--surface2)" }} onClick={() => setForm({ ...form, emoji: e })}>{e}</button>
             ))}
           </div>
@@ -497,7 +526,7 @@ export default function FamillePage() {
           </select>
           <p className="label mt-2">Emoji</p>
           <div className="flex flex-wrap gap-2">
-            {MEMBER_EMOJIS.slice(0, 10).map((e) => (
+            {["👤","👨","👩","👴","👵","🧑","👶","🏥","🏫","🏠","📞","🧑‍⚕️"].map((e) => (
               <button key={e} className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: form.emoji === e ? "var(--accent)" : "var(--surface2)" }} onClick={() => setForm({ ...form, emoji: e })}>{e}</button>
             ))}
           </div>
