@@ -15,7 +15,7 @@ const fraunces = Fraunces({
 
 export const metadata: Metadata = {
   title: "FlowTime",
-  description: "Votre famille, parfaitement synchronisée",
+  description: "Votre famille, parfaitement synchronisee",
   manifest: "/manifest.json",
   appleWebApp: {
     capable: true,
@@ -39,10 +39,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="fr">
+    <html lang="fr" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icons/icon.svg" />
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('flowtime_theme')||'dark';if(t==='system'){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}if(t==='light'){document.documentElement.classList.add('light')}}catch(e){}})()`,
+          }}
+        />
       </head>
       <body
         className={`${nunito.variable} ${fraunces.variable}`}

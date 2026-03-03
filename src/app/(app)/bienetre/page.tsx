@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
+import { ambientAudio } from "@/lib/ambient-generator";
+import WellbeingStats from "@/components/WellbeingStats";
 import Timer from "@/components/Timer";
 import BreathingCircle from "@/components/BreathingCircle";
 
@@ -52,13 +54,13 @@ const YOGA_POSES = [
   { name: "Savasana", emoji: "😌", duration: 120, level: "débutant", desc: "Allongé sur le dos, bras le long du corps, relâchez tout." },
 ];
 
-const AMBIANCES = [
-  { name: "Pluie", emoji: "🌧️", color: "#64B5F6" },
-  { name: "Océan", emoji: "🌊", color: "#3DD6C8" },
-  { name: "Forêt", emoji: "🌲", color: "#6BCB77" },
-  { name: "Feu de cheminée", emoji: "🔥", color: "#FF8C42" },
-  { name: "Vent", emoji: "💨", color: "#B39DDB" },
-  { name: "Nuit d'été", emoji: "🦗", color: "#FFD166" },
+const AMBIANCES: { name: string; emoji: string; color: string; type: import("@/lib/ambient-generator").AmbientType }[] = [
+  { name: "Pluie", emoji: "🌧️", color: "#64B5F6", type: "rain" },
+  { name: "Ocean", emoji: "🌊", color: "#3DD6C8", type: "ocean" },
+  { name: "Foret", emoji: "🌲", color: "#6BCB77", type: "forest" },
+  { name: "Feu de cheminee", emoji: "🔥", color: "#FF8C42", type: "fireplace" },
+  { name: "Vent", emoji: "💨", color: "#B39DDB", type: "wind" },
+  { name: "Nuit d'ete", emoji: "🦗", color: "#FFD166", type: "night" },
 ];
 
 const BREATHING_PROGRAMS = [
@@ -351,30 +353,51 @@ export default function BienetirePage() {
   if (view === "sons") {
     return (
       <div className="px-4 py-4 animate-in">
-        <button className="text-sm mb-4" style={{ color: "var(--accent)" }} onClick={() => { setView(null); setActiveAmbiance(null); }}>← Retour</button>
-        <h2 className="text-lg font-extrabold mb-4">🎵 Sons ambiants</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {AMBIANCES.map((a, i) => (
-            <button
-              key={i}
-              className="card text-center cursor-pointer relative overflow-hidden"
-              style={{ border: activeAmbiance === i ? `2px solid ${a.color}` : undefined }}
-              onClick={() => setActiveAmbiance(activeAmbiance === i ? null : i)}
-            >
-              {activeAmbiance === i && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full animate-pulse" style={{ background: `${a.color}22` }} />
-                  <div className="absolute w-14 h-14 rounded-full animate-pulse" style={{ background: `${a.color}33`, animationDelay: "0.5s" }} />
-                </div>
-              )}
-              <span className="text-3xl relative">{a.emoji}</span>
-              <p className="text-sm font-bold mt-2 relative">{a.name}</p>
-            </button>
-          ))}
-        </div>
-        <p className="text-xs text-center mt-4" style={{ color: "var(--faint)" }}>
-          Audio bientôt disponible — interface de prévisualisation
+        <button className="text-sm mb-4" style={{ color: "var(--accent)" }} onClick={() => { setView(null); }}>← Retour</button>
+        <h2 className="text-lg font-bold mb-4">🎵 Sons ambiants</h2>
+        <p className="text-xs mb-4" style={{ color: "var(--dim)" }}>
+          Genere en temps reel par Web Audio. Selectionnez une ambiance.
         </p>
+        <div className="grid grid-cols-2 gap-3">
+          {AMBIANCES.map((a, i) => {
+            const isActive = ambientAudio.currentType === a.type;
+            return (
+              <button
+                key={i}
+                className="card text-center cursor-pointer relative overflow-hidden"
+                style={{ border: isActive ? `2px solid ${a.color}` : undefined }}
+                onClick={() => {
+                  ambientAudio.play(a.type);
+                  setActiveAmbiance(isActive ? null : i);
+                }}
+              >
+                {isActive && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="w-20 h-20 rounded-full animate-pulse" style={{ background: `${a.color}22` }} />
+                    <div className="absolute w-14 h-14 rounded-full animate-pulse" style={{ background: `${a.color}33`, animationDelay: "0.5s" }} />
+                  </div>
+                )}
+                <span className="text-3xl relative">{a.emoji}</span>
+                <p className="text-sm font-bold mt-2 relative">{a.name}</p>
+                {isActive && <p className="text-[10px] relative mt-1" style={{ color: a.color }}>En cours</p>}
+              </button>
+            );
+          })}
+        </div>
+        {ambientAudio.playing && (
+          <div className="mt-4">
+            <p className="text-xs font-bold mb-2">Volume</p>
+            <input
+              type="range"
+              min="0"
+              max="100"
+              value={Math.round(ambientAudio.volume * 100)}
+              onChange={(e) => ambientAudio.setVolume(parseInt(e.target.value) / 100)}
+              className="!p-0 !h-2 !border-0 !rounded-full"
+              style={{ accentColor: "var(--accent)" }}
+            />
+          </div>
+        )}
       </div>
     );
   }
@@ -445,6 +468,9 @@ export default function BienetirePage() {
           </p>
         </div>
       </div>
+
+      {/* Stats */}
+      {profile && <WellbeingStats userId={profile.id} />}
 
       <div className="grid grid-cols-2 gap-3">
         {ACTIVITIES.map((a) => (

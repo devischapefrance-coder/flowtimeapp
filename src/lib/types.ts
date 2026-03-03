@@ -9,6 +9,7 @@ export interface Profile {
   lat: number | null;
   lng: number | null;
   family_id: string;
+  avatar_url: string | null;
   created_at: string;
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Logo from "@/components/Logo";
 
 export default function Splash() {
   return (
@@ -23,10 +24,9 @@ export default function Splash() {
           borderRadius: 28,
           background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
           boxShadow: "0 8px 40px var(--accent-glow)",
-          fontSize: 40,
         }}
       >
-        🌊
+        <Logo size={56} />
       </div>
 
       <h1
@@ -53,7 +53,7 @@ export default function Splash() {
         className="mt-auto pb-6 text-[9px]"
         style={{ color: "var(--faint)" }}
       >
-        v2.0 · Donnees securisees via Supabase
+        v3.0 · Donnees securisees via Supabase
       </p>
     </div>
   );

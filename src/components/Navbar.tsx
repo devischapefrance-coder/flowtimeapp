@@ -18,7 +18,7 @@ export default function Navbar() {
       className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full flex justify-around items-center"
       style={{
         maxWidth: 430,
-        background: "rgba(15, 17, 23, 0.85)",
+        background: "var(--nav-bg)",
         backdropFilter: "blur(20px)",
         borderTop: "1px solid var(--glass-border)",
         paddingTop: 8,

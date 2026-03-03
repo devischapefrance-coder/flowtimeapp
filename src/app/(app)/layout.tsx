@@ -5,6 +5,9 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
 import Navbar from "@/components/Navbar";
+import Logo from "@/components/Logo";
+import { I18nProvider } from "@/lib/i18n";
+import AmbientPlayer from "@/components/AmbientPlayer";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -25,6 +28,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
 
+  const initialLang = typeof window !== "undefined"
+    ? localStorage.getItem("flowtime_lang") || "fr"
+    : "fr";
+
   async function loadProfile() {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) {
@@ -38,10 +45,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       .single();
     if (data) setProfile(data as Profile);
     setReady(true);
+
+    // Check onboarding
+    if (!localStorage.getItem("flowtime_onboarded") && data) {
+      const created = new Date(data.created_at);
+      const now = new Date();
+      if (now.getTime() - created.getTime() < 5 * 60 * 1000) {
+        router.push("/onboarding");
+      } else {
+        localStorage.setItem("flowtime_onboarded", "true");
+      }
+    }
   }
 
   useEffect(() => {
-    // If user chose not to stay logged in, sign out when browser closes
     const sessionOnly = sessionStorage.getItem("flowtime_session_only");
     if (sessionOnly) {
       const handleUnload = () => { supabase.auth.signOut(); };
@@ -58,17 +75,20 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!ready) {
     return (
       <div className="flex items-center justify-center min-h-dvh">
-        <div className="text-[40px] animate-pulse">🌊</div>
+        <div className="animate-pulse"><Logo size={60} /></div>
       </div>
     );
   }
 
   return (
-    <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile }}>
-      <div className="pb-[80px]">
-        {children}
-      </div>
-      <Navbar />
-    </ProfileContext.Provider>
+    <I18nProvider initialLang={initialLang}>
+      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile }}>
+        <div className="pb-[80px]">
+          {children}
+        </div>
+        <AmbientPlayer />
+        <Navbar />
+      </ProfileContext.Provider>
+    </I18nProvider>
   );
 }

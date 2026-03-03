@@ -7,6 +7,10 @@ import FlowChat from "@/components/FlowChat";
 import Timeline from "@/components/Timeline";
 import NotificationManager from "@/components/NotificationManager";
 import type { Event, Member, Address, Contact } from "@/lib/types";
+import Logo from "@/components/Logo";
+import { useRealtimeEvents } from "@/lib/realtime";
+import { checkReminders } from "@/lib/reminders";
+import { downloadICS, shareICS } from "@/lib/ical";
 
 function getDays(count: number) {
   const days = [];
@@ -82,6 +86,34 @@ export default function HomePage() {
   }, [profile?.family_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  // Realtime: auto-refresh when family events change
+  useRealtimeEvents(profile?.family_id, loadData);
+
+  // Proactive reminders check every 5 minutes
+  useEffect(() => {
+    function check() {
+      const reminder = checkReminders(
+        events.map((e) => ({ title: e.title, time: e.time, date: e.date })),
+        profile?.first_name || ""
+      );
+      if (reminder && Notification.permission === "granted") {
+        new Notification(reminder.title, { body: reminder.body, icon: "/icons/icon-192.png" });
+      }
+    }
+    check();
+    const interval = setInterval(check, 5 * 60 * 1000);
+    return () => clearInterval(interval);
+  }, [events, profile?.first_name]);
+
+  // Calendar export
+  function handleExport() {
+    if (typeof navigator !== "undefined" && "canShare" in navigator) {
+      shareICS(events);
+    } else {
+      downloadICS(events);
+    }
+  }
 
   const dayEvents = events.filter((e) => e.date === currentDate);
   const filteredEvents = filter
@@ -187,11 +219,21 @@ export default function HomePage() {
             {dateDisplay}
           </p>
         </div>
-        <div
-          className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
-          style={{ background: "var(--surface2)" }}
-        >
-          {profile?.emoji || "👤"}
+        <div className="flex items-center gap-2">
+          <button
+            className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
+            style={{ background: "var(--surface2)" }}
+            onClick={handleExport}
+            title="Exporter le calendrier"
+          >
+            📤
+          </button>
+          <div
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+            style={{ background: "var(--surface2)" }}
+          >
+            {profile?.emoji || "👤"}
+          </div>
         </div>
       </div>
 
@@ -233,7 +275,7 @@ export default function HomePage() {
           className="w-11 h-11 flex items-center justify-center rounded-full text-xl"
           style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
         >
-          🌊
+          <Logo size={24} />
         </div>
         <div className="flex-1">
           <p className="text-[13px] font-bold">Flow</p>
@@ -362,7 +404,7 @@ export default function HomePage() {
         }}
         onClick={() => setChatOpen(true)}
       >
-        🌊
+        <Logo size={24} />
       </button>
 
       {/* Notifications */}

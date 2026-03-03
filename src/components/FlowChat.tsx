@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
+import Logo from "@/components/Logo";
 
 interface Message {
   role: "user" | "flow";
@@ -106,12 +107,12 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   return (
     <div className="fixed inset-0 flex flex-col" style={{ zIndex: 700, background: "var(--bg)", maxWidth: 430, margin: "0 auto" }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3" style={{ background: "rgba(15,17,23,0.9)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)" }}>
+      <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)" }}>
         <div
           className="w-10 h-10 flex items-center justify-center rounded-full text-lg"
           style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
         >
-          🌊
+          <Logo size={24} />
         </div>
         <div className="flex-1">
           <span className="font-bold text-sm">Flow</span>
@@ -126,7 +127,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
           <div key={i} className={`max-w-[85%] ${m.role === "user" ? "self-end" : "self-start"} animate-in`}>
             {m.role === "flow" && (
               <div className="flex items-end gap-2">
-                <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}>🌊</div>
+                <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}><Logo size={16} /></div>
                 <div>
                   <div
                     className="px-4 py-3 text-sm leading-relaxed"
@@ -167,7 +168,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
 
         {loading && (
           <div className="self-start flex items-end gap-2 animate-in">
-            <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}>🌊</div>
+            <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}><Logo size={16} /></div>
             <div className="px-4 py-3" style={{ background: "var(--surface)", border: "1px solid var(--glass-border)", borderRadius: "18px 18px 18px 4px" }}>
               <div className="flex gap-1.5">
                 <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: "0ms" }} />
@@ -195,7 +196,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
       </div>
 
       {/* Input */}
-      <div className="p-4 flex gap-2" style={{ background: "rgba(15,17,23,0.9)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--glass-border)", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
+      <div className="p-4 flex gap-2" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--glass-border)", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
         <input
           ref={inputRef}
           className="flex-1"

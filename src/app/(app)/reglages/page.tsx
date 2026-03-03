@@ -1,10 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import Modal from "@/components/Modal";
+import AvatarUpload from "@/components/AvatarUpload";
+import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 
 const PROFILE_EMOJIS = ["👤","👨","👩","👦","👧","👶","👴","👵","🧑","🧔","👱","🧑‍🦰","🧑‍🦱","🧑‍🦳","🧑‍🦲","🐱","🐶","🦊","🐻","🐼"];
 
@@ -29,6 +31,60 @@ export default function ReglagesPage() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
+
+  const [theme, setTheme] = useState<"dark" | "light" | "system">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("flowtime_theme") as "dark" | "light" | "system") || "dark";
+    }
+    return "dark";
+  });
+  const [lang, setLang] = useState<"fr" | "en">(() => {
+    if (typeof window !== "undefined") {
+      return (localStorage.getItem("flowtime_lang") as "fr" | "en") || "fr";
+    }
+    return "fr";
+  });
+
+  function changeTheme(t: "dark" | "light" | "system") {
+    setTheme(t);
+    localStorage.setItem("flowtime_theme", t);
+    let resolved = t;
+    if (t === "system") {
+      resolved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+    }
+    if (resolved === "light") {
+      document.documentElement.classList.add("light");
+    } else {
+      document.documentElement.classList.remove("light");
+    }
+  }
+
+  function changeLang(l: "fr" | "en") {
+    setLang(l);
+    localStorage.setItem("flowtime_lang", l);
+    document.documentElement.lang = l;
+  }
+
+  const [pushEnabled, setPushEnabled] = useState(false);
+  const [pushLoading, setPushLoading] = useState(false);
+
+  useEffect(() => {
+    isPushSubscribed().then(setPushEnabled);
+  }, []);
+
+  async function togglePush() {
+    setPushLoading(true);
+    try {
+      if (pushEnabled) {
+        await unsubscribeFromPush();
+        setPushEnabled(false);
+      } else {
+        const sub = await subscribeToPush();
+        setPushEnabled(!!sub);
+      }
+    } catch { /* ignore */ }
+    setPushLoading(false);
+  }
 
   const [familyModal, setFamilyModal] = useState(false);
   const [joinCode, setJoinCode] = useState("");
@@ -141,13 +197,13 @@ export default function ReglagesPage() {
       <p className="label">Mon profil</p>
       <div className="card">
         <div className="flex items-center gap-4 mb-4">
-          <button
-            className="w-[60px] h-[60px] flex items-center justify-center rounded-full text-3xl"
-            style={{ background: "var(--surface2)" }}
-            onClick={() => setEmojiModal(true)}
-          >
-            {emoji}
-          </button>
+          <AvatarUpload
+            userId={profile?.id || ""}
+            currentUrl={profile?.avatar_url}
+            emoji={emoji}
+            onUploaded={() => refreshProfile()}
+            size={60}
+          />
           <div>
             <p className="font-bold">{firstName} {lastName}</p>
             <p className="text-xs" style={{ color: "var(--dim)" }}>{profile?.email}</p>
@@ -166,8 +222,49 @@ export default function ReglagesPage() {
         </div>
       </div>
 
-      {/* Géolocalisation */}
-      <p className="label mt-4">Géolocalisation</p>
+      {/* Apparence */}
+      <p className="label mt-4">Apparence</p>
+      <div className="card">
+        <p className="text-sm font-bold mb-3">Theme</p>
+        <div className="flex gap-2">
+          {([["dark", "🌙", "Sombre"], ["light", "☀️", "Clair"], ["system", "💻", "Systeme"]] as const).map(([key, icon, label]) => (
+            <button
+              key={key}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+              style={{
+                background: theme === key ? "var(--accent)" : "var(--surface2)",
+                color: theme === key ? "#fff" : "var(--text)",
+              }}
+              onClick={() => changeTheme(key)}
+            >
+              {icon} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Langue */}
+      <div className="card">
+        <p className="text-sm font-bold mb-3">Langue</p>
+        <div className="flex gap-2">
+          {([["fr", "🇫🇷", "Francais"], ["en", "🇬🇧", "English"]] as const).map(([key, flag, label]) => (
+            <button
+              key={key}
+              className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+              style={{
+                background: lang === key ? "var(--accent)" : "var(--surface2)",
+                color: lang === key ? "#fff" : "var(--text)",
+              }}
+              onClick={() => changeLang(key)}
+            >
+              {flag} {label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Geolocalisation */}
+      <p className="label mt-4">Geolocalisation</p>
       <div className="card flex items-center justify-between">
         <span className="text-sm">Permettre à Flow de me géolocaliser</span>
         <button
@@ -178,6 +275,28 @@ export default function ReglagesPage() {
           <span
             className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
             style={{ left: geoEnabled ? 26 : 4 }}
+          />
+        </button>
+      </div>
+
+      {/* Notifications push */}
+      <p className="label mt-4">Notifications</p>
+      <div className="card flex items-center justify-between">
+        <div>
+          <span className="text-sm">Notifications push</span>
+          <p className="text-[10px] mt-0.5" style={{ color: "var(--dim)" }}>
+            Rappels matin & soir, alertes evenements
+          </p>
+        </div>
+        <button
+          className="w-12 h-7 rounded-full relative transition-colors"
+          style={{ background: pushEnabled ? "var(--accent)" : "var(--surface2)", opacity: pushLoading ? 0.5 : 1 }}
+          onClick={togglePush}
+          disabled={pushLoading}
+        >
+          <span
+            className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
+            style={{ left: pushEnabled ? 26 : 4 }}
           />
         </button>
       </div>
