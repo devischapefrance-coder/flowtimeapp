@@ -7,7 +7,6 @@ import type { Profile } from "@/lib/types";
 import Navbar from "@/components/Navbar";
 import Logo from "@/components/Logo";
 import { I18nProvider } from "@/lib/i18n";
-import AmbientPlayer from "@/components/AmbientPlayer";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -86,7 +85,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         <div className="pb-[80px]">
           {children}
         </div>
-        <AmbientPlayer />
+
         <Navbar />
       </ProfileContext.Provider>
     </I18nProvider>

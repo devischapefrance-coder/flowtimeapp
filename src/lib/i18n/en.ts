@@ -2,7 +2,7 @@ const en: Record<string, string> = {
   // Nav
   "nav.home": "Home",
   "nav.family": "Family",
-  "nav.wellbeing": "Wellbeing",
+
   "nav.settings": "Settings",
 
   // Home
@@ -11,7 +11,7 @@ const en: Record<string, string> = {
   "home.greeting.evening": "Good evening",
   "home.stats.today": "Today",
   "home.stats.week": "This week",
-  "home.stats.streak": "Streak days",
+
   "home.next": "Next",
   "home.flow.name": "Flow",
   "home.flow.subtitle": "Ask me anything",
@@ -48,22 +48,6 @@ const en: Record<string, string> = {
   "family.add.contact": "Add a contact",
   "family.add.address": "Add an address",
 
-  // Wellbeing
-  "wellbeing.title": "Wellbeing",
-  "wellbeing.streak": "{count} consecutive day(s)",
-  "wellbeing.start": "Start your streak!",
-  "wellbeing.start.desc": "Do an activity every day",
-  "wellbeing.stats": "Statistics",
-  "wellbeing.week": "Week",
-  "wellbeing.month": "Month",
-  "wellbeing.minutes": "minutes",
-  "wellbeing.sessions": "sessions",
-  "wellbeing.meditation": "Meditation",
-  "wellbeing.sport": "Sport",
-  "wellbeing.yoga": "Yoga",
-  "wellbeing.reading": "Reading",
-  "wellbeing.sounds": "Ambient sounds",
-  "wellbeing.breathing": "Breathing",
 
   // Settings
   "settings.title": "Settings",
@@ -108,7 +92,7 @@ const en: Record<string, string> = {
   "onboarding.family": "Add your family",
   "onboarding.family.desc": "Start by adding your family members",
   "onboarding.features": "Organize everything",
-  "onboarding.features.desc": "Planning, maps, wellbeing, and more",
+  "onboarding.features.desc": "Planning, maps, location, and more",
   "onboarding.flow": "Talk to Flow",
   "onboarding.flow.desc": "Your AI that manages your schedule in natural language",
   "onboarding.skip": "Skip",

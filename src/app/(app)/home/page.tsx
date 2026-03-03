@@ -39,7 +39,7 @@ export default function HomePage() {
   const [members, setMembers] = useState<Member[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
-  const [wellbeingStreak, setWellbeingStreak] = useState(0);
+
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -51,7 +51,7 @@ export default function HomePage() {
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
-    const [evRes, memRes, addrRes, contRes, wbRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -61,27 +61,11 @@ export default function HomePage() {
       supabase.from("members").select("*").eq("family_id", profile.family_id),
       supabase.from("addresses").select("*").eq("family_id", profile.family_id),
       supabase.from("contacts").select("*").eq("family_id", profile.family_id),
-      supabase.from("wellbeing_sessions").select("date").eq("user_id", profile.id).order("date", { ascending: false }).limit(30),
     ]);
     if (evRes.data) setEvents(evRes.data as Event[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
     if (addrRes.data) setAddresses(addrRes.data as Address[]);
     if (contRes.data) setContacts(contRes.data as Contact[]);
-    if (wbRes.data) {
-      const dates = [...new Set(wbRes.data.map((d: { date: string }) => d.date))];
-      let streak = 0;
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      for (let i = 0; i < dates.length; i++) {
-        const d = new Date(dates[i] as string);
-        d.setHours(0, 0, 0, 0);
-        const expected = new Date(today);
-        expected.setDate(expected.getDate() - i);
-        if (d.getTime() === expected.getTime()) streak++;
-        else break;
-      }
-      setWellbeingStreak(streak);
-    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id]);
 
@@ -199,7 +183,7 @@ export default function HomePage() {
     weekEvents: events.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
     addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
     contacts: contacts.map((c) => ({ name: c.name, relation: c.relation, phone: c.phone })),
-    wellbeingStreak,
+
     selectedDate: currentDate,
     selectedDayName: days[selectedDay].dayName,
     today: days[0].date,
@@ -238,7 +222,7 @@ export default function HomePage() {
       </div>
 
       {/* Quick stats */}
-      <div className="grid grid-cols-3 gap-2 mt-5">
+      <div className="grid grid-cols-2 gap-2 mt-5">
         <div className="card !mb-0 text-center !py-3">
           <p className="text-lg font-bold" style={{ color: "var(--accent)" }}>{dayEvents.length}</p>
           <p className="text-[10px]" style={{ color: "var(--dim)" }}>Aujourd&apos;hui</p>
@@ -246,10 +230,6 @@ export default function HomePage() {
         <div className="card !mb-0 text-center !py-3">
           <p className="text-lg font-bold" style={{ color: "var(--teal)" }}>{totalWeekEvents}</p>
           <p className="text-[10px]" style={{ color: "var(--dim)" }}>Cette semaine</p>
-        </div>
-        <div className="card !mb-0 text-center !py-3">
-          <p className="text-lg font-bold" style={{ color: "var(--warm)" }}>{wellbeingStreak}</p>
-          <p className="text-[10px]" style={{ color: "var(--dim)" }}>Jours streak</p>
         </div>
       </div>
 

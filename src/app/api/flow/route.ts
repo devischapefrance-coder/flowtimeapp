@@ -101,10 +101,6 @@ function buildPrompt(message: string, context: Record<string, unknown>): string 
         .join(", ")
     : "Aucun contact";
 
-  const wellbeing = context.wellbeingStreak
-    ? `Streak bien-être : ${context.wellbeingStreak} jour(s) consécutif(s)`
-    : "Pas de streak bien-être";
-
   const userName = context.userName || "l'utilisateur";
 
   return `=== CONTEXTE FAMILIAL ===
@@ -122,7 +118,6 @@ Date du jour réel : ${context.today}
 
 📍 Adresses : ${addresses}
 📞 Contacts : ${contacts}
-${wellbeing}
 
 === MESSAGE ===
 ${message}`;

@@ -20,7 +20,7 @@ const STEPS = [
   {
     icon: <span className="text-[64px]">🗺️</span>,
     title: "Tout organiser",
-    desc: "Planning, carte interactive, bien-etre, localisation — tout est la.",
+    desc: "Planning, carte interactive, localisation — tout est la.",
     bg: "linear-gradient(135deg, rgba(245,197,99,0.15), rgba(240,107,126,0.1))",
   },
   {
