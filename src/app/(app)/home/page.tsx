@@ -5,7 +5,8 @@ import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import FlowChat from "@/components/FlowChat";
 import Timeline from "@/components/Timeline";
-import type { Event, Member } from "@/lib/types";
+import NotificationManager from "@/components/NotificationManager";
+import type { Event, Member, Address, Contact } from "@/lib/types";
 
 function getDays(count: number) {
   const days = [];
@@ -25,6 +26,9 @@ export default function HomePage() {
   const { profile } = useProfile();
   const [events, setEvents] = useState<Event[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
+  const [addresses, setAddresses] = useState<Address[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [wellbeingStreak, setWellbeingStreak] = useState(0);
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
 
@@ -36,7 +40,7 @@ export default function HomePage() {
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
-    const [evRes, memRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes, wbRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -44,9 +48,30 @@ export default function HomePage() {
         .gte("date", days[0].date)
         .lte("date", days[days.length - 1].date),
       supabase.from("members").select("*").eq("family_id", profile.family_id),
+      supabase.from("addresses").select("*").eq("family_id", profile.family_id),
+      supabase.from("contacts").select("*").eq("family_id", profile.family_id),
+      supabase.from("wellbeing_sessions").select("date").eq("user_id", profile.id).order("date", { ascending: false }).limit(30),
     ]);
     if (evRes.data) setEvents(evRes.data as Event[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
+    if (addrRes.data) setAddresses(addrRes.data as Address[]);
+    if (contRes.data) setContacts(contRes.data as Contact[]);
+    // Calculate wellbeing streak
+    if (wbRes.data) {
+      const dates = [...new Set(wbRes.data.map((d: { date: string }) => d.date))];
+      let streak = 0;
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      for (let i = 0; i < dates.length; i++) {
+        const d = new Date(dates[i] as string);
+        d.setHours(0, 0, 0, 0);
+        const expected = new Date(today);
+        expected.setDate(expected.getDate() - i);
+        if (d.getTime() === expected.getTime()) streak++;
+        else break;
+      }
+      setWellbeingStreak(streak);
+    }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id]);
 
@@ -68,33 +93,39 @@ export default function HomePage() {
     loadData();
   }
 
+  function resolveMemberId(memberName?: string): string | null {
+    if (!memberName) return null;
+    const mem = members.find((m) => m.name.toLowerCase() === memberName.toLowerCase());
+    return mem?.id || null;
+  }
+
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
 
     if (action.type === "add_event") {
-      const memberName = action.data.member_name as string;
-      let memberId = null;
-      if (memberName) {
-        const mem = members.find((m) => m.name.toLowerCase() === memberName.toLowerCase());
-        if (mem) memberId = mem.id;
-      }
       await supabase.from("events").insert({
         family_id: profile.family_id,
         title: action.data.title,
         time: action.data.time,
         date: action.data.date || currentDate,
-        member_id: memberId,
+        member_id: resolveMemberId(action.data.member_name as string),
         description: action.data.description || "",
       });
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
+    } else if (action.type === "edit_event") {
+      // Delete old then insert new
+      await supabase.from("events").delete().eq("id", action.data.event_id);
+      await supabase.from("events").insert({
+        family_id: profile.family_id,
+        title: action.data.title,
+        time: action.data.time,
+        date: action.data.date || currentDate,
+        member_id: resolveMemberId(action.data.member_name as string),
+        description: action.data.description || "",
+      });
     } else if (action.type === "add_recurring") {
-      const memberName = action.data.member_name as string;
-      let memberId = null;
-      if (memberName) {
-        const mem = members.find((m) => m.name.toLowerCase() === memberName.toLowerCase());
-        if (mem) memberId = mem.id;
-      }
+      const memberId = resolveMemberId(action.data.member_name as string);
       const recurringDays = action.data.days as number[];
       const startDate = new Date();
       for (let week = 0; week < 4; week++) {
@@ -116,9 +147,16 @@ export default function HomePage() {
   }
 
   const flowContext = {
+    userName: profile?.first_name,
     members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji })),
-    events: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, member: e.members?.name })),
-    today: currentDate,
+    todayEvents: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
+    weekEvents: events.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
+    addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
+    contacts: contacts.map((c) => ({ name: c.name, relation: c.relation, phone: c.phone })),
+    wellbeingStreak,
+    selectedDate: currentDate,
+    selectedDayName: days[selectedDay].dayName,
+    today: days[0].date,
   };
 
   return (
@@ -251,6 +289,9 @@ export default function HomePage() {
       >
         +
       </button>
+
+      {/* Notifications */}
+      <NotificationManager events={events} enabled={true} />
 
       {/* Chat */}
       <FlowChat
