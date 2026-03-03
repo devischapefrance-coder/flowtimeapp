@@ -146,33 +146,43 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Day selector */}
-      <div className="flex gap-2 mt-6 mb-2 overflow-x-auto pb-1">
-        {days.map((d, i) => (
-          <button
-            key={d.date}
-            className="flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-xl transition-colors relative"
-            style={{
-              background: selectedDay === i ? "var(--accent)" : "var(--surface2)",
-              color: selectedDay === i ? "#fff" : "var(--dim)",
-              minWidth: 72,
-            }}
-            onClick={() => setSelectedDay(i)}
-          >
-            <span className="text-[11px] font-bold capitalize">{d.label}</span>
-            {eventCounts[d.date] > 0 && (
-              <span
-                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
-                style={{
-                  background: selectedDay === i ? "#fff" : "var(--accent)",
-                  color: selectedDay === i ? "var(--accent)" : "#fff",
-                }}
-              >
-                {eventCounts[d.date]}
+      {/* Week calendar */}
+      <div className="grid grid-cols-7 gap-1 mt-6 mb-2">
+        {days.map((d, i) => {
+          const date = new Date(d.date);
+          const dayNum = date.getDate();
+          const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3);
+          const isSelected = selectedDay === i;
+          const isToday = i === 0;
+          const count = eventCounts[d.date] || 0;
+
+          return (
+            <button
+              key={d.date}
+              className="flex flex-col items-center py-2 rounded-2xl transition-all"
+              style={{
+                background: isSelected ? "var(--accent)" : "transparent",
+              }}
+              onClick={() => setSelectedDay(i)}
+            >
+              <span className="text-[10px] font-bold uppercase" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>
+                {dayLetter}
               </span>
-            )}
-          </button>
-        ))}
+              <span
+                className="text-base font-extrabold mt-0.5"
+                style={{ color: isSelected ? "#fff" : isToday ? "var(--accent)" : "var(--text)" }}
+              >
+                {dayNum}
+              </span>
+              {count > 0 && (
+                <span
+                  className="w-1.5 h-1.5 rounded-full mt-1"
+                  style={{ background: isSelected ? "#fff" : "var(--accent)" }}
+                />
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {/* Member filters */}
