@@ -57,14 +57,21 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
+  // "Rester connecté" logic: if user chose session-only and this is a new browser session, sign out
   useEffect(() => {
-    const sessionOnly = sessionStorage.getItem("flowtime_session_only");
+    const sessionOnly = localStorage.getItem("flowtime_session_only");
     if (sessionOnly) {
-      const handleUnload = () => { supabase.auth.signOut(); };
-      window.addEventListener("beforeunload", handleUnload);
-      return () => window.removeEventListener("beforeunload", handleUnload);
+      const stillActive = sessionStorage.getItem("flowtime_session_active");
+      if (!stillActive) {
+        // New browser session → sign out
+        localStorage.removeItem("flowtime_session_only");
+        supabase.auth.signOut().then(() => router.push("/"));
+        return;
+      }
     }
-  }, []);
+    // Mark this browser session as active
+    sessionStorage.setItem("flowtime_session_active", "true");
+  }, [router]);
 
   useEffect(() => {
     loadProfile();

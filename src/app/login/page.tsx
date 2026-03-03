@@ -32,9 +32,9 @@ export default function LoginPage() {
     }
 
     if (!stayLogged) {
-      sessionStorage.setItem("flowtime_session_only", "true");
+      localStorage.setItem("flowtime_session_only", "true");
     } else {
-      sessionStorage.removeItem("flowtime_session_only");
+      localStorage.removeItem("flowtime_session_only");
     }
     router.push("/home");
   }
