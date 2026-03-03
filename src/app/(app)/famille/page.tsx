@@ -306,8 +306,8 @@ export default function FamillePage() {
   const filledAddresses = addresses.filter((a) => a.address).length;
 
   return (
-    <div className="px-4 py-4 animate-in">
-      <h1 className="text-xl font-extrabold mb-6">Famille</h1>
+    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
+      <h1 className="text-xl font-bold mb-6">Famille</h1>
 
       {/* MEMBRES */}
       <p className="label">Membres de la famille</p>

@@ -22,6 +22,13 @@ function getDays(count: number) {
   return days;
 }
 
+function getGreeting(): string {
+  const h = new Date().getHours();
+  if (h < 12) return "Bonjour";
+  if (h < 18) return "Bon apres-midi";
+  return "Bonsoir";
+}
+
 export default function HomePage() {
   const { profile } = useProfile();
   const [events, setEvents] = useState<Event[]>([]);
@@ -56,7 +63,6 @@ export default function HomePage() {
     if (memRes.data) setMembers(memRes.data as Member[]);
     if (addrRes.data) setAddresses(addrRes.data as Address[]);
     if (contRes.data) setContacts(contRes.data as Contact[]);
-    // Calculate wellbeing streak
     if (wbRes.data) {
       const dates = [...new Set(wbRes.data.map((d: { date: string }) => d.date))];
       let streak = 0;
@@ -82,11 +88,20 @@ export default function HomePage() {
     ? dayEvents.filter((e) => e.member_id === filter)
     : dayEvents;
 
-  // Count events per day for badges
   const eventCounts: Record<string, number> = {};
   for (const ev of events) {
     eventCounts[ev.date] = (eventCounts[ev.date] || 0) + 1;
   }
+
+  // Next upcoming event
+  const now = new Date();
+  const nextEvent = dayEvents
+    .filter((e) => {
+      if (!e.time) return false;
+      const [h, m] = e.time.split(":").map(Number);
+      return h * 60 + m > now.getHours() * 60 + now.getMinutes();
+    })
+    .sort((a, b) => (a.time || "").localeCompare(b.time || ""))[0];
 
   async function deleteEvent(id: string) {
     await supabase.from("events").delete().eq("id", id);
@@ -114,7 +129,6 @@ export default function HomePage() {
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
     } else if (action.type === "edit_event") {
-      // Delete old then insert new
       await supabase.from("events").delete().eq("id", action.data.event_id);
       await supabase.from("events").insert({
         family_id: profile.family_id,
@@ -159,29 +173,73 @@ export default function HomePage() {
     today: days[0].date,
   };
 
+  const totalWeekEvents = events.length;
+
   return (
-    <div className="px-4 py-4 animate-in">
+    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
       {/* Header */}
-      <h1 className="text-xl font-extrabold">
-        Bonjour {profile?.first_name} 👋
-      </h1>
-      <p className="text-sm capitalize mt-1" style={{ color: "var(--dim)" }}>
-        {dateDisplay}
-      </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-xl font-bold">
+            {getGreeting()}, {profile?.first_name}
+          </h1>
+          <p className="text-sm capitalize mt-0.5" style={{ color: "var(--dim)" }}>
+            {dateDisplay}
+          </p>
+        </div>
+        <div
+          className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+          style={{ background: "var(--surface2)" }}
+        >
+          {profile?.emoji || "👤"}
+        </div>
+      </div>
+
+      {/* Quick stats */}
+      <div className="grid grid-cols-3 gap-2 mt-5">
+        <div className="card !mb-0 text-center !py-3">
+          <p className="text-lg font-bold" style={{ color: "var(--accent)" }}>{dayEvents.length}</p>
+          <p className="text-[10px]" style={{ color: "var(--dim)" }}>Aujourd&apos;hui</p>
+        </div>
+        <div className="card !mb-0 text-center !py-3">
+          <p className="text-lg font-bold" style={{ color: "var(--teal)" }}>{totalWeekEvents}</p>
+          <p className="text-[10px]" style={{ color: "var(--dim)" }}>Cette semaine</p>
+        </div>
+        <div className="card !mb-0 text-center !py-3">
+          <p className="text-lg font-bold" style={{ color: "var(--warm)" }}>{wellbeingStreak}</p>
+          <p className="text-[10px]" style={{ color: "var(--dim)" }}>Jours streak</p>
+        </div>
+      </div>
+
+      {/* Next event card */}
+      {nextEvent && (
+        <div className="card flex items-center gap-3 mt-4 !mb-0" style={{ borderLeft: `3px solid var(--accent)` }}>
+          <div className="flex-1">
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--accent)" }}>Prochain</p>
+            <p className="text-sm font-bold mt-0.5">{nextEvent.title}</p>
+            <p className="text-xs" style={{ color: "var(--dim)" }}>{nextEvent.time}{nextEvent.members ? ` · ${nextEvent.members.name}` : ""}</p>
+          </div>
+          <span className="text-2xl">{nextEvent.members?.emoji || "📅"}</span>
+        </div>
+      )}
 
       {/* Flow card */}
-      <div className="card flex items-center gap-3 mt-5 cursor-pointer" onClick={() => setChatOpen(true)}>
+      <div
+        className="card flex items-center gap-3 mt-4 !mb-0 cursor-pointer"
+        style={{ background: "var(--accent-soft)", border: "1px solid rgba(124,107,240,0.15)" }}
+        onClick={() => setChatOpen(true)}
+      >
         <div
-          className="w-[50px] h-[50px] flex items-center justify-center rounded-full text-2xl animate-pulse"
-          style={{ background: "linear-gradient(135deg, var(--accent), #FFA559)" }}
+          className="w-11 h-11 flex items-center justify-center rounded-full text-xl"
+          style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
         >
           🌊
         </div>
         <div className="flex-1">
-          <p className="text-[13px]">
-            Hey, je suis <strong>Flow</strong>, votre assistant familial
-          </p>
+          <p className="text-[13px] font-bold">Flow</p>
+          <p className="text-[11px]" style={{ color: "var(--dim)" }}>Demande-moi n&apos;importe quoi</p>
         </div>
+        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--green)", color: "#fff" }}>En ligne</span>
       </div>
 
       {/* Week calendar */}
@@ -200,6 +258,7 @@ export default function HomePage() {
               className="flex flex-col items-center py-2 rounded-2xl transition-all"
               style={{
                 background: isSelected ? "var(--accent)" : "transparent",
+                boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none",
               }}
               onClick={() => setSelectedDay(i)}
             >
@@ -207,7 +266,7 @@ export default function HomePage() {
                 {dayLetter}
               </span>
               <span
-                className="text-base font-extrabold mt-0.5"
+                className="text-base font-bold mt-0.5"
                 style={{ color: isSelected ? "#fff" : isToday ? "var(--accent)" : "var(--text)" }}
               >
                 {dayNum}
@@ -224,48 +283,50 @@ export default function HomePage() {
       </div>
 
       {/* Member filters */}
-      <div className="flex justify-center gap-3 mb-3">
-        <button
-          className="flex flex-col items-center gap-1 transition-opacity"
-          style={{ opacity: !filter ? 1 : 0.4 }}
-          onClick={() => setFilter(null)}
-        >
-          <div
-            className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-            style={{
-              background: !filter ? "var(--accent)" : "var(--surface2)",
-              boxShadow: !filter ? "0 0 12px var(--accent-glow)" : "none",
-            }}
+      {members.length > 0 && (
+        <div className="flex justify-center gap-3 mb-3">
+          <button
+            className="flex flex-col items-center gap-1 transition-opacity"
+            style={{ opacity: !filter ? 1 : 0.35 }}
+            onClick={() => setFilter(null)}
           >
-            👥
-          </div>
-          <span className="text-[9px] font-bold" style={{ color: !filter ? "var(--accent)" : "var(--dim)" }}>Tous</span>
-        </button>
-        {members.map((m) => {
-          const active = filter === m.id;
-          return (
-            <button
-              key={m.id}
-              className="flex flex-col items-center gap-1 transition-opacity"
-              style={{ opacity: active ? 1 : 0.4 }}
-              onClick={() => setFilter(active ? null : m.id)}
+            <div
+              className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+              style={{
+                background: !filter ? "var(--accent-soft)" : "var(--surface2)",
+                outline: !filter ? "2px solid var(--accent)" : "none",
+                outlineOffset: 2,
+              }}
             >
-              <div
-                className="w-10 h-10 rounded-full flex items-center justify-center text-lg relative"
-                style={{
-                  background: "var(--surface2)",
-                  boxShadow: active ? `0 0 12px ${m.color}44` : "none",
-                  outline: active ? `2px solid ${m.color}` : "none",
-                  outlineOffset: 2,
-                }}
+              👥
+            </div>
+            <span className="text-[9px] font-bold" style={{ color: !filter ? "var(--accent)" : "var(--dim)" }}>Tous</span>
+          </button>
+          {members.map((m) => {
+            const active = filter === m.id;
+            return (
+              <button
+                key={m.id}
+                className="flex flex-col items-center gap-1 transition-opacity"
+                style={{ opacity: active ? 1 : 0.35 }}
+                onClick={() => setFilter(active ? null : m.id)}
               >
-                {m.emoji}
-              </div>
-              <span className="text-[9px] font-bold" style={{ color: active ? m.color : "var(--dim)" }}>{m.name.split(" ")[0]}</span>
-            </button>
-          );
-        })}
-      </div>
+                <div
+                  className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
+                  style={{
+                    background: "var(--surface2)",
+                    outline: active ? `2px solid ${m.color}` : "none",
+                    outlineOffset: 2,
+                  }}
+                >
+                  {m.emoji}
+                </div>
+                <span className="text-[9px] font-bold" style={{ color: active ? m.color : "var(--dim)" }}>{m.name.split(" ")[0]}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Timeline */}
       <p className="label">
@@ -273,21 +334,35 @@ export default function HomePage() {
       </p>
       <Timeline events={filteredEvents} onDelete={deleteEvent} />
 
+      {filteredEvents.length === 0 && (
+        <div className="text-center py-8">
+          <p className="text-3xl mb-2">📭</p>
+          <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun evenement {selectedDay === 0 ? "aujourd'hui" : "ce jour"}</p>
+          <button
+            className="text-xs font-bold mt-2"
+            style={{ color: "var(--accent)" }}
+            onClick={() => setChatOpen(true)}
+          >
+            + Ajouter via Flow
+          </button>
+        </div>
+      )}
+
       {/* FAB */}
       <button
-        className="fixed flex items-center justify-center rounded-full text-white text-[28px]"
+        className="fixed flex items-center justify-center rounded-full text-white text-xl"
         style={{
           bottom: 100,
           right: "max(20px, calc(50% - 195px))",
-          width: 56,
-          height: 56,
-          background: "linear-gradient(135deg, var(--accent), #FFA559)",
-          boxShadow: "0 4px 20px var(--accent-glow)",
+          width: 54,
+          height: 54,
+          background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
+          boxShadow: "0 4px 24px var(--accent-glow)",
           zIndex: 50,
         }}
         onClick={() => setChatOpen(true)}
       >
-        +
+        🌊
       </button>
 
       {/* Notifications */}

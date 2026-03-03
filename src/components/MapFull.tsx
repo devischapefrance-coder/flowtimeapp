@@ -1,8 +1,8 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import type { MapMarker } from "./MapView";
+import type { MapMarker, MapStyle, RouteInfo } from "./MapView";
 
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
@@ -15,6 +15,16 @@ const POI_CATEGORIES = [
   { key: "park", emoji: "🌳", label: "Parc", query: "park" },
   { key: "bakery", emoji: "🥖", label: "Boulangerie", query: "bakery" },
   { key: "fuel", emoji: "⛽", label: "Station", query: "fuel" },
+  { key: "cafe", emoji: "☕", label: "Café", query: "cafe" },
+  { key: "bank", emoji: "🏦", label: "Banque", query: "bank" },
+  { key: "post_office", emoji: "📮", label: "Poste", query: "post_office" },
+  { key: "cinema", emoji: "🎬", label: "Cinéma", query: "cinema" },
+];
+
+const MAP_STYLES: { key: MapStyle; label: string; icon: string }[] = [
+  { key: "dark", label: "Sombre", icon: "🌙" },
+  { key: "standard", label: "Standard", icon: "🗺️" },
+  { key: "satellite", label: "Satellite", icon: "🛰️" },
 ];
 
 interface MapFullProps {
@@ -24,13 +34,128 @@ interface MapFullProps {
   deviceMarkers?: MapMarker[];
 }
 
+function formatDistance(meters: number): string {
+  if (meters < 1000) return `${Math.round(meters)} m`;
+  return `${(meters / 1000).toFixed(1)} km`;
+}
+
+function formatDuration(seconds: number): string {
+  if (seconds < 60) return `${Math.round(seconds)} sec`;
+  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
+  const h = Math.floor(seconds / 3600);
+  const m = Math.round((seconds % 3600) / 60);
+  return `${h}h${m > 0 ? ` ${m}min` : ""}`;
+}
+
 export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers = [] }: MapFullProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MapMarker[]>([]);
   const [poiMarkers, setPoiMarkers] = useState<MapMarker[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
-  const [tab, setTab] = useState<"lieux" | "recherche">("lieux");
+  const [tab, setTab] = useState<"lieux" | "recherche" | "itineraire">("lieux");
+  const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
+  const [showStylePicker, setShowStylePicker] = useState(false);
+
+  // My location
+  const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
+  const [mapCenter, setMapCenter] = useState<[number, number]>(center);
+  const watchRef = useRef<number | null>(null);
+
+  // Routing
+  const [routeFrom, setRouteFrom] = useState("");
+  const [routeTo, setRouteTo] = useState("");
+  const [route, setRoute] = useState<RouteInfo | null>(null);
+  const [routeLoading, setRouteLoading] = useState(false);
+  const [routeMode, setRouteMode] = useState<"driving" | "walking" | "cycling">("driving");
+  const [routeFromCoord, setRouteFromCoord] = useState<[number, number] | null>(null);
+  const [routeToCoord, setRouteToCoord] = useState<[number, number] | null>(null);
+
+  // Geocode an address via Nominatim
+  const geocode = useCallback(async (query: string): Promise<[number, number] | null> => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
+        { headers: { "User-Agent": "FlowTime/1.0" } }
+      );
+      const data = await res.json();
+      if (data.length > 0) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
+    } catch { /* ignore */ }
+    return null;
+  }, []);
+
+  // Fetch route via OSRM
+  async function fetchRoute() {
+    setRouteLoading(true);
+    setRoute(null);
+    try {
+      let from = routeFromCoord;
+      let to = routeToCoord;
+
+      // If "Ma position" is the from field, use GPS
+      if (routeFrom.toLowerCase().includes("ma position") && myLocation) {
+        from = myLocation;
+      } else if (!from) {
+        from = await geocode(routeFrom);
+      }
+      if (!to) {
+        to = await geocode(routeTo);
+      }
+
+      if (!from || !to) {
+        setRouteLoading(false);
+        return;
+      }
+
+      setRouteFromCoord(from);
+      setRouteToCoord(to);
+
+      const profile = routeMode === "driving" ? "car" : routeMode === "cycling" ? "bike" : "foot";
+      const res = await fetch(
+        `https://router.project-osrm.org/route/v1/${profile}/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`
+      );
+      const data = await res.json();
+
+      if (data.routes && data.routes.length > 0) {
+        const r = data.routes[0];
+        setRoute({
+          coordinates: r.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]),
+          distance: r.distance,
+          duration: r.duration,
+        });
+      }
+    } catch { /* ignore */ }
+    setRouteLoading(false);
+  }
+
+  // Start watching my location
+  function locateMe() {
+    if (watchRef.current !== null) {
+      navigator.geolocation.clearWatch(watchRef.current);
+      watchRef.current = null;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude];
+        setMyLocation(loc);
+        setMapCenter(loc);
+      },
+      () => alert("Impossible d'acceder a la geolocalisation"),
+      { enableHighAccuracy: true }
+    );
+    watchRef.current = navigator.geolocation.watchPosition(
+      (pos) => setMyLocation([pos.coords.latitude, pos.coords.longitude]),
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 10000 }
+    );
+  }
+
+  // Cleanup watch on unmount
+  useEffect(() => {
+    return () => {
+      if (watchRef.current !== null) navigator.geolocation.clearWatch(watchRef.current);
+    };
+  }, []);
 
   // Search places via Nominatim
   const searchPlaces = useCallback(async (query: string) => {
@@ -43,7 +168,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
       );
       const data = await res.json();
       setSearchResults(
-        data.map((r: { display_name: string; lat: string; lon: string; type?: string }) => ({
+        data.map((r: { display_name: string; lat: string; lon: string }) => ({
           lat: parseFloat(r.lat),
           lng: parseFloat(r.lon),
           emoji: "📍",
@@ -66,8 +191,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     setActiveCategory(category.key);
     setSearching(true);
     try {
-      const [lat, lng] = center;
-      const radius = 3000; // 3km
+      const [lat, lng] = mapCenter;
+      const radius = 3000;
       const query = `[out:json][timeout:10];node["amenity"="${category.query}"](around:${radius},${lat},${lng});out body 20;`;
       const res = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
@@ -96,7 +221,16 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     return () => clearTimeout(t);
   }, [searchQuery, tab, searchPlaces]);
 
-  const allMarkers = [...markers, ...deviceMarkers, ...poiMarkers, ...searchResults];
+  // Build markers list
+  const myLocationMarker: MapMarker[] = myLocation
+    ? [{ lat: myLocation[0], lng: myLocation[1], emoji: "📍", name: "Ma position", type: "mylocation" }]
+    : [];
+
+  const routeMarkers: MapMarker[] = [];
+  if (routeFromCoord) routeMarkers.push({ lat: routeFromCoord[0], lng: routeFromCoord[1], emoji: "🟢", name: "Depart", type: "poi" });
+  if (routeToCoord) routeMarkers.push({ lat: routeToCoord[0], lng: routeToCoord[1], emoji: "🔴", name: "Arrivee", type: "poi" });
+
+  const allMarkers = [...markers, ...deviceMarkers, ...poiMarkers, ...searchResults, ...myLocationMarker, ...routeMarkers];
 
   return (
     <div className="fixed inset-0" style={{ zIndex: 1000, background: "var(--bg)" }}>
@@ -120,24 +254,25 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
         {/* Tabs */}
         <div className="flex gap-1 p-1 rounded-xl" style={{ background: "var(--surface)" }}>
-          <button
-            className="flex-1 py-2 rounded-lg text-xs font-bold transition-colors"
-            style={{ background: tab === "lieux" ? "var(--accent)" : "transparent", color: tab === "lieux" ? "#fff" : "var(--dim)" }}
-            onClick={() => { setTab("lieux"); setSearchResults([]); }}
-          >
-            📍 Lieux
-          </button>
-          <button
-            className="flex-1 py-2 rounded-lg text-xs font-bold transition-colors"
-            style={{ background: tab === "recherche" ? "var(--accent)" : "transparent", color: tab === "recherche" ? "#fff" : "var(--dim)" }}
-            onClick={() => { setTab("recherche"); setActiveCategory(null); setPoiMarkers([]); }}
-          >
-            🔍 Recherche
-          </button>
+          {(["lieux", "recherche", "itineraire"] as const).map((t) => (
+            <button
+              key={t}
+              className="flex-1 py-2 rounded-lg text-xs font-bold transition-colors"
+              style={{ background: tab === t ? "var(--accent)" : "transparent", color: tab === t ? "#fff" : "var(--dim)" }}
+              onClick={() => {
+                setTab(t);
+                if (t !== "recherche") setSearchResults([]);
+                if (t !== "lieux") { setActiveCategory(null); setPoiMarkers([]); }
+                if (t !== "itineraire") { setRoute(null); setRouteFromCoord(null); setRouteToCoord(null); }
+              }}
+            >
+              {t === "lieux" ? "📍 Lieux" : t === "recherche" ? "🔍 Chercher" : "🧭 Trajet"}
+            </button>
+          ))}
         </div>
 
-        {/* Categories or search input */}
-        {tab === "lieux" ? (
+        {/* Tab content */}
+        {tab === "lieux" && (
           <div className="flex gap-1.5 overflow-x-auto pb-1">
             {POI_CATEGORIES.map((cat) => (
               <button
@@ -153,7 +288,9 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               </button>
             ))}
           </div>
-        ) : (
+        )}
+
+        {tab === "recherche" && (
           <input
             placeholder="Rechercher un lieu, une adresse..."
             value={searchQuery}
@@ -163,22 +300,149 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           />
         )}
 
+        {tab === "itineraire" && (
+          <div className="flex flex-col gap-2">
+            <div className="flex gap-2">
+              <input
+                placeholder="Depart (ou 'Ma position')"
+                value={routeFrom}
+                onChange={(e) => { setRouteFrom(e.target.value); setRouteFromCoord(null); }}
+                className="!rounded-xl !text-sm flex-1"
+              />
+              <button
+                className="px-2 text-lg"
+                title="Ma position"
+                onClick={() => {
+                  if (myLocation) {
+                    setRouteFrom("Ma position");
+                    setRouteFromCoord(myLocation);
+                  } else {
+                    locateMe();
+                    setRouteFrom("Ma position");
+                  }
+                }}
+              >
+                📍
+              </button>
+            </div>
+            <input
+              placeholder="Destination"
+              value={routeTo}
+              onChange={(e) => { setRouteTo(e.target.value); setRouteToCoord(null); }}
+              className="!rounded-xl !text-sm"
+            />
+            <div className="flex gap-1">
+              {(["driving", "walking", "cycling"] as const).map((mode) => (
+                <button
+                  key={mode}
+                  className="flex-1 py-1.5 rounded-lg text-xs font-bold transition-colors"
+                  style={{
+                    background: routeMode === mode ? "var(--accent)" : "var(--surface)",
+                    color: routeMode === mode ? "#fff" : "var(--dim)",
+                  }}
+                  onClick={() => { setRouteMode(mode); setRoute(null); }}
+                >
+                  {mode === "driving" ? "🚗 Voiture" : mode === "walking" ? "🚶 A pied" : "🚴 Velo"}
+                </button>
+              ))}
+            </div>
+            <button
+              className="btn btn-primary !py-2 !text-sm"
+              onClick={fetchRoute}
+              disabled={routeLoading || !routeFrom.trim() || !routeTo.trim()}
+            >
+              {routeLoading ? "Calcul..." : "Calculer l'itineraire"}
+            </button>
+
+            {route && (
+              <div className="flex gap-3 items-center px-3 py-2 rounded-xl" style={{ background: "var(--surface)" }}>
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{formatDistance(route.distance)}</p>
+                  <p className="text-xs" style={{ color: "var(--dim)" }}>Distance</p>
+                </div>
+                <div className="w-px h-8" style={{ background: "var(--surface2)" }} />
+                <div className="flex-1">
+                  <p className="text-sm font-bold">{formatDuration(route.duration)}</p>
+                  <p className="text-xs" style={{ color: "var(--dim)" }}>Duree</p>
+                </div>
+                <div className="w-px h-8" style={{ background: "var(--surface2)" }} />
+                <div className="flex-1 text-center">
+                  <p className="text-sm font-bold">{routeMode === "driving" ? "🚗" : routeMode === "walking" ? "🚶" : "🚴"}</p>
+                  <p className="text-xs" style={{ color: "var(--dim)" }}>{routeMode === "driving" ? "Voiture" : routeMode === "walking" ? "A pied" : "Velo"}</p>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Legend */}
-        <div className="flex gap-2 overflow-x-auto">
-          {markers.map((m, i) => (
-            <span key={`a-${i}`} className="flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-bold" style={{ background: "var(--surface)" }}>
-              {m.emoji} {m.name}
-            </span>
-          ))}
-          {deviceMarkers.map((m, i) => (
-            <span key={`d-${i}`} className="flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-bold" style={{ background: "rgba(61,214,200,0.15)", color: "var(--teal)" }}>
-              {m.emoji} {m.name}
-            </span>
-          ))}
+        {tab !== "itineraire" && (
+          <div className="flex gap-2 overflow-x-auto">
+            {markers.map((m, i) => (
+              <span key={`a-${i}`} className="flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-bold" style={{ background: "var(--surface)" }}>
+                {m.emoji} {m.name}
+              </span>
+            ))}
+            {deviceMarkers.map((m, i) => (
+              <span key={`d-${i}`} className="flex-shrink-0 px-2 py-1 rounded-full text-[10px] font-bold" style={{ background: "rgba(61,214,200,0.15)", color: "var(--teal)" }}>
+                {m.emoji} {m.name}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Right side buttons */}
+      <div className="absolute flex flex-col gap-2" style={{ zIndex: 1001, right: 16, bottom: 100 }}>
+        {/* My location */}
+        <button
+          onClick={locateMe}
+          className="w-11 h-11 flex items-center justify-center rounded-full text-lg shadow-lg"
+          style={{ background: myLocation ? "var(--accent)" : "var(--surface2)" }}
+          title="Ma position"
+        >
+          {myLocation ? "📍" : "🎯"}
+        </button>
+
+        {/* Map style */}
+        <div className="relative">
+          <button
+            onClick={() => setShowStylePicker(!showStylePicker)}
+            className="w-11 h-11 flex items-center justify-center rounded-full text-lg shadow-lg"
+            style={{ background: "var(--surface2)" }}
+            title="Style de carte"
+          >
+            🗺️
+          </button>
+          {showStylePicker && (
+            <div className="absolute right-full mr-2 bottom-0 flex flex-col gap-1 p-2 rounded-xl shadow-xl" style={{ background: "var(--surface)", minWidth: 120 }}>
+              {MAP_STYLES.map((s) => (
+                <button
+                  key={s.key}
+                  className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-bold transition-colors text-left"
+                  style={{
+                    background: mapStyle === s.key ? "var(--accent)" : "transparent",
+                    color: mapStyle === s.key ? "#fff" : "var(--text)",
+                  }}
+                  onClick={() => { setMapStyle(s.key); setShowStylePicker(false); }}
+                >
+                  {s.icon} {s.label}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 
-      <MapView markers={allMarkers} center={center} interactive height="100dvh" zoom={14} />
+      <MapView
+        markers={allMarkers}
+        center={mapCenter}
+        interactive
+        height="100dvh"
+        zoom={14}
+        mapStyle={mapStyle}
+        route={route}
+      />
     </div>
   );
 }

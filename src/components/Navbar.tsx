@@ -6,8 +6,8 @@ import { usePathname } from "next/navigation";
 const tabs = [
   { href: "/home", emoji: "🏠", label: "Accueil" },
   { href: "/famille", emoji: "👨‍👩‍👧‍👦", label: "Famille" },
-  { href: "/bienetre", emoji: "🧘", label: "Bien-être" },
-  { href: "/reglages", emoji: "⚙️", label: "Réglages" },
+  { href: "/bienetre", emoji: "🧘", label: "Bien-etre" },
+  { href: "/reglages", emoji: "⚙️", label: "Reglages" },
 ];
 
 export default function Navbar() {
@@ -15,11 +15,13 @@ export default function Navbar() {
 
   return (
     <nav
-      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full flex justify-around items-center py-2"
+      className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full flex justify-around items-center"
       style={{
         maxWidth: 430,
-        background: "var(--surface)",
-        borderTop: "1px solid rgba(255,255,255,0.04)",
+        background: "rgba(15, 17, 23, 0.85)",
+        backdropFilter: "blur(20px)",
+        borderTop: "1px solid var(--glass-border)",
+        paddingTop: 8,
         paddingBottom: "calc(8px + env(safe-area-inset-bottom))",
         zIndex: 100,
       }}
@@ -30,11 +32,26 @@ export default function Navbar() {
           <Link
             key={tab.href}
             href={tab.href}
-            className="flex flex-col items-center gap-0.5 py-1 px-3"
-            style={{ color: active ? "var(--accent)" : "var(--dim)" }}
+            className="flex flex-col items-center gap-0.5 py-1 px-3 relative"
           >
-            <span className="text-[20px]">{tab.emoji}</span>
-            <span className="text-[9px] font-bold">{tab.label}</span>
+            {active && (
+              <span
+                className="absolute -top-[8px] left-1/2 -translate-x-1/2 w-6 h-[3px] rounded-full"
+                style={{ background: "var(--accent)" }}
+              />
+            )}
+            <span
+              className="text-[20px] transition-transform"
+              style={{ transform: active ? "scale(1.15)" : "scale(1)" }}
+            >
+              {tab.emoji}
+            </span>
+            <span
+              className="text-[9px] font-bold transition-colors"
+              style={{ color: active ? "var(--accent)" : "var(--dim)" }}
+            >
+              {tab.label}
+            </span>
           </Link>
         );
       })}

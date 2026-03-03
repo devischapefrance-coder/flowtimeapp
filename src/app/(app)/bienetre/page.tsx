@@ -430,23 +430,29 @@ export default function BienetirePage() {
 
   // ---- MAIN GRID ----
   return (
-    <div className="px-4 py-4 animate-in">
-      <h1 className="text-xl font-extrabold mb-2">Bien-être</h1>
+    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
+      <h1 className="text-xl font-bold mb-2">Bien-etre</h1>
 
-      {streak > 0 && (
-        <div className="card flex items-center gap-2 mb-4">
-          <span className="text-2xl">🔥</span>
-          <span className="font-bold">{streak} jour{streak > 1 ? "s" : ""} consécutif{streak > 1 ? "s" : ""}</span>
+      {/* Streak card */}
+      <div className="card flex items-center gap-3 mb-4" style={{ background: streak > 0 ? "var(--accent-soft)" : "var(--surface)", border: streak > 0 ? "1px solid rgba(124,107,240,0.15)" : undefined }}>
+        <span className="text-2xl">{streak > 0 ? "🔥" : "💫"}</span>
+        <div className="flex-1">
+          <p className="text-sm font-bold">
+            {streak > 0 ? `${streak} jour${streak > 1 ? "s" : ""} consecutif${streak > 1 ? "s" : ""}` : "Commence ta serie !"}
+          </p>
+          <p className="text-[11px]" style={{ color: "var(--dim)" }}>
+            {streak > 0 ? "Continue comme ca !" : "Fais une activite chaque jour"}
+          </p>
         </div>
-      )}
+      </div>
 
       <div className="grid grid-cols-2 gap-3">
         {ACTIVITIES.map((a) => (
-          <button key={a.key} className="card text-center cursor-pointer" onClick={() => setView(a.key)}>
-            <span className="text-[32px]">{a.emoji}</span>
+          <button key={a.key} className="card text-center cursor-pointer group" onClick={() => setView(a.key)}>
+            <span className="text-[32px] block transition-transform group-hover:scale-110">{a.emoji}</span>
             <p className="text-sm font-bold mt-2">{a.name}</p>
-            <p className="text-[11px] mt-1" style={{ color: "var(--dim)" }}>
-              Dernière : {daysAgo(lastActivity[a.key])}
+            <p className="text-[10px] mt-1" style={{ color: "var(--dim)" }}>
+              {daysAgo(lastActivity[a.key])}
             </p>
           </button>
         ))}

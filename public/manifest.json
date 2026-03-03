@@ -1,11 +1,11 @@
 {
   "name": "FlowTime",
   "short_name": "Flow",
-  "description": "Votre famille, parfaitement synchronisée",
+  "description": "Votre famille, parfaitement synchronisee",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#1C1510",
-  "theme_color": "#FF8C42",
+  "background_color": "#0F1117",
+  "theme_color": "#7C6BF0",
   "orientation": "portrait",
   "icons": [
     {
