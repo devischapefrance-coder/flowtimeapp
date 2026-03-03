@@ -186,30 +186,47 @@ export default function HomePage() {
       </div>
 
       {/* Member filters */}
-      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
+      <div className="flex justify-center gap-3 mb-3">
         <button
-          className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors"
-          style={{
-            background: !filter ? "var(--accent)" : "var(--surface2)",
-            color: !filter ? "#fff" : "var(--dim)",
-          }}
+          className="flex flex-col items-center gap-1 transition-opacity"
+          style={{ opacity: !filter ? 1 : 0.4 }}
           onClick={() => setFilter(null)}
         >
-          Tous
-        </button>
-        {members.map((m) => (
-          <button
-            key={m.id}
-            className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1 transition-colors"
+          <div
+            className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
             style={{
-              background: filter === m.id ? "var(--accent)" : "var(--surface2)",
-              color: filter === m.id ? "#fff" : "var(--dim)",
+              background: !filter ? "var(--accent)" : "var(--surface2)",
+              boxShadow: !filter ? "0 0 12px var(--accent-glow)" : "none",
             }}
-            onClick={() => setFilter(filter === m.id ? null : m.id)}
           >
-            {m.emoji} {m.name}
-          </button>
-        ))}
+            👥
+          </div>
+          <span className="text-[9px] font-bold" style={{ color: !filter ? "var(--accent)" : "var(--dim)" }}>Tous</span>
+        </button>
+        {members.map((m) => {
+          const active = filter === m.id;
+          return (
+            <button
+              key={m.id}
+              className="flex flex-col items-center gap-1 transition-opacity"
+              style={{ opacity: active ? 1 : 0.4 }}
+              onClick={() => setFilter(active ? null : m.id)}
+            >
+              <div
+                className="w-10 h-10 rounded-full flex items-center justify-center text-lg relative"
+                style={{
+                  background: "var(--surface2)",
+                  boxShadow: active ? `0 0 12px ${m.color}44` : "none",
+                  outline: active ? `2px solid ${m.color}` : "none",
+                  outlineOffset: 2,
+                }}
+              >
+                {m.emoji}
+              </div>
+              <span className="text-[9px] font-bold" style={{ color: active ? m.color : "var(--dim)" }}>{m.name.split(" ")[0]}</span>
+            </button>
+          );
+        })}
       </div>
 
       {/* Timeline */}
