@@ -10,7 +10,15 @@ import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
 
-const MEMBER_EMOJIS = ["⚽","🎨","🎵","🎮","📚","🏊","🎭","🎤","💃","🎯","🏀","🎸","🐱","🐶","🦋","🌟","💪","🎪","🎲","🎳"];
+const MEMBER_EMOJIS = [
+  // Personnes
+  "👨","👩","👦","👧","👶","🧔","👱‍♂️","👱‍♀️","👴","👵","🧑","🧒",
+  "👨‍🦰","👩‍🦰","👨‍🦱","👩‍🦱","👨‍🦳","👩‍🦳","🧑‍🦲","👸","🤴","🧑‍🍼",
+  // Activités
+  "⚽","🎨","🎵","🎮","📚","🏊","💃","🏀","🎸","💪",
+  // Animaux
+  "🐱","🐶","🦊","🐻","🐼","🦋","🌟",
+];
 const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
 const ROLES = ["parent","enfant","bébé","ado","grand-parent","autre"];
 const ADDRESS_EMOJIS = ["🏠","🏫","💼","⚽","🏥","👶","👴","🏪","🎭","🏖️"];

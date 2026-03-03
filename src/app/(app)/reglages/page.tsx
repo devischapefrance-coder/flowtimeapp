@@ -8,7 +8,18 @@ import Modal from "@/components/Modal";
 import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 
-const PROFILE_EMOJIS = ["👤","👨","👩","👦","👧","👶","👴","👵","🧑","🧔","👱","🧑‍🦰","🧑‍🦱","🧑‍🦳","🧑‍🦲","🐱","🐶","🦊","🐻","🐼"];
+const PROFILE_EMOJIS = [
+  // Hommes
+  "👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🧑‍🦲","🤴",
+  // Femmes
+  "👩","👱‍♀️","👩‍🦰","👩‍🦱","👩‍🦳","👸",
+  // Jeunes
+  "👦","👧","🧒","🧑",
+  // Bébés / Seniors
+  "👶","🧒","👴","👵","🧑‍🍼",
+  // Fun
+  "🐱","🐶","🦊","🐻","🐼","🦁","🐸","🌟",
+];
 
 export default function ReglagesPage() {
   const router = useRouter();
