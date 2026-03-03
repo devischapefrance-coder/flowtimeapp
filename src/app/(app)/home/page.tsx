@@ -7,6 +7,20 @@ import FlowChat from "@/components/FlowChat";
 import Timeline from "@/components/Timeline";
 import type { Event, Member } from "@/lib/types";
 
+function getDays(count: number) {
+  const days = [];
+  for (let i = 0; i < count; i++) {
+    const d = new Date();
+    d.setDate(d.getDate() + i);
+    days.push({
+      date: d.toISOString().split("T")[0],
+      label: i === 0 ? "Aujourd'hui" : i === 1 ? "Demain" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
+      dayName: d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    });
+  }
+  return days;
+}
+
 export default function HomePage() {
   const { profile } = useProfile();
   const [events, setEvents] = useState<Event[]>([]);
@@ -14,13 +28,11 @@ export default function HomePage() {
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
 
-  const today = new Date().toISOString().split("T")[0];
-  const dateDisplay = new Date().toLocaleDateString("fr-FR", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const days = getDays(7);
+  const [selectedDay, setSelectedDay] = useState(0);
+  const currentDate = days[selectedDay].date;
+
+  const dateDisplay = days[selectedDay].dayName;
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
@@ -29,14 +41,27 @@ export default function HomePage() {
         .from("events")
         .select("*, members(name,emoji,color)")
         .eq("family_id", profile.family_id)
-        .eq("date", today),
+        .gte("date", days[0].date)
+        .lte("date", days[days.length - 1].date),
       supabase.from("members").select("*").eq("family_id", profile.family_id),
     ]);
     if (evRes.data) setEvents(evRes.data as Event[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
-  }, [profile?.family_id, today]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.family_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
+
+  const dayEvents = events.filter((e) => e.date === currentDate);
+  const filteredEvents = filter
+    ? dayEvents.filter((e) => e.member_id === filter)
+    : dayEvents;
+
+  // Count events per day for badges
+  const eventCounts: Record<string, number> = {};
+  for (const ev of events) {
+    eventCounts[ev.date] = (eventCounts[ev.date] || 0) + 1;
+  }
 
   async function deleteEvent(id: string) {
     await supabase.from("events").delete().eq("id", id);
@@ -57,7 +82,7 @@ export default function HomePage() {
         family_id: profile.family_id,
         title: action.data.title,
         time: action.data.time,
-        date: action.data.date || today,
+        date: action.data.date || currentDate,
         member_id: memberId,
         description: action.data.description || "",
       });
@@ -70,10 +95,10 @@ export default function HomePage() {
         const mem = members.find((m) => m.name.toLowerCase() === memberName.toLowerCase());
         if (mem) memberId = mem.id;
       }
-      const days = action.data.days as number[];
+      const recurringDays = action.data.days as number[];
       const startDate = new Date();
       for (let week = 0; week < 4; week++) {
-        for (const day of days) {
+        for (const day of recurringDays) {
           const d = new Date(startDate);
           d.setDate(d.getDate() + ((day - d.getDay() + 7) % 7) + week * 7);
           await supabase.from("events").insert({
@@ -82,7 +107,7 @@ export default function HomePage() {
             time: action.data.time_start,
             date: d.toISOString().split("T")[0],
             member_id: memberId,
-            recurring: { days, time_start: action.data.time_start, time_end: action.data.time_end },
+            recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
           });
         }
       }
@@ -90,14 +115,10 @@ export default function HomePage() {
     loadData();
   }
 
-  const filteredEvents = filter
-    ? events.filter((e) => e.member_id === filter)
-    : events;
-
   const flowContext = {
     members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji })),
-    events: events.map((e) => ({ title: e.title, time: e.time, member: e.members?.name })),
-    today,
+    events: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, member: e.members?.name })),
+    today: currentDate,
   };
 
   return (
@@ -125,8 +146,37 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="flex gap-2 mt-6 mb-3 overflow-x-auto pb-1">
+      {/* Day selector */}
+      <div className="flex gap-2 mt-6 mb-2 overflow-x-auto pb-1">
+        {days.map((d, i) => (
+          <button
+            key={d.date}
+            className="flex-shrink-0 flex flex-col items-center px-3 py-2 rounded-xl transition-colors relative"
+            style={{
+              background: selectedDay === i ? "var(--accent)" : "var(--surface2)",
+              color: selectedDay === i ? "#fff" : "var(--dim)",
+              minWidth: 72,
+            }}
+            onClick={() => setSelectedDay(i)}
+          >
+            <span className="text-[11px] font-bold capitalize">{d.label}</span>
+            {eventCounts[d.date] > 0 && (
+              <span
+                className="absolute -top-1 -right-1 w-4 h-4 rounded-full flex items-center justify-center text-[9px] font-bold"
+                style={{
+                  background: selectedDay === i ? "#fff" : "var(--accent)",
+                  color: selectedDay === i ? "var(--accent)" : "#fff",
+                }}
+              >
+                {eventCounts[d.date]}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Member filters */}
+      <div className="flex gap-2 mb-3 overflow-x-auto pb-1">
         <button
           className="flex-shrink-0 px-3 py-1.5 rounded-full text-xs font-bold transition-colors"
           style={{
@@ -153,7 +203,9 @@ export default function HomePage() {
       </div>
 
       {/* Timeline */}
-      <p className="label">Planning du jour</p>
+      <p className="label">
+        {selectedDay === 0 ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
+      </p>
       <Timeline events={filteredEvents} onDelete={deleteEvent} />
 
       {/* FAB */}
