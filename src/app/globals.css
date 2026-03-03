@@ -87,6 +87,11 @@
     color: var(--faint) !important;
   }
 
+  select option {
+    background: var(--surface-solid);
+    color: var(--text);
+  }
+
   input:-webkit-autofill,
   input:-webkit-autofill:hover,
   input:-webkit-autofill:focus {

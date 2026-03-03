@@ -516,7 +516,7 @@ export default function FamillePage() {
                 <button
                   key={i}
                   className="w-full text-left text-xs p-3 hover:opacity-80 transition-opacity"
-                  style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}
+                  style={{ borderBottom: "1px solid var(--glass-border)" }}
                   onClick={() => {
                     setForm({ ...form, address: r.display_name, lat: r.lat, lng: r.lon });
                     setSearchQuery("");
