@@ -41,6 +41,16 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   }
 
   useEffect(() => {
+    // If user chose not to stay logged in, sign out when browser closes
+    const sessionOnly = sessionStorage.getItem("flowtime_session_only");
+    if (sessionOnly) {
+      const handleUnload = () => { supabase.auth.signOut(); };
+      window.addEventListener("beforeunload", handleUnload);
+      return () => window.removeEventListener("beforeunload", handleUnload);
+    }
+  }, []);
+
+  useEffect(() => {
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

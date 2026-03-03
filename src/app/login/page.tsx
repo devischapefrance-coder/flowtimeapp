@@ -11,6 +11,7 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [stayLogged, setStayLogged] = useState(true);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -30,6 +31,11 @@ export default function LoginPage() {
       return setError(authError.message);
     }
 
+    if (!stayLogged) {
+      sessionStorage.setItem("flowtime_session_only", "true");
+    } else {
+      sessionStorage.removeItem("flowtime_session_only");
+    }
     router.push("/home");
   }
 
@@ -84,6 +90,15 @@ export default function LoginPage() {
           onChange={(e) => setPassword(e.target.value)}
           onKeyDown={(e) => e.key === "Enter" && handleSubmit(e)}
         />
+        <label className="flex items-center gap-2 cursor-pointer mt-1">
+          <input
+            type="checkbox"
+            checked={stayLogged}
+            onChange={(e) => setStayLogged(e.target.checked)}
+            className="!w-4 !h-4 !p-0 rounded"
+          />
+          <span className="text-xs" style={{ color: "var(--dim)" }}>Rester connecté</span>
+        </label>
         <button type="submit" className="btn btn-primary mt-2" disabled={loading}>
           {loading ? "Connexion..." : "Se connecter"}
         </button>
