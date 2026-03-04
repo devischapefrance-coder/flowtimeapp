@@ -190,9 +190,11 @@ export default function ReglagesPage() {
       return setJoinError(result.error || "Erreur inconnue");
     }
 
-    setJoinSuccess("Tu as rejoint la famille ! Recharge l'app pour voir les changements.");
+    setJoinSuccess("Tu as rejoint la famille ! Tu as été ajouté comme membre.");
     setJoinCode("");
     refreshProfile();
+    // Auto-reload after 2s to refresh all data
+    setTimeout(() => window.location.reload(), 2000);
   }
 
   async function signOut() {

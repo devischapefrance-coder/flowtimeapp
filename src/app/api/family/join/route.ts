@@ -23,48 +23,34 @@ export async function POST(req: Request) {
 
   const search = code.trim().toLowerCase();
 
-  // Use raw SQL via rpc — family_id is UUID, need cast to text for ILIKE
-  const { data: matches, error: searchError } = await adminClient
-    .rpc("find_family_by_code", { code_prefix: search, exclude_user: user.id });
+  // 1. Find the target family — fetch all profiles and filter in JS (UUID can't use ilike)
+  const { data: allProfiles, error: fetchError } = await adminClient
+    .from("profiles")
+    .select("id, family_id, first_name, last_name, emoji, phone")
+    .neq("id", user.id);
 
-  if (searchError) {
-    // Fallback: if RPC doesn't exist yet, try direct query with text cast
-    const { data: fallback, error: fallbackError } = await adminClient
-      .from("profiles")
-      .select("family_id")
-      .neq("id", user.id);
-
-    if (fallbackError || !fallback) {
-      return Response.json({ error: `Erreur: ${searchError.message}` }, { status: 500 });
-    }
-
-    // Filter in JS as fallback
-    const match = fallback.find((p) =>
-      p.family_id.toLowerCase().startsWith(search)
-    );
-
-    if (!match) {
-      return Response.json({ error: "Code famille introuvable. Vérifie le code et réessaie." }, { status: 404 });
-    }
-
-    const { error: updateError } = await adminClient
-      .from("profiles")
-      .update({ family_id: match.family_id })
-      .eq("id", user.id);
-
-    if (updateError) {
-      return Response.json({ error: "Erreur lors de la mise à jour." }, { status: 500 });
-    }
-
-    return Response.json({ success: true, family_id: match.family_id });
+  if (fetchError || !allProfiles) {
+    return Response.json({ error: `Erreur: ${fetchError?.message}` }, { status: 500 });
   }
 
-  if (!matches || matches.length === 0) {
+  const match = allProfiles.find((p) =>
+    p.family_id.toLowerCase().startsWith(search)
+  );
+
+  if (!match) {
     return Response.json({ error: "Code famille introuvable. Vérifie le code et réessaie." }, { status: 404 });
   }
 
-  const targetFamilyId = matches[0].family_id;
+  const targetFamilyId = match.family_id;
 
+  // 2. Get the joining user's profile info
+  const { data: joinerProfile } = await adminClient
+    .from("profiles")
+    .select("first_name, last_name, emoji, phone")
+    .eq("id", user.id)
+    .single();
+
+  // 3. Update the user's family_id to join the family
   const { error: updateError } = await adminClient
     .from("profiles")
     .update({ family_id: targetFamilyId })
@@ -72,6 +58,26 @@ export async function POST(req: Request) {
 
   if (updateError) {
     return Response.json({ error: "Erreur lors de la mise à jour." }, { status: 500 });
+  }
+
+  // 4. Auto-create a member entry for this person in the family
+  if (joinerProfile) {
+    // Check if a member with this name already exists to avoid duplicates
+    const { data: existingMembers } = await adminClient
+      .from("members")
+      .select("id")
+      .eq("family_id", targetFamilyId)
+      .ilike("name", joinerProfile.first_name);
+
+    if (!existingMembers || existingMembers.length === 0) {
+      await adminClient.from("members").insert({
+        family_id: targetFamilyId,
+        name: joinerProfile.first_name,
+        emoji: joinerProfile.emoji || "👤",
+        role: "parent",
+        phone: joinerProfile.phone || null,
+      });
+    }
   }
 
   return Response.json({ success: true, family_id: targetFamilyId });
