@@ -1357,7 +1357,7 @@ export default function HomePage() {
       <button
         className="fixed flex items-center justify-center rounded-full text-white text-xl"
         style={{
-          bottom: 100,
+          bottom: "calc(70px + env(safe-area-inset-bottom, 0px))",
           right: "max(20px, calc(50% - 195px))",
           width: 54,
           height: 54,
