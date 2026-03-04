@@ -138,16 +138,16 @@ export default function FamillePage() {
   // MEMBER CRUD
   function openMemberModal(m: Member | "new") {
     if (m === "new") {
-      setForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8" });
+      setForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "" });
     } else {
-      setForm({ name: m.name, role: m.role, emoji: m.emoji, color: m.color });
+      setForm({ name: m.name, role: m.role, emoji: m.emoji, color: m.color, birth_date: m.birth_date || "" });
     }
     setMemberModal(m);
   }
 
   async function saveMember() {
     if (!familyId) return;
-    const data = { family_id: familyId, name: form.name as string, role: form.role as string, emoji: form.emoji as string, color: form.color as string };
+    const data = { family_id: familyId, name: form.name as string, role: form.role as string, emoji: form.emoji as string, color: form.color as string, birth_date: (form.birth_date as string) || null };
     if (memberModal === "new") {
       await supabase.from("members").insert(data);
     } else if (memberModal) {
@@ -347,16 +347,22 @@ export default function FamillePage() {
 
       {/* MEMBRES */}
       <p className="label">Membres de la famille</p>
-      {members.map((m) => (
-        <div key={m.id} className="card flex items-center gap-3 cursor-pointer" onClick={() => openMemberModal(m)}>
-          <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl" style={{ background: "var(--surface2)" }}>{m.emoji}</div>
-          <div className="flex-1">
-            <p className="font-bold text-sm">{m.name}</p>
-            <p className="text-xs" style={{ color: "var(--dim)" }}>{ROLES.find((r) => r.key === m.role)?.label || m.role}</p>
+      {members.map((m) => {
+        const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+        return (
+          <div key={m.id} className="card flex items-center gap-3 cursor-pointer" onClick={() => openMemberModal(m)}>
+            <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl" style={{ background: "var(--surface2)" }}>{m.emoji}</div>
+            <div className="flex-1">
+              <p className="font-bold text-sm">{m.name}</p>
+              <p className="text-xs" style={{ color: "var(--dim)" }}>
+                {ROLES.find((r) => r.key === m.role)?.label || m.role}
+                {age !== null && ` · ${age} ans`}
+              </p>
+            </div>
+            <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
           </div>
-          <span className="w-2 h-2 rounded-full" style={{ background: m.color }} />
-        </div>
-      ))}
+        );
+      })}
       <button className="btn btn-secondary mt-1 mb-6" onClick={() => openMemberModal("new")}>＋ Ajouter un membre</button>
 
       {/* CONTACTS */}
@@ -495,6 +501,8 @@ export default function FamillePage() {
       <Modal open={memberModal !== null} onClose={() => setMemberModal(null)} title={memberModal === "new" ? "Nouveau membre" : "Modifier le membre"}>
         <div className="flex flex-col gap-3">
           <input placeholder="Nom" value={(form.name as string) || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
+          <p className="label">Date de naissance</p>
+          <input type="date" value={(form.birth_date as string) || ""} onChange={(e) => setForm({ ...form, birth_date: e.target.value })} />
           <p className="label">Role</p>
           <div className="flex flex-wrap gap-2">
             {ROLES.map((r) => (

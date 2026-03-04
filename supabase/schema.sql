@@ -30,6 +30,7 @@ CREATE TABLE members (
   role TEXT DEFAULT 'enfant',
   emoji TEXT DEFAULT '👦',
   color TEXT DEFAULT '#3DD6C8',
+  birth_date DATE,
   schedules JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

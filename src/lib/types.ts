@@ -20,6 +20,7 @@ export interface Member {
   role: string;
   emoji: string;
   color: string;
+  birth_date: string | null;
   schedules: unknown[];
   created_at: string;
 }
