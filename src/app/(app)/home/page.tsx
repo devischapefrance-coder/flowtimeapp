@@ -285,13 +285,14 @@ export default function HomePage() {
     userName: profile?.first_name,
     members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji })),
     todayEvents: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
-    weekEvents: events.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
+    weekEvents: viewEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
     addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
     contacts: contacts.map((c) => ({ name: c.name, relation: c.relation, phone: c.phone })),
 
     selectedDate: currentDate,
     selectedDayName: days[selectedDay].dayName,
-    today: days[0].date,
+    today: todayStr,
+    viewMode,
   };
 
   const totalWeekEvents = viewEvents.length;

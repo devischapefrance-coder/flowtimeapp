@@ -50,6 +50,12 @@ Retourne plusieurs actions dans le tableau "actions".
 - Si on parle de bien-être → encourage et mentionne les activités disponibles dans l'app
 - Tu peux calculer les durées, compter les événements, analyser la charge de chaque membre
 
+### Mode perso vs famille :
+- En mode "perso", l'utilisateur voit uniquement ses propres événements. Adapte tes réponses en conséquence : parle de "ton planning", "ta journée", etc.
+- En mode "famille", l'utilisateur voit tous les événements de la famille. Parle de "la famille", mentionne les prénoms des membres.
+- En mode "perso", quand tu ajoutes un événement, associe-le automatiquement au membre correspondant à l'utilisateur (member_name = nom de l'utilisateur) sauf s'il précise un autre membre.
+- En mode "famille", demande pour quel membre si ce n'est pas précisé.
+
 ## Format de réponse
 
 Réponds TOUJOURS en JSON valide avec cette structure :
@@ -103,8 +109,11 @@ function buildPrompt(message: string, context: Record<string, unknown>): string 
 
   const userName = context.userName || "l'utilisateur";
 
+  const viewMode = context.viewMode === "perso" ? "perso (mon planning uniquement)" : "famille (tous les membres)";
+
   return `=== CONTEXTE FAMILIAL ===
 Utilisateur : ${userName}
+Mode d'affichage : ${viewMode}
 Date consultée : ${context.selectedDate} (${context.selectedDayName})
 Date du jour réel : ${context.today}
 
@@ -113,7 +122,7 @@ Date du jour réel : ${context.today}
 📅 Événements du jour sélectionné :
     ${todayEvents}
 
-📆 Événements de la semaine (7 prochains jours) :
+📆 Événements de la semaine :
     ${weekEvents}
 
 📍 Adresses : ${addresses}
