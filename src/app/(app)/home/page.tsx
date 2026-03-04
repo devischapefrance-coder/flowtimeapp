@@ -587,10 +587,14 @@ export default function HomePage() {
             📤
           </button>
           <div
-            className="w-11 h-11 rounded-full flex items-center justify-center text-xl"
+            className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden"
             style={{ background: "var(--surface2)" }}
           >
-            {profile?.emoji || "👤"}
+            {profile?.avatar_url ? (
+              <img src={profile.avatar_url} alt="Profil" className="w-full h-full object-cover" />
+            ) : (
+              profile?.emoji || "👤"
+            )}
           </div>
         </div>
       </div>
