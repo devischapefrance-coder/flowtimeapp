@@ -16,7 +16,8 @@
       "Bash(curl:*)",
       "Bash(wc:*)",
       "Bash(npx vercel:*)",
-      "Bash(python3:*)"
+      "Bash(python3:*)",
+      "Bash(vercel:*)"
     ]
   }
 }

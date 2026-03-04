@@ -132,6 +132,7 @@
   * {
     scrollbar-width: thin;
     scrollbar-color: var(--faint) transparent;
+    -webkit-tap-highlight-color: transparent;
   }
 
   body {
@@ -142,6 +143,7 @@
     min-height: 100dvh;
     -webkit-font-smoothing: antialiased;
     letter-spacing: 0.01em;
+    overscroll-behavior-y: contain;
   }
 
   input, textarea, select {
@@ -227,10 +229,11 @@
     border-radius: var(--radius);
     padding: 16px;
     margin-bottom: 10px;
-    transition: border-color 0.2s, transform 0.15s ease, opacity 0.15s ease;
+    transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease;
+    will-change: transform;
   }
   .card:hover { border-color: var(--card-hover); }
-  .card:active { transform: scale(0.98); opacity: 0.85; }
+  .card:active { transform: scale(0.97); opacity: 0.9; }
 
   .label {
     font-size: 11px;
@@ -241,48 +244,19 @@
     margin-bottom: 10px;
   }
 
-  .animate-in { animation: fadeIn 0.35s ease-out !important; }
+  .animate-in { animation: fadeIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both; }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(6px); }
-    to { opacity: 1; transform: translateY(0); }
+    from { opacity: 0; transform: translateY(8px) translateZ(0); }
+    to { opacity: 1; transform: translateY(0) translateZ(0); }
   }
 
-  .modal-slide-up {
-    animation: modalSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
-    opacity: 1 !important;
-  }
-
-  .modal-slide-down {
-    animation: modalSlideDown 0.28s cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
-  }
-
-  @keyframes modalSlideUp {
-    from { opacity: 0; transform: translateY(100%); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-
-  @keyframes modalSlideDown {
-    from { opacity: 1; transform: translateY(0); }
-    to { opacity: 0; transform: translateY(100%); }
-  }
-
-  .modal-backdrop-in {
-    animation: backdropIn 0.3s ease-out forwards;
-  }
-
-  .modal-backdrop-out {
-    animation: backdropOut 0.25s ease-in forwards;
-  }
-
-  @keyframes backdropIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes backdropOut {
-    from { opacity: 1; }
-    to { opacity: 0; }
+  /* GPU-accelerated utility */
+  .gpu-accelerated {
+    will-change: transform;
+    -webkit-backface-visibility: hidden;
+    backface-visibility: hidden;
+    transform: translateZ(0);
   }
 
   @keyframes pulse {

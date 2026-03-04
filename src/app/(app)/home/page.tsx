@@ -153,9 +153,8 @@ export default function HomePage() {
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
-  const [weekSlideX, setWeekSlideX] = useState(0);
-  const [weekSlideAnim, setWeekSlideAnim] = useState(false);
-  const weekTouchRef = useRef({ startX: 0, startY: 0, swiping: false });
+  const weekGridRef = useRef<HTMLDivElement>(null);
+  const weekTouchRef = useRef({ startX: 0, startY: 0, swiping: false, slideX: 0 });
 
   // Month view state
   const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
@@ -810,8 +809,10 @@ export default function HomePage() {
             <div className="overflow-hidden"
               onTouchStart={(e) => {
                 const t = e.touches[0];
-                weekTouchRef.current = { startX: t.clientX, startY: t.clientY, swiping: false };
-                setWeekSlideAnim(false);
+                weekTouchRef.current = { startX: t.clientX, startY: t.clientY, swiping: false, slideX: 0 };
+                if (weekGridRef.current) {
+                  weekGridRef.current.style.transition = "none";
+                }
               }}
               onTouchMove={(e) => {
                 const ref = weekTouchRef.current;
@@ -820,40 +821,39 @@ export default function HomePage() {
                 if (!ref.swiping && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
                   ref.swiping = true;
                 }
-                if (ref.swiping) {
-                  setWeekSlideX(dx);
+                if (ref.swiping && weekGridRef.current) {
+                  ref.slideX = dx;
+                  weekGridRef.current.style.transform = `translateX(${dx}px) translateZ(0)`;
                 }
               }}
               onTouchEnd={() => {
                 const ref = weekTouchRef.current;
-                if (ref.swiping && Math.abs(weekSlideX) > 60) {
-                  const dir = weekSlideX < 0 ? 1 : -1;
-                  // Slide out fully
-                  setWeekSlideAnim(true);
-                  setWeekSlideX(dir * -400);
+                const grid = weekGridRef.current;
+                if (!grid) { ref.swiping = false; return; }
+                if (ref.swiping && Math.abs(ref.slideX) > 60) {
+                  const dir = ref.slideX < 0 ? 1 : -1;
+                  // Slide out
+                  grid.style.transition = "transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)";
+                  grid.style.transform = `translateX(${dir * -420}px) translateZ(0)`;
                   setTimeout(() => {
                     setDayOffset((o) => o + dir);
-                    // Reset position instantly on opposite side, then slide in
-                    setWeekSlideAnim(false);
-                    setWeekSlideX(dir * 400);
+                    // Jump to other side instantly, then slide in
+                    grid.style.transition = "none";
+                    grid.style.transform = `translateX(${dir * 420}px) translateZ(0)`;
                     requestAnimationFrame(() => {
-                      setWeekSlideAnim(true);
-                      setWeekSlideX(0);
+                      grid.style.transition = "transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)";
+                      grid.style.transform = "translateX(0) translateZ(0)";
                     });
-                  }, 180);
+                  }, 200);
                 } else {
-                  setWeekSlideAnim(true);
-                  setWeekSlideX(0);
+                  grid.style.transition = "transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)";
+                  grid.style.transform = "translateX(0) translateZ(0)";
                 }
-                weekTouchRef.current.swiping = false;
+                ref.swiping = false;
               }}
             >
-            <div className="grid grid-cols-7 gap-1"
-              style={{
-                transform: `translateX(${weekSlideX}px)`,
-                transition: weekSlideAnim ? "transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none",
-                willChange: "transform",
-              }}>
+            <div ref={weekGridRef} className="grid grid-cols-7 gap-1"
+              style={{ willChange: "transform", transform: "translateZ(0)" }}>
               {days.map((d, i) => {
                 const date = new Date(d.date);
                 const dayNum = date.getDate();
