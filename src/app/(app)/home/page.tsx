@@ -1156,7 +1156,7 @@ export default function HomePage() {
         : [46.6, 2.5];
     return (
       <>
-        <div className="card !mb-0 block cursor-pointer" onClick={() => setMapFullOpen(true)}>
+        <div className="card !mb-0 block cursor-pointer" style={{ position: "relative", zIndex: 1 }} onClick={() => setMapFullOpen(true)}>
           <div className="flex items-center justify-between mb-2">
             <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
             <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
@@ -1296,7 +1296,7 @@ export default function HomePage() {
   return (
     <div
       className="px-4 py-4 animate-in gradient-bg"
-      style={{ paddingBottom: 180 }}
+      style={{ paddingBottom: 200 }}
     >
       {/* Offline banner */}
       {isOffline && (
