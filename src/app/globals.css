@@ -268,28 +268,6 @@
     backdrop-filter: blur(16px);
   }
 
-  @keyframes wiggle {
-    0% { transform: rotate(-0.6deg); }
-    25% { transform: rotate(0.6deg); }
-    50% { transform: rotate(-0.4deg); }
-    75% { transform: rotate(0.4deg); }
-    100% { transform: rotate(-0.6deg); }
-  }
-
-  .widget-wiggle {
-    animation: wiggle 0.4s ease-in-out infinite;
-  }
-
-  /* Stagger wiggle for each widget child so they don't all move in sync (iOS-like) */
-  .widget-wiggle:nth-child(2n) {
-    animation-delay: 0.1s;
-    animation-duration: 0.45s;
-  }
-  .widget-wiggle:nth-child(3n) {
-    animation-delay: 0.05s;
-    animation-duration: 0.38s;
-  }
-
   .gradient-bg {
     background: radial-gradient(ellipse at top, rgba(124, 107, 240, 0.06) 0%, transparent 60%),
                 radial-gradient(ellipse at bottom right, rgba(94, 212, 200, 0.04) 0%, transparent 60%),

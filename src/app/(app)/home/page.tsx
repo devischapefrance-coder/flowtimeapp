@@ -175,14 +175,7 @@ export default function HomePage() {
 
   // Widget state
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
-  const [editMode, setEditMode] = useState(false);
-  const [dragIdx, setDragIdx] = useState<number | null>(null);
-  const [dragOffsetY, setDragOffsetY] = useState(0);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const dragStartY = useRef(0);
-  const widgetRects = useRef<DOMRect[]>([]);
-  const widgetContainerRef = useRef<HTMLDivElement>(null);
-  const isDragging = useRef(false);
+  const [widgetModalOpen, setWidgetModalOpen] = useState(false);
 
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -598,98 +591,20 @@ export default function HomePage() {
     setCalendarView("week");
   }
 
-  // ---- Widget drag & drop (iOS-style) ----
-  function handleLongPressStart() {
-    longPressTimer.current = setTimeout(() => {
-      setEditMode(true);
-    }, 500);
-  }
-
-  function handleLongPressEnd() {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-  }
-
-  function captureWidgetRects() {
-    if (!widgetContainerRef.current) return;
-    const children = widgetContainerRef.current.children;
-    const rects: DOMRect[] = [];
-    for (let i = 0; i < children.length; i++) {
-      rects.push(children[i].getBoundingClientRect());
-    }
-    widgetRects.current = rects;
-  }
-
-  function handleDragStart(idx: number, clientY: number) {
-    if (!editMode) return;
-    captureWidgetRects();
-    setDragIdx(idx);
-    setDragOffsetY(0);
-    dragStartY.current = clientY;
-    isDragging.current = true;
-  }
-
-  function handleDragMove(clientY: number) {
-    if (!isDragging.current || dragIdx === null) return;
-
-    const offset = clientY - dragStartY.current;
-    setDragOffsetY(offset);
-
-    // Calculate which position the dragged item is over
-    const rects = widgetRects.current;
-    if (rects.length === 0) return;
-
-    const draggedCenter = rects[dragIdx].top + rects[dragIdx].height / 2 + offset;
-
-    let targetIdx = dragIdx;
-    if (offset > 0) {
-      // Moving down - find first item whose center we've passed
-      for (let i = dragIdx + 1; i < rects.length; i++) {
-        const itemCenter = rects[i].top + rects[i].height / 2;
-        if (draggedCenter > itemCenter) targetIdx = i;
-        else break;
-      }
-    } else {
-      // Moving up
-      for (let i = dragIdx - 1; i >= 0; i--) {
-        const itemCenter = rects[i].top + rects[i].height / 2;
-        if (draggedCenter < itemCenter) targetIdx = i;
-        else break;
-      }
-    }
-
-    if (targetIdx !== dragIdx) {
-      const newConfig = [...widgetConfig];
-      const [item] = newConfig.splice(dragIdx, 1);
-      newConfig.splice(targetIdx, 0, item);
-      setWidgetConfig(newConfig);
-      saveWidgetConfig(newConfig);
-
-      // Recalculate: the dragged item is now at targetIdx
-      // Adjust startY so the offset stays continuous
-      const oldRect = rects[dragIdx];
-      const newRect = rects[targetIdx];
-      dragStartY.current += (newRect.top - oldRect.top);
-      setDragOffsetY(clientY - dragStartY.current);
-
-      setDragIdx(targetIdx);
-      // Re-capture rects after reorder
-      requestAnimationFrame(() => captureWidgetRects());
-    }
-  }
-
-  function handleDragEnd() {
-    isDragging.current = false;
-    setDragIdx(null);
-    setDragOffsetY(0);
-  }
-
+  // ---- Widget config helpers ----
   function toggleWidgetVisibility(id: string) {
     const newConfig = widgetConfig.map((w) =>
       w.id === id ? { ...w, visible: !w.visible } : w
     );
+    setWidgetConfig(newConfig);
+    saveWidgetConfig(newConfig);
+  }
+
+  function moveWidget(idx: number, dir: -1 | 1) {
+    const target = idx + dir;
+    if (target < 0 || target >= widgetConfig.length) return;
+    const newConfig = [...widgetConfig];
+    [newConfig[idx], newConfig[target]] = [newConfig[target], newConfig[idx]];
     setWidgetConfig(newConfig);
     saveWidgetConfig(newConfig);
   }
@@ -792,7 +707,7 @@ export default function HomePage() {
       <div
         className="card flex items-center gap-3 !mb-0 cursor-pointer"
         style={{ background: "var(--accent-soft)", border: "1px solid rgba(124,107,240,0.15)" }}
-        onClick={() => !editMode && setChatOpen(true)}
+        onClick={() => setChatOpen(true)}
       >
         <div
           className="w-11 h-11 flex items-center justify-center rounded-full text-xl"
@@ -1014,7 +929,7 @@ export default function HomePage() {
             const meal = dayMeals.find((m) => m.meal_type === type.value);
             return (
               <div key={type.value} className="card !mb-0 flex items-center gap-3 cursor-pointer"
-                onClick={() => !editMode && (meal ? openEditMeal(meal) : openNewMeal(type.value))}>
+                onClick={() => meal ? openEditMeal(meal) : openNewMeal(type.value)}>
                 <span className="text-xl">{meal ? meal.emoji : type.emoji}</span>
                 <div className="flex-1">
                   <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>{type.label}</p>
@@ -1114,14 +1029,14 @@ export default function HomePage() {
         ? [profile.lat, profile.lng]
         : [46.6, 2.5];
     return (
-      <div className="card !mb-0">
+      <a href="/famille" className="card !mb-0 block cursor-pointer" style={{ textDecoration: "none", color: "inherit" }}>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
-            {devices.length} appareil{devices.length !== 1 ? "s" : ""}
+            {devices.length} appareil{devices.length !== 1 ? "s" : ""} · Voir →
           </span>
         </div>
-        <div className="rounded-xl overflow-hidden" style={{ height: 180 }}>
+        <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
           <MapView
             markers={mapMarkers}
             center={center}
@@ -1131,7 +1046,7 @@ export default function HomePage() {
             interactive={false}
           />
         </div>
-      </div>
+      </a>
     );
   }
 
@@ -1174,9 +1089,6 @@ export default function HomePage() {
     <div
       className="px-4 py-4 animate-in gradient-bg"
       style={{ paddingBottom: 100 }}
-      onMouseMove={(e) => { if (isDragging.current) handleDragMove(e.clientY); }}
-      onMouseUp={handleDragEnd}
-      onMouseLeave={handleDragEnd}
     >
       {/* Offline banner */}
       {isOffline && (
@@ -1211,120 +1123,60 @@ export default function HomePage() {
           onClick={() => { setViewMode("perso"); setFilter(null); }}>👤 Mon planning</button>
       </div>
 
-      {/* Edit mode banner */}
-      {editMode && (
-        <div className="flex items-center justify-between mt-3 px-3 py-2 rounded-xl" style={{ background: "var(--accent-soft)", border: "1px solid rgba(124,107,240,0.2)" }}>
-          <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>Mode edition — Reorganisez vos widgets</span>
-          <button
-            className="text-xs font-bold px-3 py-1 rounded-lg"
-            style={{ background: "var(--accent)", color: "#fff" }}
-            onClick={() => setEditMode(false)}
-          >
-            OK
-          </button>
-        </div>
-      )}
-
       {/* Widgets */}
-      <div
-        ref={widgetContainerRef}
-        className="flex flex-col gap-3 mt-3"
-        style={{ position: "relative" }}
-      >
-        {widgetConfig.map((w, idx) => {
-          if (!w.visible && !editMode) return null;
-          const def = WIDGET_DEFS.find((d) => d.id === w.id);
+      <div className="flex flex-col gap-3 mt-3">
+        {widgetConfig.map((w) => {
+          if (!w.visible) return null;
           const content = renderWidget(w.id);
-          if (!content && !editMode) return null;
-
-          const isBeingDragged = dragIdx === idx;
-          // Other items shift smoothly when dragged item passes over them
-          const isDisplaced = dragIdx !== null && !isBeingDragged;
-
-          return (
-            <div
-              key={w.id}
-              className={`relative ${editMode && !isBeingDragged ? "widget-wiggle" : ""} ${!w.visible && editMode ? "opacity-40" : ""}`}
-              style={{
-                // Dragged item: follows finger with translateY, scaled up, elevated
-                ...(isBeingDragged ? {
-                  transform: `translateY(${dragOffsetY}px) scale(1.03)`,
-                  zIndex: 100,
-                  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.35)",
-                  opacity: 0.92,
-                  transition: "box-shadow 0.2s, opacity 0.2s",
-                  willChange: "transform",
-                } : {}),
-                // Non-dragged items: smooth transition for when they reorder
-                ...(isDisplaced ? {
-                  transition: "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
-                } : {}),
-                // Normal state
-                ...(!isBeingDragged && !isDisplaced ? {
-                  transition: "transform 0.3s ease",
-                } : {}),
-                // Prevent text selection during drag
-                ...(editMode ? { userSelect: "none" as const, WebkitUserSelect: "none" as const } : {}),
-              }}
-              onTouchStart={(e) => {
-                handleLongPressStart();
-                if (editMode) {
-                  e.preventDefault();
-                  handleDragStart(idx, e.touches[0].clientY);
-                }
-              }}
-              onTouchMove={(e) => {
-                handleLongPressEnd();
-                if (editMode && isDragging.current) {
-                  e.preventDefault();
-                  handleDragMove(e.touches[0].clientY);
-                }
-              }}
-              onTouchEnd={() => {
-                handleLongPressEnd();
-                handleDragEnd();
-              }}
-              onMouseDown={(e) => {
-                if (editMode) {
-                  e.preventDefault();
-                  handleDragStart(idx, e.clientY);
-                }
-              }}
-            >
-              {/* Edit mode overlay controls */}
-              {editMode && (
-                <div className="absolute -top-1 -right-1 z-10 flex items-center gap-1">
-                  <button
-                    className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
-                    style={{ background: "var(--surface-solid)", border: "1px solid var(--glass-border)" }}
-                    onClick={(e) => { e.stopPropagation(); toggleWidgetVisibility(w.id); }}
-                    title={w.visible ? "Masquer" : "Afficher"}
-                  >
-                    {w.visible ? "👁️" : "👁️‍🗨️"}
-                  </button>
-                </div>
-              )}
-              {editMode && (
-                <div className="absolute top-1/2 -left-1 -translate-y-1/2 z-10">
-                  <span className="text-xs cursor-grab active:cursor-grabbing" style={{ color: "var(--dim)" }}>⠿</span>
-                </div>
-              )}
-
-              {/* Widget label in edit mode when hidden */}
-              {editMode && !content && (
-                <div className="card !mb-0 flex items-center gap-2 py-3">
-                  <span>{def?.icon}</span>
-                  <span className="text-xs font-bold" style={{ color: "var(--dim)" }}>{def?.label}</span>
-                  <span className="text-[10px] ml-auto" style={{ color: "var(--faint)" }}>Masque</span>
-                </div>
-              )}
-
-              {/* Actual widget content */}
-              {(w.visible || editMode) && content}
-            </div>
-          );
+          if (!content) return null;
+          return <div key={w.id}>{content}</div>;
         })}
+
+        {/* Edit widgets button */}
+        <button
+          className="mx-auto mt-1 px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5"
+          style={{ background: "var(--surface2)", color: "var(--dim)" }}
+          onClick={() => setWidgetModalOpen(true)}
+        >
+          <span>⚙️</span> Personnaliser les widgets
+        </button>
       </div>
+
+      {/* Widget config modal */}
+      <Modal open={widgetModalOpen} onClose={() => setWidgetModalOpen(false)} title="Widgets">
+        <div className="flex flex-col gap-2">
+          {widgetConfig.map((w, idx) => {
+            const def = WIDGET_DEFS.find((d) => d.id === w.id);
+            if (!def) return null;
+            return (
+              <div key={w.id} className="flex items-center gap-2 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                <span className="text-lg">{def.icon}</span>
+                <span className="flex-1 text-sm font-bold">{def.label}</span>
+                <button
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                  style={{ background: "var(--surface-solid)", color: idx === 0 ? "var(--faint)" : "var(--dim)" }}
+                  onClick={() => moveWidget(idx, -1)}
+                  disabled={idx === 0}
+                >▲</button>
+                <button
+                  className="w-7 h-7 rounded-lg flex items-center justify-center text-xs"
+                  style={{ background: "var(--surface-solid)", color: idx === widgetConfig.length - 1 ? "var(--faint)" : "var(--dim)" }}
+                  onClick={() => moveWidget(idx, 1)}
+                  disabled={idx === widgetConfig.length - 1}
+                >▼</button>
+                <button
+                  className="w-9 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
+                  style={{
+                    background: w.visible ? "rgba(124,107,240,0.15)" : "var(--surface-solid)",
+                    color: w.visible ? "var(--accent)" : "var(--faint)",
+                  }}
+                  onClick={() => toggleWidgetVisibility(w.id)}
+                >{w.visible ? "ON" : "OFF"}</button>
+              </div>
+            );
+          })}
+        </div>
+      </Modal>
 
       {/* Quick Event Modal */}
       <Modal open={quickEventModal} onClose={() => setQuickEventModal(false)} title="Nouvel evenement">
