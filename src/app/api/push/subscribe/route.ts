@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Force user_id to authenticated user (ignore body userId)
-    await supabaseAdmin.from("push_subscriptions").upsert(
+    const { error } = await supabaseAdmin.from("push_subscriptions").upsert(
       {
         endpoint: subscription.endpoint,
         keys: subscription.keys,
@@ -36,8 +36,14 @@ export async function POST(req: NextRequest) {
       { onConflict: "endpoint" }
     );
 
+    if (error) {
+      console.error("Push subscribe DB error:", error.message, error.code);
+      return NextResponse.json({ error: "DB error: " + error.message }, { status: 500 });
+    }
+
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (err) {
+    console.error("Push subscribe error:", err);
     return NextResponse.json({ error: "Server error" }, { status: 500 });
   }
 }

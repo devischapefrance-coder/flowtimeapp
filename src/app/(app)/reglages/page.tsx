@@ -342,12 +342,32 @@ export default function ReglagesPage() {
           onClick={async () => {
             try {
               const { data: { session } } = await supabase.auth.getSession();
+              const headers: Record<string, string> = { "Content-Type": "application/json" };
+              if (session?.access_token) headers["Authorization"] = `Bearer ${session.access_token}`;
+
+              // Step 1: Re-subscribe to make sure subscription is saved
+              const reg = await navigator.serviceWorker.ready;
+              const sub = await reg.pushManager.getSubscription();
+              if (sub) {
+                const subRes = await fetch("/api/push/subscribe", {
+                  method: "POST",
+                  headers,
+                  body: JSON.stringify({ subscription: sub.toJSON() }),
+                });
+                const subData = await subRes.json();
+                if (subData.error) {
+                  alert("Erreur subscribe: " + subData.error);
+                  return;
+                }
+              } else {
+                alert("Pas d'abonnement push actif. Desactive et reactive les notifications.");
+                return;
+              }
+
+              // Step 2: Send test notification
               const res = await fetch("/api/push/send", {
                 method: "POST",
-                headers: {
-                  "Content-Type": "application/json",
-                  ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
-                },
+                headers,
                 body: JSON.stringify({
                   title: "FlowTime - Test",
                   body: "Les notifications fonctionnent ! Meme ecran verrouille.",
@@ -355,13 +375,15 @@ export default function ReglagesPage() {
                 }),
               });
               const data = await res.json();
-              if (data.sent > 0) {
+              if (data.error) {
+                alert("Erreur send: " + data.error);
+              } else if (data.sent > 0) {
                 alert("Notification envoyee ! Verrouille ton ecran pour verifier.");
               } else {
-                alert("Aucune notification envoyee. Verifie ton abonnement.");
+                alert("Aucun abonnement trouve en base. Erreur cote serveur.");
               }
-            } catch {
-              alert("Erreur lors du test.");
+            } catch (err) {
+              alert("Erreur: " + (err instanceof Error ? err.message : String(err)));
             }
           }}
         >

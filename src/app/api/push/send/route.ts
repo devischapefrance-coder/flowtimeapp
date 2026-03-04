@@ -53,9 +53,13 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    const { data: subs } = await query;
+    const { data: subs, error: queryError } = await query;
+    if (queryError) {
+      console.error("Push send query error:", queryError.message, queryError.code);
+      return NextResponse.json({ error: "DB query error: " + queryError.message, sent: 0 });
+    }
     if (!subs || subs.length === 0) {
-      return NextResponse.json({ sent: 0 });
+      return NextResponse.json({ sent: 0, debug: "No subscriptions found for query" });
     }
 
     const payload = JSON.stringify({
@@ -79,7 +83,9 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json({ sent });
-  } catch {
-    return NextResponse.json({ error: "Server error" }, { status: 500 });
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("Push send error:", msg);
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
