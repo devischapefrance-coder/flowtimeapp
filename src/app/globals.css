@@ -269,19 +269,25 @@
   }
 
   @keyframes wiggle {
-    0%, 100% { transform: rotate(-0.5deg); }
-    50% { transform: rotate(0.5deg); }
+    0% { transform: rotate(-0.6deg); }
+    25% { transform: rotate(0.6deg); }
+    50% { transform: rotate(-0.4deg); }
+    75% { transform: rotate(0.4deg); }
+    100% { transform: rotate(-0.6deg); }
   }
 
   .widget-wiggle {
-    animation: wiggle 0.3s ease-in-out infinite;
+    animation: wiggle 0.4s ease-in-out infinite;
   }
 
-  .widget-dragging {
-    opacity: 0.7;
-    transform: scale(1.03);
-    z-index: 100;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  /* Stagger wiggle for each widget child so they don't all move in sync (iOS-like) */
+  .widget-wiggle:nth-child(2n) {
+    animation-delay: 0.1s;
+    animation-duration: 0.45s;
+  }
+  .widget-wiggle:nth-child(3n) {
+    animation-delay: 0.05s;
+    animation-duration: 0.38s;
   }
 
   .gradient-bg {

@@ -169,9 +169,12 @@ export default function HomePage() {
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
   const [editMode, setEditMode] = useState(false);
   const [dragIdx, setDragIdx] = useState<number | null>(null);
+  const [dragOffsetY, setDragOffsetY] = useState(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const dragStartY = useRef(0);
-  const dragCurrentY = useRef(0);
+  const widgetRects = useRef<DOMRect[]>([]);
+  const widgetContainerRef = useRef<HTMLDivElement>(null);
+  const isDragging = useRef(false);
 
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
@@ -582,7 +585,7 @@ export default function HomePage() {
     setCalendarView("week");
   }
 
-  // ---- Widget drag & drop ----
+  // ---- Widget drag & drop (iOS-style) ----
   function handleLongPressStart() {
     longPressTimer.current = setTimeout(() => {
       setEditMode(true);
@@ -596,35 +599,78 @@ export default function HomePage() {
     }
   }
 
+  function captureWidgetRects() {
+    if (!widgetContainerRef.current) return;
+    const children = widgetContainerRef.current.children;
+    const rects: DOMRect[] = [];
+    for (let i = 0; i < children.length; i++) {
+      rects.push(children[i].getBoundingClientRect());
+    }
+    widgetRects.current = rects;
+  }
+
   function handleDragStart(idx: number, clientY: number) {
     if (!editMode) return;
+    captureWidgetRects();
     setDragIdx(idx);
+    setDragOffsetY(0);
     dragStartY.current = clientY;
-    dragCurrentY.current = clientY;
+    isDragging.current = true;
   }
 
   function handleDragMove(clientY: number) {
-    if (dragIdx === null) return;
-    dragCurrentY.current = clientY;
-    const diff = clientY - dragStartY.current;
-    const itemHeight = 70; // approximate widget height
-    const steps = Math.round(diff / itemHeight);
-    if (steps !== 0) {
-      const newConfig = [...widgetConfig];
-      const newIdx = Math.max(0, Math.min(newConfig.length - 1, dragIdx + steps));
-      if (newIdx !== dragIdx) {
-        const [item] = newConfig.splice(dragIdx, 1);
-        newConfig.splice(newIdx, 0, item);
-        setWidgetConfig(newConfig);
-        saveWidgetConfig(newConfig);
-        setDragIdx(newIdx);
-        dragStartY.current = clientY;
+    if (!isDragging.current || dragIdx === null) return;
+
+    const offset = clientY - dragStartY.current;
+    setDragOffsetY(offset);
+
+    // Calculate which position the dragged item is over
+    const rects = widgetRects.current;
+    if (rects.length === 0) return;
+
+    const draggedCenter = rects[dragIdx].top + rects[dragIdx].height / 2 + offset;
+
+    let targetIdx = dragIdx;
+    if (offset > 0) {
+      // Moving down - find first item whose center we've passed
+      for (let i = dragIdx + 1; i < rects.length; i++) {
+        const itemCenter = rects[i].top + rects[i].height / 2;
+        if (draggedCenter > itemCenter) targetIdx = i;
+        else break;
       }
+    } else {
+      // Moving up
+      for (let i = dragIdx - 1; i >= 0; i--) {
+        const itemCenter = rects[i].top + rects[i].height / 2;
+        if (draggedCenter < itemCenter) targetIdx = i;
+        else break;
+      }
+    }
+
+    if (targetIdx !== dragIdx) {
+      const newConfig = [...widgetConfig];
+      const [item] = newConfig.splice(dragIdx, 1);
+      newConfig.splice(targetIdx, 0, item);
+      setWidgetConfig(newConfig);
+      saveWidgetConfig(newConfig);
+
+      // Recalculate: the dragged item is now at targetIdx
+      // Adjust startY so the offset stays continuous
+      const oldRect = rects[dragIdx];
+      const newRect = rects[targetIdx];
+      dragStartY.current += (newRect.top - oldRect.top);
+      setDragOffsetY(clientY - dragStartY.current);
+
+      setDragIdx(targetIdx);
+      // Re-capture rects after reorder
+      requestAnimationFrame(() => captureWidgetRects());
     }
   }
 
   function handleDragEnd() {
+    isDragging.current = false;
     setDragIdx(null);
+    setDragOffsetY(0);
   }
 
   function toggleWidgetVisibility(id: string) {
@@ -1031,8 +1077,9 @@ export default function HomePage() {
     <div
       className="px-4 py-4 animate-in gradient-bg"
       style={{ paddingBottom: 100 }}
-      onPointerMove={(e) => handleDragMove(e.clientY)}
-      onPointerUp={handleDragEnd}
+      onMouseMove={(e) => { if (isDragging.current) handleDragMove(e.clientY); }}
+      onMouseUp={handleDragEnd}
+      onMouseLeave={handleDragEnd}
     >
       {/* Offline banner */}
       {isOffline && (
@@ -1082,32 +1129,69 @@ export default function HomePage() {
       )}
 
       {/* Widgets */}
-      <div className="flex flex-col gap-3 mt-3">
+      <div
+        ref={widgetContainerRef}
+        className="flex flex-col gap-3 mt-3"
+        style={{ position: "relative" }}
+      >
         {widgetConfig.map((w, idx) => {
           if (!w.visible && !editMode) return null;
           const def = WIDGET_DEFS.find((d) => d.id === w.id);
           const content = renderWidget(w.id);
           if (!content && !editMode) return null;
 
+          const isBeingDragged = dragIdx === idx;
+          // Other items shift smoothly when dragged item passes over them
+          const isDisplaced = dragIdx !== null && !isBeingDragged;
+
           return (
             <div
               key={w.id}
-              className={`relative ${editMode ? "widget-wiggle" : ""} ${dragIdx === idx ? "widget-dragging" : ""} ${!w.visible && editMode ? "opacity-40" : ""}`}
-              style={{ transition: dragIdx === idx ? "none" : "transform 0.2s" }}
+              className={`relative ${editMode && !isBeingDragged ? "widget-wiggle" : ""} ${!w.visible && editMode ? "opacity-40" : ""}`}
+              style={{
+                // Dragged item: follows finger with translateY, scaled up, elevated
+                ...(isBeingDragged ? {
+                  transform: `translateY(${dragOffsetY}px) scale(1.03)`,
+                  zIndex: 100,
+                  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.35)",
+                  opacity: 0.92,
+                  transition: "box-shadow 0.2s, opacity 0.2s",
+                  willChange: "transform",
+                } : {}),
+                // Non-dragged items: smooth transition for when they reorder
+                ...(isDisplaced ? {
+                  transition: "transform 0.35s cubic-bezier(0.25, 1, 0.5, 1)",
+                } : {}),
+                // Normal state
+                ...(!isBeingDragged && !isDisplaced ? {
+                  transition: "transform 0.3s ease",
+                } : {}),
+                // Prevent text selection during drag
+                ...(editMode ? { userSelect: "none" as const, WebkitUserSelect: "none" as const } : {}),
+              }}
               onTouchStart={(e) => {
                 handleLongPressStart();
-                if (editMode) handleDragStart(idx, e.touches[0].clientY);
+                if (editMode) {
+                  e.preventDefault();
+                  handleDragStart(idx, e.touches[0].clientY);
+                }
               }}
               onTouchMove={(e) => {
                 handleLongPressEnd();
-                if (editMode) handleDragMove(e.touches[0].clientY);
+                if (editMode && isDragging.current) {
+                  e.preventDefault();
+                  handleDragMove(e.touches[0].clientY);
+                }
               }}
               onTouchEnd={() => {
                 handleLongPressEnd();
                 handleDragEnd();
               }}
-              onPointerDown={(e) => {
-                if (editMode) handleDragStart(idx, e.clientY);
+              onMouseDown={(e) => {
+                if (editMode) {
+                  e.preventDefault();
+                  handleDragStart(idx, e.clientY);
+                }
               }}
             >
               {/* Edit mode overlay controls */}
@@ -1125,11 +1209,11 @@ export default function HomePage() {
               )}
               {editMode && (
                 <div className="absolute top-1/2 -left-1 -translate-y-1/2 z-10">
-                  <span className="text-xs cursor-grab" style={{ color: "var(--dim)" }}>⠿</span>
+                  <span className="text-xs cursor-grab active:cursor-grabbing" style={{ color: "var(--dim)" }}>⠿</span>
                 </div>
               )}
 
-              {/* Widget label in edit mode */}
+              {/* Widget label in edit mode when hidden */}
               {editMode && !content && (
                 <div className="card !mb-0 flex items-center gap-2 py-3">
                   <span>{def?.icon}</span>
