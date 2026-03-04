@@ -97,11 +97,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             {children}
           </div>
 
-          {/* Floating chat button — visible on all pages */}
+          {/* Floating chat button — above vocal button on all pages */}
           {profile?.family_id && (
             <button
               className="fixed z-[90] w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg active:scale-90 transition-transform"
-              style={{ background: "var(--accent)", color: "#fff", bottom: 90, right: "max(16px, calc((100vw - 430px) / 2 + 16px))" }}
+              style={{
+                background: "var(--surface2)",
+                border: "1.5px solid var(--glass-border)",
+                color: "var(--text)",
+                bottom: "calc(220px + env(safe-area-inset-bottom, 0px))",
+                right: "max(20px, calc(50% - 195px))",
+              }}
               onClick={() => setChatOpen(true)}
               aria-label="Chat famille"
             >
