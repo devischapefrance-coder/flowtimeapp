@@ -54,21 +54,22 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Voice states
+  // Voice UI states
   const [voiceMode, setVoiceMode] = useState(false);
   const [isListening, setIsListening] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [interimTranscript, setInterimTranscript] = useState("");
   const [speechSupported, setSpeechSupported] = useState(false);
 
+  // Voice refs — always up-to-date, no stale closures
   const recognitionRef = useRef<SpeechRecognition | null>(null);
-  const shouldRestartListening = useRef(false);
   const voiceModeRef = useRef(false);
+  const busyRef = useRef(false);
   const isSpeakingRef = useRef(false);
-  const processingVoiceRef = useRef(false);
   const messagesRef = useRef(messages);
   messagesRef.current = messages;
 
+  // ─── Scroll & focus ───
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
@@ -78,23 +79,22 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
-      if (!voiceMode) {
-        setTimeout(() => inputRef.current?.focus(), 100);
-      }
+      if (!voiceMode) setTimeout(() => inputRef.current?.focus(), 100);
     } else {
       document.body.style.overflow = "";
     }
     return () => { document.body.style.overflow = ""; };
   }, [open, voiceMode]);
 
-  // Check speech support
+  // ─── Check speech support ───
   useEffect(() => {
-    const supported = typeof window !== "undefined" &&
-      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
-    setSpeechSupported(supported);
+    setSpeechSupported(
+      typeof window !== "undefined" &&
+      ("SpeechRecognition" in window || "webkitSpeechRecognition" in window)
+    );
   }, []);
 
-  // Core send logic — returns Flow's response text
+  // ─── Core send logic ───
   const sendAndGetResponse = useCallback(async (userMsg: string): Promise<string | null> => {
     const currentMessages = messagesRef.current;
     const newMessages: Message[] = [...currentMessages, { role: "user", text: userMsg }];
@@ -138,91 +138,118 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
     }
   }, [context, onAction]);
 
-  // TTS
+  // ─── TTS with safety timeout + Chrome resume workaround ───
   const speakResponse = useCallback((text: string): Promise<void> => {
     return new Promise((resolve) => {
-      if (!("speechSynthesis" in window)) {
-        resolve();
-        return;
-      }
+      if (!("speechSynthesis" in window)) { resolve(); return; }
 
       window.speechSynthesis.cancel();
 
       const cleaned = cleanForSpeech(text);
-      if (!cleaned) {
-        resolve();
-        return;
-      }
+      if (!cleaned) { resolve(); return; }
 
       const utterance = new SpeechSynthesisUtterance(cleaned);
       utterance.lang = "fr-FR";
       utterance.rate = 1.05;
 
-      // Try to find a French voice
       const voices = window.speechSynthesis.getVoices();
       const frVoice = voices.find(v => v.lang.startsWith("fr") && v.localService) ||
                       voices.find(v => v.lang.startsWith("fr"));
       if (frVoice) utterance.voice = frVoice;
 
+      let resolved = false;
+      const done = () => {
+        if (resolved) return;
+        resolved = true;
+        clearTimeout(safetyTimeout);
+        clearInterval(chromeResumeInterval);
+        isSpeakingRef.current = false;
+        setIsSpeaking(false);
+        resolve();
+      };
+
+      // Safety: resolve after max duration to never hang the loop
+      const safetyTimeout = setTimeout(() => {
+        window.speechSynthesis.cancel();
+        done();
+      }, Math.max(20000, cleaned.length * 120));
+
+      // Chrome bug: long utterances silently pause after ~14s. Workaround: pause/resume.
+      const chromeResumeInterval = setInterval(() => {
+        if (resolved) return;
+        if (window.speechSynthesis.speaking && !window.speechSynthesis.paused) {
+          window.speechSynthesis.pause();
+          window.speechSynthesis.resume();
+        }
+      }, 12000);
+
       utterance.onstart = () => { isSpeakingRef.current = true; setIsSpeaking(true); };
-      utterance.onend = () => {
-        isSpeakingRef.current = false;
-        setIsSpeaking(false);
-        resolve();
-      };
-      utterance.onerror = () => {
-        isSpeakingRef.current = false;
-        setIsSpeaking(false);
-        resolve();
-      };
+      utterance.onend = done;
+      utterance.onerror = done;
 
       window.speechSynthesis.speak(utterance);
     });
   }, []);
 
-  // Voice conversation loop — uses refs to avoid stale closures
+  // ─── Restart recognition with retry ───
+  const restartRecognition = useCallback(() => {
+    if (!voiceModeRef.current || !recognitionRef.current) return;
+
+    const attempt = (delay: number, retries: number) => {
+      setTimeout(() => {
+        if (!voiceModeRef.current || !recognitionRef.current) return;
+        try {
+          recognitionRef.current.start();
+          setIsListening(true);
+        } catch {
+          if (retries > 0) {
+            attempt(500, retries - 1);
+          }
+        }
+      }, delay);
+    };
+
+    attempt(300, 2);
+  }, []);
+
+  // ─── Voice conversation handler ───
   const handleVoiceInput = useCallback(async (transcript: string) => {
-    if (processingVoiceRef.current) return;
-    processingVoiceRef.current = true;
-
-    // Stop listening while processing
-    shouldRestartListening.current = false;
-    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
+    if (busyRef.current) return;
+    busyRef.current = true;
     setIsListening(false);
+    setInterimTranscript("");
 
-    // Cancel any ongoing speech (interruption)
-    if (isSpeakingRef.current) {
+    try {
+      // Cancel any ongoing speech (user interrupted)
       window.speechSynthesis.cancel();
-      setIsSpeaking(false);
       isSpeakingRef.current = false;
+      setIsSpeaking(false);
+
+      const response = await sendAndGetResponse(transcript);
+
+      if (response && voiceModeRef.current) {
+        await speakResponse(response);
+      }
+    } finally {
+      busyRef.current = false;
+      if (voiceModeRef.current) {
+        restartRecognition();
+      }
     }
+  }, [sendAndGetResponse, speakResponse, restartRecognition]);
 
-    const response = await sendAndGetResponse(transcript);
-
-    if (response && voiceModeRef.current) {
-      await speakResponse(response);
-    }
-
-    processingVoiceRef.current = false;
-
-    // Resume listening if still in voice mode
-    if (voiceModeRef.current) {
-      startListening();
-    }
-  }, [sendAndGetResponse, speakResponse]);
-
-  // Stable ref so onresult always calls latest handleVoiceInput
+  // Stable ref so the recognition onresult always calls the latest version
   const handleVoiceInputRef = useRef(handleVoiceInput);
   handleVoiceInputRef.current = handleVoiceInput;
 
-  // Init SpeechRecognition
+  // ─── Init SpeechRecognition ───
   useEffect(() => {
     if (!speechSupported) return;
 
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognitionClass();
     recognition.lang = "fr-FR";
-    recognition.continuous = true;
+    recognition.continuous = false; // Single phrase — more reliable across browsers
     recognition.interimResults = true;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -235,85 +262,79 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
             handleVoiceInputRef.current(transcript);
           }
           setInterimTranscript("");
+          return; // Stop processing — handleVoiceInput takes over
         } else {
           interim += result[0].transcript;
         }
       }
-      if (interim) {
-        setInterimTranscript(interim);
-      }
+      if (interim) setInterimTranscript(interim);
     };
 
     recognition.onend = () => {
       setIsListening(false);
-      if (shouldRestartListening.current) {
+      // Auto-restart if in voice mode and not processing/speaking
+      // This handles: Safari auto-stop, "no-speech" timeout, "aborted" errors
+      if (voiceModeRef.current && !busyRef.current) {
         setTimeout(() => {
-          if (shouldRestartListening.current && recognitionRef.current) {
+          if (voiceModeRef.current && !busyRef.current && recognitionRef.current) {
             try {
               recognitionRef.current.start();
               setIsListening(true);
             } catch {
-              // ignore
+              // Will be retried on next onend or by restartRecognition
             }
           }
-        }, 200);
+        }, 300);
       }
     };
 
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
       if (event.error === "not-allowed" || event.error === "service-not-available") {
-        shouldRestartListening.current = false;
         voiceModeRef.current = false;
         setVoiceMode(false);
         setIsListening(false);
       }
+      // "no-speech", "aborted", "network" → onend will fire and handle restart
     };
 
     recognitionRef.current = recognition;
 
     return () => {
-      shouldRestartListening.current = false;
       try { recognition.abort(); } catch { /* ignore */ }
     };
   }, [speechSupported]);
 
-  function startListening() {
-    if (!recognitionRef.current) return;
-    shouldRestartListening.current = true;
-    try {
-      recognitionRef.current.start();
-      setIsListening(true);
-    } catch {
-      // Already started
-    }
-  }
-
-  function stopListening() {
-    shouldRestartListening.current = false;
-    try { recognitionRef.current?.stop(); } catch { /* ignore */ }
-    setIsListening(false);
-  }
-
+  // ─── Voice mode controls ───
   function enterVoiceMode() {
     voiceModeRef.current = true;
+    busyRef.current = false;
     setVoiceMode(true);
     setInterimTranscript("");
-    startListening();
+    if (recognitionRef.current) {
+      try {
+        recognitionRef.current.start();
+        setIsListening(true);
+      } catch {
+        restartRecognition();
+      }
+    }
   }
 
   function exitVoiceMode() {
     voiceModeRef.current = false;
+    busyRef.current = false;
     setVoiceMode(false);
-    stopListening();
+    setIsListening(false);
+    setInterimTranscript("");
+    try { recognitionRef.current?.abort(); } catch { /* ignore */ }
     window.speechSynthesis.cancel();
     isSpeakingRef.current = false;
     setIsSpeaking(false);
-    setInterimTranscript("");
   }
 
   // Cleanup when FlowChat closes
   useEffect(() => {
-    if (!open) {
+    if (!open && voiceModeRef.current) {
       exitVoiceMode();
     }
   }, [open]);
@@ -432,21 +453,17 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
       {voiceMode ? (
         /* Voice mode UI */
         <div className="flex flex-col items-center gap-3 p-4" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--glass-border)", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
-          {/* Interim transcript */}
           {interimTranscript && (
             <p className="text-sm italic text-center px-4" style={{ color: "var(--dim)" }}>
               {interimTranscript}
             </p>
           )}
 
-          {/* Status label */}
           <p className="text-xs font-bold" style={{ color: "var(--dim)" }}>
             {voiceStatusLabel}
           </p>
 
-          {/* Mic button + speaking bars */}
           <div className="flex items-center gap-6">
-            {/* Keyboard button */}
             <button
               onClick={exitVoiceMode}
               className="w-10 h-10 flex items-center justify-center rounded-full text-sm"
@@ -456,7 +473,6 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
               ⌨
             </button>
 
-            {/* Central mic / speaker */}
             <div className="relative">
               {isListening && !isSpeaking && (
                 <>
@@ -475,6 +491,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
                 onClick={() => {
                   if (isSpeaking) {
                     window.speechSynthesis.cancel();
+                    isSpeakingRef.current = false;
                     setIsSpeaking(false);
                   }
                 }}
@@ -489,7 +506,6 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
               </button>
             </div>
 
-            {/* Close voice button */}
             <button
               onClick={exitVoiceMode}
               className="w-10 h-10 flex items-center justify-center rounded-full text-sm"
