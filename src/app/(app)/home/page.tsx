@@ -153,6 +153,9 @@ export default function HomePage() {
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
+  const [weekSlideX, setWeekSlideX] = useState(0);
+  const [weekSlideAnim, setWeekSlideAnim] = useState(false);
+  const weekTouchRef = useRef({ startX: 0, startY: 0, swiping: false });
 
   // Month view state
   const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
@@ -803,16 +806,53 @@ export default function HomePage() {
 
           {/* Week view */}
           {calendarView === "week" && (
-            <div className="grid grid-cols-7 gap-1"
-              onTouchStart={(e) => { (e.currentTarget as HTMLElement).dataset.sx = String(e.touches[0].clientX); }}
-              onTouchEnd={(e) => {
-                const sx = Number((e.currentTarget as HTMLElement).dataset.sx || 0);
-                const ex = e.changedTouches[0].clientX;
-                const dx = ex - sx;
-                if (Math.abs(dx) > 60) {
-                  if (dx < 0) { setWeekOffset((o) => o + 1); setSelectedDay(0); }
-                  else { setWeekOffset((o) => o - 1); setSelectedDay(0); }
+            <div className="overflow-hidden"
+              onTouchStart={(e) => {
+                const t = e.touches[0];
+                weekTouchRef.current = { startX: t.clientX, startY: t.clientY, swiping: false };
+                setWeekSlideAnim(false);
+              }}
+              onTouchMove={(e) => {
+                const ref = weekTouchRef.current;
+                const dx = e.touches[0].clientX - ref.startX;
+                const dy = e.touches[0].clientY - ref.startY;
+                if (!ref.swiping && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
+                  ref.swiping = true;
                 }
+                if (ref.swiping) {
+                  setWeekSlideX(dx);
+                }
+              }}
+              onTouchEnd={() => {
+                const ref = weekTouchRef.current;
+                if (ref.swiping && Math.abs(weekSlideX) > 60) {
+                  const dir = weekSlideX < 0 ? 1 : -1;
+                  // Slide out fully
+                  setWeekSlideAnim(true);
+                  setWeekSlideX(dir * -400);
+                  setTimeout(() => {
+                    setWeekOffset((o) => o + dir);
+                    setSelectedDay(0);
+                    // Reset position instantly on opposite side, then slide in
+                    setWeekSlideAnim(false);
+                    setWeekSlideX(dir * 400);
+                    requestAnimationFrame(() => {
+                      setWeekSlideAnim(true);
+                      setWeekSlideX(0);
+                    });
+                  }, 180);
+                } else {
+                  setWeekSlideAnim(true);
+                  setWeekSlideX(0);
+                }
+                weekTouchRef.current.swiping = false;
+              }}
+            >
+            <div className="grid grid-cols-7 gap-1"
+              style={{
+                transform: `translateX(${weekSlideX}px)`,
+                transition: weekSlideAnim ? "transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94)" : "none",
+                willChange: "transform",
               }}>
               {days.map((d, i) => {
                 const date = new Date(d.date);
@@ -832,6 +872,7 @@ export default function HomePage() {
                   </button>
                 );
               })}
+            </div>
             </div>
           )}
 
