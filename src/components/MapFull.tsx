@@ -307,8 +307,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
   return (
     <div className="fixed inset-0" style={{ zIndex: 1000, background: "var(--bg)" }}>
-      {/* Top bar - minimal */}
-      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3" style={{ zIndex: 1002 }}>
+      {/* Top bar - minimal, safe area for notch/Dynamic Island */}
+      <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4" style={{ zIndex: 1002, paddingTop: "max(16px, env(safe-area-inset-top, 16px))" }}>
         <div className="flex items-center gap-2">
           <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-lg" style={{ background: t.badgeBg, color: t.red }}>
             🔴 En direct
@@ -421,8 +421,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
             borderRight: `1px solid ${t.border}`,
           }}
         >
-          {/* Panel header */}
-          <div className="px-4 pt-16 pb-3">
+          {/* Panel header — offset for safe area */}
+          <div className="px-4 pb-3" style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 16px) + 44px))" }}>
             <h2 className="text-base font-bold" style={{ color: t.text }}>
               {tab === "lieux" ? "Lieux a proximite" : tab === "recherche" ? "Rechercher" : tab === "itineraire" ? "Itineraire" : ""}
             </h2>
@@ -639,8 +639,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
       {/* Drag toast */}
       {dragToast && (
         <div
-          className="absolute left-1/2 -translate-x-1/2 bottom-8 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold animate-in"
-          style={{ zIndex: 1003, background: t.stripBg, color: t.text, backdropFilter: "blur(20px)", maxWidth: 320 }}
+          className="absolute left-1/2 -translate-x-1/2 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold animate-in"
+          style={{ zIndex: 1003, background: t.stripBg, color: t.text, backdropFilter: "blur(20px)", maxWidth: 320, bottom: "max(32px, calc(env(safe-area-inset-bottom, 8px) + 24px))" }}
         >
           {dragToast}
         </div>
