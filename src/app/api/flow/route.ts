@@ -132,6 +132,7 @@ Utilisateur : ${userName}
 Mode d'affichage : ${viewMode}
 Date consultée : ${context.selectedDate} (${context.selectedDayName})
 Date du jour réel : ${context.today}
+Heure actuelle : ${context.currentTime || "non disponible"}
 
 👨‍👩‍👧‍👦 Membres : ${members}
 

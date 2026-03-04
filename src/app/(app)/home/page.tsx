@@ -652,6 +652,7 @@ export default function HomePage() {
     selectedDate: currentDate,
     selectedDayName: days[selectedDay].dayName,
     today: todayStr,
+    currentTime: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
     viewMode,
   };
 
