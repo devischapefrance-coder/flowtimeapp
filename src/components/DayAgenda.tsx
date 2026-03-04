@@ -92,7 +92,7 @@ export default function DayAgenda({ events, onDelete, onReorder }: DayAgendaProp
     <div
       ref={containerRef}
       className="relative"
-      style={{ minHeight: (END_HOUR - START_HOUR + 1) * SLOT_HEIGHT, touchAction: "none" }}
+      style={{ minHeight: (END_HOUR - START_HOUR + 1) * SLOT_HEIGHT }}
     >
       {/* Hour grid lines */}
       {hours.map((h) => (
@@ -162,6 +162,7 @@ export default function DayAgenda({ events, onDelete, onReorder }: DayAgendaProp
               boxShadow: isDragging ? "0 4px 20px rgba(0,0,0,0.3)" : "none",
               transition: isDragging ? "none" : "top 0.2s ease",
               cursor: onReorder ? "grab" : "default",
+              touchAction: onReorder ? "none" : "auto",
             }}
             onPointerDown={(e) => handlePointerDown(e, ev)}
             onPointerMove={handlePointerMove}
