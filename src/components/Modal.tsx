@@ -14,21 +14,21 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
   const [closing, setClosing] = useState(false);
   // Animated close
   const animatedClose = useCallback(() => {
+    if (closing) return;
     setClosing(true);
     setTimeout(() => {
       setClosing(false);
       setVisible(false);
+      document.body.style.overflow = "";
       onClose();
     }, 250);
-  }, [onClose]);
+  }, [closing, onClose]);
 
   useEffect(() => {
-    if (open) {
+    if (open && !closing) {
       setVisible(true);
-      setClosing(false);
       document.body.style.overflow = "hidden";
-    } else if (visible && !closing) {
-      // External close (e.g. setState from parent)
+    } else if (!open && visible && !closing) {
       setVisible(false);
       document.body.style.overflow = "";
     }
