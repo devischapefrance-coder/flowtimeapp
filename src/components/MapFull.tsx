@@ -452,7 +452,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               {poiMarkers.length > 0 && (
                 <div className="mt-3">
                   <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: t.textDim }}>
-                    {poiMarkers.length} resultats
+                    {poiMarkers.length} résultats
                   </p>
                   <div className="flex flex-col gap-1">
                     {poiMarkers.map((poi, i) => (
@@ -543,7 +543,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               )}
 
               {searchQuery.length > 0 && searchResults.length === 0 && !searching && (
-                <p className="text-xs text-center py-8" style={{ color: t.textDim }}>Aucun resultat</p>
+                <p className="text-xs text-center py-8" style={{ color: t.textDim }}>Aucun résultat</p>
               )}
             </div>
           )}

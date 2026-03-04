@@ -62,7 +62,7 @@ const QUICK_ACTIONS = [
   { label: "Évènement", emoji: "📅", href: "/home?action=create" },
   { label: "Contact", emoji: "📞", href: "/famille?action=create" },
   { label: "Note", emoji: "📝", href: "/vie?action=create" },
-  { label: "Tâche", emoji: "✅", href: "/vie?action=create-chore" },
+  { label: "Tâche", emoji: "✅", href: "/vie?tab=taches" },
 ];
 
 export default function SearchOverlay({ open, onClose, familyId }: SearchOverlayProps) {

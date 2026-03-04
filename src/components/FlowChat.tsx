@@ -20,18 +20,18 @@ interface FlowChatProps {
 
 const SUGGESTIONS = [
   "Qu'est-ce qu'on a aujourd'hui ?",
-  "Resume de la semaine",
-  "Qui est libre cet apres-midi ?",
-  "Ajouter un evenement",
+  "Résumé de la semaine",
+  "Qui est libre cet après-midi ?",
+  "Ajouter un évènement",
 ];
 
 function actionLabel(type: string): string {
   switch (type) {
-    case "add_event": return "Evenement ajoute";
-    case "delete_event": return "Evenement supprime";
-    case "edit_event": return "Evenement modifie";
-    case "add_recurring": return "Recurrence creee";
-    default: return "Action effectuee";
+    case "add_event": return "Évènement ajouté";
+    case "delete_event": return "Évènement supprimé";
+    case "edit_event": return "Évènement modifié";
+    case "add_recurring": return "Récurrence créée";
+    default: return "Action effectuée";
   }
 }
 

@@ -35,13 +35,13 @@ const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "stats", label: "Stats rapides", icon: "📊" },
   { id: "next_event", label: "Prochain event", icon: "⏭️" },
   { id: "flow", label: "Flow AI", icon: "🤖" },
-  { id: "weather", label: "Meteo", icon: "🌤️" },
+  { id: "weather", label: "Météo", icon: "🌤️" },
   { id: "calendar", label: "Planning", icon: "📅" },
   { id: "meals", label: "Repas", icon: "🍽️" },
-  { id: "expenses", label: "Depenses", icon: "💰" },
+  { id: "expenses", label: "Dépenses", icon: "💰" },
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
   { id: "family_map", label: "Carte famille", icon: "🗺️" },
-  { id: "chores", label: "Taches", icon: "🧹" },
+  { id: "chores", label: "Tâches", icon: "🧹" },
 ];
 
 const DEFAULT_WIDGETS: WidgetConfig[] = WIDGET_DEFS.map((w) => ({ id: w.id, visible: true }));
@@ -785,7 +785,7 @@ export default function HomePage() {
         <div className="card !mb-0 flex items-center gap-3">
           <span className="text-2xl">🌡️</span>
           <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Meteo</p>
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
             <p className="text-xs" style={{ color: "var(--faint)" }}>Chargement...</p>
           </div>
         </div>
@@ -795,7 +795,7 @@ export default function HomePage() {
       <div className="card !mb-0 flex items-center gap-3">
         <span className="text-3xl">{weather.icon}</span>
         <div className="flex-1">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Meteo</p>
+          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
           <p className="text-lg font-bold">{weather.temperature}°C</p>
           <p className="text-xs" style={{ color: "var(--dim)" }}>{weather.description}</p>
         </div>
@@ -968,7 +968,7 @@ export default function HomePage() {
               title="Exporter PDF">📄</button>
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
               style={{ background: "var(--accent)", color: "#fff" }}
-              onClick={openQuickEvent} title="Ajouter un evenement">+</button>
+              onClick={openQuickEvent} title="Ajouter un évènement">+</button>
           </div>
         </div>
 
@@ -983,8 +983,8 @@ export default function HomePage() {
         {filteredEvents.length === 0 && (
           <div className="text-center py-8">
             <p className="text-3xl mb-2">📭</p>
-            <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun evenement {selectedDate === todayStr ? "aujourd'hui" : "ce jour"}</p>
-            <button className="text-xs font-bold mt-2" style={{ color: "var(--accent)" }} onClick={openQuickEvent}>+ Ajouter un evenement</button>
+            <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun évènement {selectedDate === todayStr ? "aujourd'hui" : "ce jour"}</p>
+            <button className="text-xs font-bold mt-2" style={{ color: "var(--accent)" }} onClick={openQuickEvent}>+ Ajouter un évènement</button>
           </div>
         )}
       </>
@@ -1022,7 +1022,7 @@ export default function HomePage() {
     return (
       <div className="card !mb-0">
         <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Depenses du mois</p>
+          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Dépenses du mois</p>
           <p className="text-lg font-bold" style={{ color: "var(--warm)" }}>{expenseTotal.toFixed(0)} €</p>
         </div>
         {topExpenseCategories.length > 0 ? (
@@ -1141,7 +1141,7 @@ export default function HomePage() {
     const freqLabel = (f: string) => f === "daily" ? "Quotidien" : "Hebdo";
     return (
       <div className="card !mb-0">
-        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Taches menageres</p>
+        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Tâches ménagères</p>
         {displayChores.length > 0 ? (
           <div className="flex flex-col gap-2">
             {displayChores.map((ch) => {
@@ -1283,7 +1283,7 @@ export default function HomePage() {
       </Modal>
 
       {/* Quick Event Modal */}
-      <Modal open={quickEventModal} onClose={() => setQuickEventModal(false)} title="Nouvel evenement">
+      <Modal open={quickEventModal} onClose={() => setQuickEventModal(false)} title="Nouvel évènement">
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Titre</label>

@@ -10,7 +10,7 @@ const tabs = [
   { href: "/home", emoji: "🏠", label: "Accueil" },
   { href: "/famille", emoji: "👨‍👩‍👧‍👦", label: "Famille" },
   { href: "/vie", emoji: "📌", label: "Vie" },
-  { href: "/reglages", emoji: "⚙️", label: "Reglages" },
+  { href: "/reglages", emoji: "⚙️", label: "Réglages" },
 ];
 
 export default function Navbar() {

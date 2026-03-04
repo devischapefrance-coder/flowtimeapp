@@ -43,7 +43,14 @@ function genId() {
 
 export default function ViePage() {
   const { profile } = useProfile();
-  const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">("notes");
+  const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const t = params.get("tab");
+      if (t === "taches" || t === "notes" || t === "anniversaires" || t === "courses" || t === "budget" || t === "photos") return t;
+    }
+    return "notes";
+  });
 
   // Notes state
   const [notes, setNotes] = useState<Note[]>([]);
@@ -406,7 +413,7 @@ export default function ViePage() {
           ["anniversaires", "🎂", "Anniv."],
           ["courses", "🛒", "Courses"],
           ["budget", "💰", "Budget"],
-          ["taches", "🧹", "Taches"],
+          ["taches", "🧹", "Tâches"],
           ["photos", "📸", "Photos"],
         ] as const).map(([key, emoji, label]) => (
           <button
@@ -481,7 +488,7 @@ export default function ViePage() {
             <div className="text-center py-8">
               <p className="text-3xl mb-2">📝</p>
               <p className="text-sm" style={{ color: "var(--dim)" }}>
-                {search || filterCat !== "all" ? "Aucun resultat" : "Aucune note pour le moment"}
+                {search || filterCat !== "all" ? "Aucun résultat" : "Aucune note pour le moment"}
               </p>
             </div>
           )}
@@ -897,7 +904,7 @@ export default function ViePage() {
       })()}
 
       {/* Expense Modal */}
-      <Modal open={expenseModal} onClose={() => setExpenseModal(false)} title="Nouvelle depense">
+      <Modal open={expenseModal} onClose={() => setExpenseModal(false)} title="Nouvelle dépense">
         <div className="flex flex-col gap-4">
           <div>
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Montant (€)</label>
@@ -998,7 +1005,7 @@ export default function ViePage() {
             {chores.length === 0 && (
               <div className="text-center py-8">
                 <p className="text-3xl mb-2">🧹</p>
-                <p className="text-sm" style={{ color: "var(--dim)" }}>Aucune tache menagere</p>
+                <p className="text-sm" style={{ color: "var(--dim)" }}>Aucune tâche ménagère</p>
               </div>
             )}
 

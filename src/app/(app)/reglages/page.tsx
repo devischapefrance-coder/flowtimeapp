@@ -201,7 +201,7 @@ export default function ReglagesPage() {
 
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
-      <h1 className="text-xl font-bold mb-6">Reglages</h1>
+      <h1 className="text-xl font-bold mb-6">Réglages</h1>
 
       {/* Profil */}
       <p className="label">Mon profil</p>
@@ -235,12 +235,12 @@ export default function ReglagesPage() {
       {/* Apparence */}
       <p className="label mt-4">Apparence</p>
       <div className="card">
-        <p className="text-sm font-bold mb-3">Theme</p>
+        <p className="text-sm font-bold mb-3">Thème</p>
         <div className="grid grid-cols-3 gap-2">
           {([
             ["dark", "🌙", "Sombre"],
             ["light", "☀️", "Clair"],
-            ["system", "💻", "Systeme"],
+            ["system", "💻", "Système"],
           ] as const).map(([key, icon, label]) => (
             <button
               key={key}
@@ -283,7 +283,7 @@ export default function ReglagesPage() {
       <div className="card">
         <p className="text-sm font-bold mb-3">Langue</p>
         <div className="flex gap-2">
-          {([["fr", "🇫🇷", "Francais"], ["en", "🇬🇧", "English"]] as const).map(([key, flag, label]) => (
+          {([["fr", "🇫🇷", "Français"], ["en", "🇬🇧", "English"]] as const).map(([key, flag, label]) => (
             <button
               key={key}
               className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
@@ -299,8 +299,8 @@ export default function ReglagesPage() {
         </div>
       </div>
 
-      {/* Geolocalisation */}
-      <p className="label mt-4">Geolocalisation</p>
+      {/* Géolocalisation */}
+      <p className="label mt-4">Géolocalisation</p>
       <div className="card flex items-center justify-between">
         <span className="text-sm">Permettre à Flow de me géolocaliser</span>
         <button
@@ -321,7 +321,7 @@ export default function ReglagesPage() {
         <div>
           <span className="text-sm">Notifications push</span>
           <p className="text-[10px] mt-0.5" style={{ color: "var(--dim)" }}>
-            Rappels matin & soir, alertes evenements
+            Rappels matin & soir, alertes évènements
           </p>
         </div>
         <button
@@ -360,7 +360,7 @@ export default function ReglagesPage() {
                   return;
                 }
               } else {
-                alert("Pas d'abonnement push actif. Desactive et reactive les notifications.");
+                alert("Pas d'abonnement push actif. Désactive et réactive les notifications.");
                 return;
               }
 
@@ -370,7 +370,7 @@ export default function ReglagesPage() {
                 headers,
                 body: JSON.stringify({
                   title: "FlowTime fonctionne ! 🎉",
-                  body: `Hey ${profile?.first_name || ""} ! Les notifications sont bien activees. Tu recevras tes rappels meme ecran verrouille 🔔`,
+                  body: `Hey ${profile?.first_name || ""} ! Les notifications sont bien activées. Tu recevras tes rappels même écran verrouillé 🔔`,
                   userId: profile?.id,
                 }),
               });
@@ -378,7 +378,7 @@ export default function ReglagesPage() {
               if (data.error) {
                 alert("Erreur send: " + data.error);
               } else if (data.sent > 0) {
-                alert("Notification envoyee ! Verrouille ton ecran pour verifier.");
+                alert("Notification envoyée ! Verrouille ton écran pour vérifier.");
               } else {
                 alert("Aucun abonnement trouve en base. Erreur cote serveur.");
               }
@@ -445,7 +445,7 @@ export default function ReglagesPage() {
       </div>
 
       {/* Nouveautés */}
-      <p className="label mt-4">Nouveautes</p>
+      <p className="label mt-4">Nouveautés</p>
       <div className="flex flex-col gap-2">
         {[
           {
@@ -474,7 +474,7 @@ export default function ReglagesPage() {
             version: "1.4.0", date: "4 mars 2025", tag: "UX",
             changes: [
               "Refonte des contacts de confiance (50+ relations, 6 categories, appel rapide)",
-              "Taches cochables depuis l'accueil",
+              "Tâches cochables depuis l'accueil",
               "Historique Flow conserve entre ouverture/fermeture",
               "Skeletons de chargement",
               "Feedback tactile sur les cartes et boutons",
@@ -486,9 +486,9 @@ export default function ReglagesPage() {
             ],
           },
           {
-            version: "1.3.0", date: "3 mars 2025", tag: "Securite",
+            version: "1.3.0", date: "3 mars 2025", tag: "Sécurité",
             changes: [
-              "Securisation de toutes les routes API (authentification)",
+              "Sécurisation de toutes les routes API (authentification)",
               "Headers de securite (CSP, HSTS, X-Frame-Options)",
               "Rate limiting sur les APIs sensibles",
               "Correction des politiques RLS Supabase",
@@ -500,10 +500,10 @@ export default function ReglagesPage() {
             version: "1.2.0", date: "2 mars 2025", tag: "Notifications",
             changes: [
               "Notifications push iOS/Android",
-              "Resume matinal a 7h avec le programme du jour",
-              "Rappels 15 min avant chaque evenement",
+              "Résumé matinal à 7h avec le programme du jour",
+              "Rappels 15 min avant chaque évènement",
               "Notifications meme app fermee (Service Worker)",
-              "Emojis et messages personnalises par categorie",
+              "Emojis et messages personnalisés par catégorie",
               "Bouton tester les notifications dans les reglages",
             ],
           },
@@ -511,8 +511,8 @@ export default function ReglagesPage() {
             version: "1.1.0", date: "1 mars 2025", tag: "Cartes",
             changes: [
               "Carte interactive multi-couches (Sombre, Standard, Satellite)",
-              "Itineraires gratuits (voiture, marche, velo)",
-              "Recherche POI (12 categories)",
+              "Itinéraires gratuits (voiture, marche, vélo)",
+              "Recherche POI (12 catégories)",
               "Localisation GPS en temps reel",
               "Partage de position entre appareils",
               "Widget carte sur l'accueil",
@@ -525,8 +525,8 @@ export default function ReglagesPage() {
               "Gestion des membres, contacts, adresses",
               "Mode vocal et photo dans Flow",
               "Notes collaboratives avec commentaires",
-              "Listes de courses partagees",
-              "Suivi des depenses et taches menageres",
+              "Listes de courses partagées",
+              "Suivi des dépenses et tâches ménagères",
               "5 themes (Sombre, Ocean, Foret, Coucher de soleil, Clair)",
               "Mode hors-ligne avec cache",
               "PWA installable sur mobile",
@@ -538,8 +538,8 @@ export default function ReglagesPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">v{release.version}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{
-                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Securite" ? "rgba(240,107,126,0.12)" : release.tag === "UX" ? "rgba(94,212,200,0.12)" : "rgba(94,200,158,0.12)",
-                  color: release.tag === "Nouveau" ? "var(--accent)" : release.tag === "Securite" ? "var(--red)" : release.tag === "UX" ? "var(--teal)" : "var(--green)",
+                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Sécurité" ? "rgba(240,107,126,0.12)" : release.tag === "UX" ? "rgba(94,212,200,0.12)" : "rgba(94,200,158,0.12)",
+                  color: release.tag === "Nouveau" ? "var(--accent)" : release.tag === "Sécurité" ? "var(--red)" : release.tag === "UX" ? "var(--teal)" : "var(--green)",
                 }}>{release.tag}</span>
               </div>
               <span className="text-[10px]" style={{ color: "var(--dim)" }}>{release.date}</span>
@@ -569,7 +569,7 @@ export default function ReglagesPage() {
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>
-          Votre famille, parfaitement synchronisee.
+          Votre famille, parfaitement synchronisée.
         </p>
         <p className="text-[10px] mt-2" style={{ color: "var(--faint)" }}>
           Fait avec 💜 par FlowTime Team
