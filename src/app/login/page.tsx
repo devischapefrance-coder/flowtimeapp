@@ -23,13 +23,13 @@ export default function LoginPage() {
     setError("");
     setLoading(true);
     const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/login`,
+      redirectTo: `${window.location.origin}/reset-password`,
     });
     setLoading(false);
     if (resetError) {
       setError(resetError.message);
     } else {
-      setSuccess("Un email de reinitialisation a ete envoye !");
+      setSuccess("Un email de réinitialisation a été envoyé !");
     }
   }
 
