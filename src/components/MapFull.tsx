@@ -63,6 +63,36 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
   const [mapStyle, setMapStyle] = useState<MapStyle>("apple");
   const [showStylePicker, setShowStylePicker] = useState(false);
 
+  // Detect light/dark theme
+  const [isLight, setIsLight] = useState(false);
+  useEffect(() => {
+    const check = () => setIsLight(document.documentElement.classList.contains("light"));
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+
+  // Theme-aware colors
+  const t = {
+    panelBg: isLight ? "rgba(255,255,255,0.92)" : "rgba(30,32,42,0.92)",
+    stripBg: isLight ? "rgba(255,255,255,0.95)" : "rgba(30,32,42,0.95)",
+    pillBg: isLight ? "rgba(255,255,255,0.95)" : "rgba(30,32,42,0.95)",
+    text: isLight ? "#1D1D1F" : "#ECEEF4",
+    textDim: isLight ? "#86868B" : "rgba(236,238,244,0.5)",
+    inputBg: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
+    catBg: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
+    hoverBg: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)",
+    border: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
+    divider: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)",
+    badgeBg: isLight ? "rgba(255,255,255,0.95)" : "rgba(30,32,42,0.95)",
+    accent: "#007AFF",
+    red: "#FF3B30",
+    green: "#34C759",
+    deviceBg: isLight ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.15)",
+    routeInfoBg: isLight ? "rgba(0,122,255,0.06)" : "rgba(0,122,255,0.12)",
+  };
+
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
   const watchRef = useRef<number | null>(null);
@@ -255,15 +285,15 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
       {/* Top bar - minimal */}
       <div className="absolute top-0 left-0 right-0 flex items-center justify-between px-4 py-3" style={{ zIndex: 1002 }}>
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-lg" style={{ background: "rgba(255,255,255,0.95)", color: "#FF3B30" }}>
+          <span className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-bold shadow-lg" style={{ background: t.badgeBg, color: t.red }}>
             🔴 En direct
           </span>
-          {searching && <span className="text-[10px] animate-pulse px-2 py-1 rounded-full font-medium shadow-sm" style={{ background: "rgba(255,255,255,0.9)", color: "#86868B" }}>Recherche...</span>}
+          {searching && <span className="text-[10px] animate-pulse px-2 py-1 rounded-full font-medium shadow-sm" style={{ background: t.pillBg, color: t.textDim }}>Recherche...</span>}
         </div>
         <button
           onClick={onClose}
           className="w-9 h-9 flex items-center justify-center rounded-full text-sm font-bold shadow-lg"
-          style={{ background: "rgba(255,255,255,0.95)", color: "#1D1D1F" }}
+          style={{ background: t.pillBg, color: t.text }}
         >
           ✕
         </button>
@@ -276,7 +306,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           zIndex: 1002,
           top: "50%",
           transform: "translateY(-50%)",
-          background: "rgba(255,255,255,0.95)",
+          background: t.stripBg,
           backdropFilter: "blur(20px)",
           WebkitBackdropFilter: "blur(20px)",
         }}
@@ -291,8 +321,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
             onClick={() => switchTab(item.key)}
             className="w-10 h-10 flex flex-col items-center justify-center rounded-xl transition-all"
             style={{
-              background: tab === item.key ? "#007AFF" : "transparent",
-              color: tab === item.key ? "#fff" : "#1D1D1F",
+              background: tab === item.key ? t.accent : "transparent",
+              color: tab === item.key ? "#fff" : t.text,
             }}
             title={item.label}
           >
@@ -301,13 +331,13 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           </button>
         ))}
 
-        <div className="w-6 h-px mx-auto my-0.5" style={{ background: "rgba(0,0,0,0.1)" }} />
+        <div className="w-6 h-px mx-auto my-0.5" style={{ background: t.divider }} />
 
         {/* GPS button */}
         <button
           onClick={locateMe}
           className="w-10 h-10 flex items-center justify-center rounded-xl transition-all"
-          style={{ background: myLocation ? "#007AFF" : "transparent", color: myLocation ? "#fff" : "#1D1D1F" }}
+          style={{ background: myLocation ? t.accent : "transparent", color: myLocation ? "#fff" : t.text }}
           title="Ma position"
         >
           <span className="text-base">{myLocation ? "📍" : "🎯"}</span>
@@ -318,7 +348,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           <button
             onClick={() => setShowStylePicker(!showStylePicker)}
             className="w-10 h-10 flex items-center justify-center rounded-xl"
-            style={{ color: "#1D1D1F" }}
+            style={{ color: t.text }}
             title="Style de carte"
           >
             <span className="text-base">🗺️</span>
@@ -326,15 +356,15 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           {showStylePicker && (
             <div
               className="absolute left-full ml-2 top-0 flex flex-col gap-0.5 p-1.5 rounded-xl shadow-xl"
-              style={{ background: "rgba(255,255,255,0.95)", backdropFilter: "blur(20px)", minWidth: 120 }}
+              style={{ background: t.stripBg, backdropFilter: "blur(20px)", minWidth: 120 }}
             >
               {MAP_STYLES.map((s) => (
                 <button
                   key={s.key}
                   className="flex items-center gap-2 px-3 py-2 rounded-lg text-xs font-semibold transition-colors text-left"
                   style={{
-                    background: mapStyle === s.key ? "#007AFF" : "transparent",
-                    color: mapStyle === s.key ? "#fff" : "#1D1D1F",
+                    background: mapStyle === s.key ? t.accent : "transparent",
+                    color: mapStyle === s.key ? "#fff" : t.text,
                   }}
                   onClick={() => { setMapStyle(s.key); setShowStylePicker(false); }}
                 >
@@ -360,15 +390,15 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           className="h-full flex flex-col overflow-y-auto"
           style={{
             width: 280,
-            background: "rgba(255,255,255,0.92)",
+            background: t.panelBg,
             backdropFilter: "blur(24px)",
             WebkitBackdropFilter: "blur(24px)",
-            borderRight: "1px solid rgba(0,0,0,0.06)",
+            borderRight: `1px solid ${t.border}`,
           }}
         >
           {/* Panel header */}
           <div className="px-4 pt-16 pb-3">
-            <h2 className="text-base font-bold" style={{ color: "#1D1D1F" }}>
+            <h2 className="text-base font-bold" style={{ color: t.text }}>
               {tab === "lieux" ? "Lieux a proximite" : tab === "recherche" ? "Rechercher" : tab === "itineraire" ? "Itineraire" : ""}
             </h2>
           </div>
@@ -382,8 +412,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                     key={cat.key}
                     className="flex flex-col items-center gap-1 py-2.5 px-1 rounded-xl transition-all"
                     style={{
-                      background: activeCategory === cat.key ? "#007AFF" : "rgba(0,0,0,0.04)",
-                      color: activeCategory === cat.key ? "#fff" : "#1D1D1F",
+                      background: activeCategory === cat.key ? t.accent : t.catBg,
+                      color: activeCategory === cat.key ? "#fff" : t.text,
                     }}
                     onClick={() => searchPOI(cat)}
                   >
@@ -396,21 +426,24 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               {/* POI results list */}
               {poiMarkers.length > 0 && (
                 <div className="mt-3">
-                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: "#86868B" }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: t.textDim }}>
                     {poiMarkers.length} resultats
                   </p>
                   <div className="flex flex-col gap-1">
                     {poiMarkers.map((poi, i) => (
                       <button
                         key={i}
-                        className="flex items-start gap-2 px-3 py-2 rounded-xl text-left transition-colors hover:bg-black/5"
+                        className="flex items-start gap-2 px-3 py-2 rounded-xl text-left transition-colors"
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = t.hoverBg)}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                         onClick={() => setMapCenter([poi.lat, poi.lng])}
                       >
                         <span className="text-sm mt-0.5">{poi.emoji}</span>
                         <div className="flex-1 min-w-0">
-                          <p className="text-xs font-semibold truncate" style={{ color: "#1D1D1F" }}>{poi.name}</p>
+                          <p className="text-xs font-semibold truncate" style={{ color: t.text }}>{poi.name}</p>
                           {poi.detail && (
-                            <p className="text-[10px] truncate mt-0.5" style={{ color: "#86868B" }}>{poi.detail}</p>
+                            <p className="text-[10px] truncate mt-0.5" style={{ color: t.textDim }}>{poi.detail}</p>
                           )}
                         </div>
                       </button>
@@ -421,21 +454,21 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
               {/* Legend */}
               {(markers.length > 0 || deviceMarkers.length > 0) && (
-                <div className="mt-4 pt-3" style={{ borderTop: "1px solid rgba(0,0,0,0.06)" }}>
-                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: "#86868B" }}>
+                <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${t.border}` }}>
+                  <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: t.textDim }}>
                     Vos adresses
                   </p>
                   <div className="flex flex-col gap-1">
                     {markers.map((m, i) => (
                       <div key={`a-${i}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg">
                         <span className="text-sm">{m.emoji}</span>
-                        <span className="text-xs font-medium truncate" style={{ color: "#1D1D1F" }}>{m.name}</span>
+                        <span className="text-xs font-medium truncate" style={{ color: t.text }}>{m.name}</span>
                       </div>
                     ))}
                     {deviceMarkers.map((m, i) => (
-                      <div key={`d-${i}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: "rgba(0,122,255,0.08)" }}>
+                      <div key={`d-${i}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: t.deviceBg }}>
                         <span className="text-sm">{m.emoji}</span>
-                        <span className="text-xs font-medium truncate" style={{ color: "#007AFF" }}>{m.name}</span>
+                        <span className="text-xs font-medium truncate" style={{ color: t.accent }}>{m.name}</span>
                       </div>
                     ))}
                   </div>
@@ -454,8 +487,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full px-3 py-2.5 rounded-xl text-sm font-medium"
                   style={{
-                    background: "rgba(0,0,0,0.06)",
-                    color: "#1D1D1F",
+                    background: t.inputBg,
+                    color: t.text,
                     border: "none",
                     outline: "none",
                   }}
@@ -468,13 +501,16 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                   {searchResults.map((r, i) => (
                     <button
                       key={i}
-                      className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-colors hover:bg-black/5"
+                      className="flex items-start gap-2 px-3 py-2.5 rounded-xl text-left transition-colors"
+                      style={{ cursor: "pointer" }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = t.hoverBg)}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
                       onClick={() => setMapCenter([r.lat, r.lng])}
                     >
                       <span className="text-sm mt-0.5">{r.emoji}</span>
                       <div className="flex-1 min-w-0">
-                        <p className="text-xs font-semibold truncate" style={{ color: "#1D1D1F" }}>{r.name}</p>
-                        {r.detail && <p className="text-[10px] truncate mt-0.5" style={{ color: "#86868B" }}>{r.detail}</p>}
+                        <p className="text-xs font-semibold truncate" style={{ color: t.text }}>{r.name}</p>
+                        {r.detail && <p className="text-[10px] truncate mt-0.5" style={{ color: t.textDim }}>{r.detail}</p>}
                       </div>
                     </button>
                   ))}
@@ -482,7 +518,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               )}
 
               {searchQuery.length > 0 && searchResults.length === 0 && !searching && (
-                <p className="text-xs text-center py-8" style={{ color: "#86868B" }}>Aucun resultat</p>
+                <p className="text-xs text-center py-8" style={{ color: t.textDim }}>Aucun resultat</p>
               )}
             </div>
           )}
@@ -492,17 +528,17 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
             <div className="flex-1 px-3 pb-4">
               <div className="flex flex-col gap-2 mb-3">
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#34C759" }} />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: t.green }} />
                   <input
                     placeholder="Depart"
                     value={routeFrom}
                     onChange={(e) => { setRouteFrom(e.target.value); setRouteFromCoord(null); }}
                     className="flex-1 px-3 py-2 rounded-xl text-sm font-medium"
-                    style={{ background: "rgba(0,0,0,0.06)", color: "#1D1D1F", border: "none", outline: "none" }}
+                    style={{ background: t.inputBg, color: t.text, border: "none", outline: "none" }}
                   />
                   <button
                     className="w-8 h-8 flex items-center justify-center rounded-lg text-sm"
-                    style={{ background: "rgba(0,122,255,0.1)" }}
+                    style={{ background: t.deviceBg }}
                     title="Ma position"
                     onClick={() => {
                       if (myLocation) {
@@ -518,26 +554,26 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                   </button>
                 </div>
                 <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: "#FF3B30" }} />
+                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: t.red }} />
                   <input
                     placeholder="Destination"
                     value={routeTo}
                     onChange={(e) => { setRouteTo(e.target.value); setRouteToCoord(null); }}
                     className="flex-1 px-3 py-2 rounded-xl text-sm font-medium"
-                    style={{ background: "rgba(0,0,0,0.06)", color: "#1D1D1F", border: "none", outline: "none" }}
+                    style={{ background: t.inputBg, color: t.text, border: "none", outline: "none" }}
                   />
                 </div>
               </div>
 
               {/* Transport mode */}
-              <div className="flex gap-1 p-1 rounded-xl mb-3" style={{ background: "rgba(0,0,0,0.04)" }}>
+              <div className="flex gap-1 p-1 rounded-xl mb-3" style={{ background: t.catBg }}>
                 {(["driving", "walking", "cycling"] as const).map((mode) => (
                   <button
                     key={mode}
                     className="flex-1 py-2 rounded-lg text-[11px] font-bold transition-all"
                     style={{
-                      background: routeMode === mode ? "#007AFF" : "transparent",
-                      color: routeMode === mode ? "#fff" : "#86868B",
+                      background: routeMode === mode ? t.accent : "transparent",
+                      color: routeMode === mode ? "#fff" : t.textDim,
                     }}
                     onClick={() => { setRouteMode(mode); setRoute(null); }}
                   >
@@ -549,7 +585,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               <button
                 className="w-full py-2.5 rounded-xl text-sm font-bold transition-all"
                 style={{
-                  background: routeLoading || !routeFrom.trim() || !routeTo.trim() ? "rgba(0,122,255,0.3)" : "#007AFF",
+                  background: routeLoading || !routeFrom.trim() || !routeTo.trim() ? "rgba(0,122,255,0.3)" : t.accent,
                   color: "#fff",
                   cursor: routeLoading || !routeFrom.trim() || !routeTo.trim() ? "not-allowed" : "pointer",
                 }}
@@ -560,12 +596,12 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               </button>
 
               {route && (
-                <div className="mt-3 p-3 rounded-xl" style={{ background: "rgba(0,122,255,0.06)" }}>
+                <div className="mt-3 p-3 rounded-xl" style={{ background: t.routeInfoBg }}>
                   <div className="flex items-center justify-between mb-1">
-                    <span className="text-lg font-bold" style={{ color: "#007AFF" }}>{formatDuration(route.duration)}</span>
-                    <span className="text-xs font-medium" style={{ color: "#86868B" }}>{formatDistance(route.distance)}</span>
+                    <span className="text-lg font-bold" style={{ color: t.accent }}>{formatDuration(route.duration)}</span>
+                    <span className="text-xs font-medium" style={{ color: t.textDim }}>{formatDistance(route.distance)}</span>
                   </div>
-                  <p className="text-[10px]" style={{ color: "#86868B" }}>
+                  <p className="text-[10px]" style={{ color: t.textDim }}>
                     {routeMode === "driving" ? "en voiture" : routeMode === "walking" ? "a pied" : "a velo"}
                   </p>
                 </div>
