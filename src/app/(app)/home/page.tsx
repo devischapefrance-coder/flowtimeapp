@@ -401,19 +401,24 @@ export default function HomePage() {
 
   // Scroll day strip to selected date
   useEffect(() => {
-    if (!scrollStripRef.current) return;
-    const el = scrollStripRef.current.querySelector(`[data-date="${selectedDate}"]`) as HTMLElement | null;
-    if (el) {
-      const container = scrollStripRef.current;
-      const scrollLeft = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
-      if (!scrollInitRef.current) {
-        // First render: jump instantly
-        container.scrollLeft = scrollLeft;
-        scrollInitRef.current = true;
-      } else {
-        container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+    if (!selectedDate || !scrollStripRef.current) return;
+    // Small delay to ensure DOM is painted with the day strip
+    const raf = requestAnimationFrame(() => {
+      if (!scrollStripRef.current) return;
+      const el = scrollStripRef.current.querySelector(`[data-date="${selectedDate}"]`) as HTMLElement | null;
+      if (el) {
+        const container = scrollStripRef.current;
+        const scrollLeft = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
+        if (!scrollInitRef.current) {
+          // First render: jump instantly
+          container.scrollLeft = scrollLeft;
+          scrollInitRef.current = true;
+        } else {
+          container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+        }
       }
-    }
+    });
+    return () => cancelAnimationFrame(raf);
   }, [selectedDate]);
 
   // Proactive reminders check every minute
