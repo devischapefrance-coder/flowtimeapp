@@ -451,13 +451,13 @@ export default function ReglagesPage() {
           {
             version: "1.6.0", date: "4 mars 2026", tag: "Nouveau",
             changes: [
-              "Recherche amelioree (repas, taches, contenu des notes)",
-              "Recherches recentes sauvegardees",
-              "Actions rapides (creer evenement, contact, note, tache)",
-              "Evenements a venir dans la recherche",
+              "Recherche améliorée (repas, tâches, contenu des notes)",
+              "Recherches récentes sauvegardées",
+              "Actions rapides (créer évènement, contact, note, tâche)",
+              "Évènements à venir dans la recherche",
               "Anniversaires proches dans la recherche",
-              "Widget meteo dans la recherche",
-              "Navigation directe vers la date d'un evenement",
+              "Widget météo dans la recherche",
+              "Navigation directe vers la date d'un évènement",
             ],
           },
           {

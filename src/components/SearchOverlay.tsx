@@ -59,10 +59,10 @@ function clearRecentSearches() {
 }
 
 const QUICK_ACTIONS = [
-  { label: "Evenement", emoji: "📅", href: "/home?action=create" },
+  { label: "Évènement", emoji: "📅", href: "/home?action=create" },
   { label: "Contact", emoji: "📞", href: "/famille?action=create" },
   { label: "Note", emoji: "📝", href: "/vie?action=create" },
-  { label: "Tache", emoji: "✅", href: "/home?action=create-chore" },
+  { label: "Tâche", emoji: "✅", href: "/vie?action=create-chore" },
 ];
 
 export default function SearchOverlay({ open, onClose, familyId }: SearchOverlayProps) {
@@ -190,7 +190,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
         found.push({
           type: "event",
           title: e.title,
-          subtitle: `${e.date} a ${e.time || ""}${(e.members as unknown as { name: string } | null)?.name ? ` · ${(e.members as unknown as { name: string }).name}` : ""}`,
+          subtitle: `${e.date} à ${e.time || ""}${(e.members as unknown as { name: string } | null)?.name ? ` · ${(e.members as unknown as { name: string }).name}` : ""}`,
           emoji: "📅",
           href: "/home",
           data: { date: e.date },
@@ -236,7 +236,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
         found.push({
           type: "chore",
           title: c.name,
-          subtitle: c.done ? "Fait" : c.assigned_to || "Non assigne",
+          subtitle: c.done ? "Fait" : c.assigned_to || "Non assigné",
           emoji: c.emoji || "🧹",
           href: "/home",
         });
@@ -279,13 +279,13 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
   if (!open) return null;
 
   const typeLabels: Record<string, string> = {
-    event: "Evenements",
+    event: "Évènements",
     member: "Membres",
     contact: "Contacts",
     address: "Adresses",
     note: "Notes",
     meal: "Repas",
-    chore: "Taches menageres",
+    chore: "Tâches ménagères",
   };
 
   const grouped: Record<string, SearchResult[]> = {};
@@ -344,7 +344,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
                   <span className="text-2xl">{weatherData.icon}</span>
                   <div>
                     <p className="text-sm font-bold">{weatherData.temp}°C</p>
-                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>Meteo actuelle</p>
+                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>Météo actuelle</p>
                   </div>
                 </div>
               )}
@@ -374,7 +374,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
                 <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>
-                      Recherches recentes
+                      Recherches récentes
                     </p>
                     <button
                       className="text-[10px] font-bold"
@@ -412,7 +412,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
               {upcomingEvents.length > 0 && (
                 <div>
                   <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>
-                    Prochains evenements
+                    Prochains évènements
                   </p>
                   <div className="flex flex-col gap-1">
                     {upcomingEvents.map((ev, i) => (
@@ -426,7 +426,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
                         <div className="flex-1 min-w-0">
                           <p className="text-sm font-bold truncate">{ev.title}</p>
                           <p className="text-[10px]" style={{ color: "var(--dim)" }}>
-                            {formatDateShort(ev.date)}{ev.time ? ` a ${ev.time}` : ""}
+                            {formatDateShort(ev.date)}{ev.time ? ` à ${ev.time}` : ""}
                           </p>
                         </div>
                         <span className="text-xs" style={{ color: "var(--accent)" }}>→</span>
@@ -469,7 +469,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
           {hasQuery && results.length === 0 && (
             <div className="text-center py-8">
               <p className="text-2xl mb-2">🔍</p>
-              <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun resultat</p>
+              <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun résultat</p>
             </div>
           )}
 
