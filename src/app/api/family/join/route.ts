@@ -70,13 +70,20 @@ export async function POST(req: Request) {
       .ilike("name", joinerProfile.first_name);
 
     if (!existingMembers || existingMembers.length === 0) {
-      await adminClient.from("members").insert({
+      // Try with phone first, fallback without if column doesn't exist
+      const memberData: Record<string, unknown> = {
         family_id: targetFamilyId,
         name: joinerProfile.first_name,
         emoji: joinerProfile.emoji || "👤",
         role: "parent",
-        phone: joinerProfile.phone || null,
-      });
+      };
+
+      const { error: insertErr } = await adminClient.from("members").insert({ ...memberData, phone: joinerProfile.phone || null });
+
+      if (insertErr) {
+        // Retry without phone in case column doesn't exist yet
+        await adminClient.from("members").insert(memberData);
+      }
     }
   }
 
