@@ -16,6 +16,7 @@ import dynamic from "next/dynamic";
 import type { MapMarker } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
+const MapFull = dynamic(() => import("@/components/MapFull"), { ssr: false });
 import { checkReminders, checkEventReminders } from "@/lib/reminders";
 import { downloadICS, shareICS } from "@/lib/ical";
 import { exportPDF } from "@/lib/pdf-export";
@@ -144,6 +145,7 @@ export default function HomePage() {
   const [chores, setChores] = useState<Chore[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
+  const [mapFullOpen, setMapFullOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
@@ -1029,24 +1031,34 @@ export default function HomePage() {
         ? [profile.lat, profile.lng]
         : [46.6, 2.5];
     return (
-      <a href="/famille" className="card !mb-0 block cursor-pointer" style={{ textDecoration: "none", color: "inherit" }}>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
-          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
-            {devices.length} appareil{devices.length !== 1 ? "s" : ""} · Voir →
-          </span>
+      <>
+        <div className="card !mb-0 block cursor-pointer" onClick={() => setMapFullOpen(true)}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+              {devices.length} appareil{devices.length !== 1 ? "s" : ""} · Voir →
+            </span>
+          </div>
+          <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
+            <MapView
+              markers={mapMarkers}
+              center={center}
+              zoom={mapMarkers.length > 0 ? 12 : 6}
+              height="180px"
+              mapStyle="dark"
+              interactive={false}
+            />
+          </div>
         </div>
-        <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
-          <MapView
-            markers={mapMarkers}
+        {mapFullOpen && (
+          <MapFull
+            markers={mapMarkers.filter((m) => m.type === "address")}
+            deviceMarkers={mapMarkers.filter((m) => m.type === "device")}
             center={center}
-            zoom={mapMarkers.length > 0 ? 12 : 6}
-            height="180px"
-            mapStyle="dark"
-            interactive={false}
+            onClose={() => setMapFullOpen(false)}
           />
-        </div>
-      </a>
+        )}
+      </>
     );
   }
 
