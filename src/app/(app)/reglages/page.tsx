@@ -449,11 +449,19 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
-            version: "1.4.0", date: "4 mars 2025", tag: "Nouveau",
+            version: "1.5.0", date: "4 mars 2025", tag: "Nouveau",
+            changes: [
+              "Recadrage photo de profil (repositionner, zoomer avant upload)",
+              "Badge camera visible sur la photo de profil",
+              "Calendrier en tourniquet : scroll horizontal libre jour par jour (60 jours)",
+              "Animations modals fluides (ouverture/fermeture sans flicker)",
+              "Fermeture des modals par croix ou tap sur le fond",
+            ],
+          },
+          {
+            version: "1.4.0", date: "4 mars 2025", tag: "UX",
             changes: [
               "Refonte des contacts de confiance (50+ relations, 6 categories, appel rapide)",
-              "Swipe gauche/droite sur le calendrier",
-              "Swipe vers le bas pour fermer les modals",
               "Taches cochables depuis l'accueil",
               "Historique Flow conserve entre ouverture/fermeture",
               "Skeletons de chargement",
@@ -518,8 +526,8 @@ export default function ReglagesPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">v{release.version}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{
-                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Securite" ? "rgba(240,107,126,0.12)" : "rgba(94,200,158,0.12)",
-                  color: release.tag === "Nouveau" ? "var(--accent)" : release.tag === "Securite" ? "var(--red)" : "var(--green)",
+                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Securite" ? "rgba(240,107,126,0.12)" : release.tag === "UX" ? "rgba(94,212,200,0.12)" : "rgba(94,200,158,0.12)",
+                  color: release.tag === "Nouveau" ? "var(--accent)" : release.tag === "Securite" ? "var(--red)" : release.tag === "UX" ? "var(--teal)" : "var(--green)",
                 }}>{release.tag}</span>
               </div>
               <span className="text-[10px]" style={{ color: "var(--dim)" }}>{release.date}</span>
@@ -545,7 +553,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.4.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.5.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>
