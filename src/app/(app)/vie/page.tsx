@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores } from "@/lib/realtime";
@@ -44,7 +44,7 @@ function genId() {
 }
 
 export default function ViePage() {
-  const { profile } = useProfile();
+  const { profile, setVieUnread } = useProfile();
   const { toast, toastUndo } = useToast();
   const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">(() => {
     if (typeof window !== "undefined") {
@@ -117,6 +117,53 @@ export default function ViePage() {
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const dataLoadedRef = useRef(false);
+
+  // --- Badge "nouveautés" helpers ---
+  const TAB_KEYS = ["notes", "anniversaires", "courses", "budget", "taches", "photos"] as const;
+
+  function getLastSeen(t: string): string {
+    return localStorage.getItem(`flowtime_vie_lastSeen_${t}`) || "1970-01-01T00:00:00.000Z";
+  }
+
+  function markSeen(t: string) {
+    localStorage.setItem(`flowtime_vie_lastSeen_${t}`, new Date().toISOString());
+  }
+
+  // Compute new item counts per tab
+  const newCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    const dataMap: Record<string, { created_at: string }[]> = {
+      notes, anniversaires: birthdays, courses: shoppingItems,
+      budget: expenses, taches: chores, photos,
+    };
+    for (const key of TAB_KEYS) {
+      const lastSeen = getLastSeen(key);
+      counts[key] = (dataMap[key] || []).filter((item) => item.created_at > lastSeen).length;
+    }
+    return counts;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [notes, birthdays, shoppingItems, expenses, chores, photos]);
+
+  // Mark the active tab as seen once data loads & propagate total to Navbar
+  useEffect(() => {
+    const hasData = notes.length || birthdays.length || shoppingItems.length || expenses.length || chores.length || photos.length;
+    if (hasData && !dataLoadedRef.current) {
+      dataLoadedRef.current = true;
+      markSeen(tab);
+    }
+  }, [notes, birthdays, shoppingItems, expenses, chores, photos, tab]);
+
+  // Propagate total unread to Navbar via layout context
+  useEffect(() => {
+    const total = TAB_KEYS.reduce((sum, key) => sum + (key === tab ? 0 : (newCounts[key] || 0)), 0);
+    setVieUnread(total);
+  }, [newCounts, tab, setVieUnread]);
+
+  // Reset unread when leaving the page
+  useEffect(() => {
+    return () => setVieUnread(0);
+  }, [setVieUnread]);
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
@@ -436,15 +483,20 @@ export default function ViePage() {
         ] as const).map(([key, emoji, label]) => (
           <button
             key={key}
-            className="px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all shrink-0"
+            className="px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all shrink-0 relative"
             style={{
               background: tab === key ? "var(--accent)" : "var(--surface2)",
               color: tab === key ? "#fff" : "var(--dim)",
               boxShadow: tab === key ? "0 4px 16px var(--accent-glow)" : "none",
             }}
-            onClick={() => setTab(key)}
+            onClick={() => { setTab(key); markSeen(key); }}
           >
             {emoji} {label}
+            {tab !== key && (newCounts[key] || 0) > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: "var(--red, #ef4444)" }}>
+                {newCounts[key] > 9 ? "9+" : newCounts[key]}
+              </span>
+            )}
           </button>
         ))}
       </div>

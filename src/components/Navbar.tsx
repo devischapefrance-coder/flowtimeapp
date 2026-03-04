@@ -16,7 +16,7 @@ const tabs = [
 export default function Navbar() {
   const pathname = usePathname();
   const [searchOpen, setSearchOpen] = useState(false);
-  const { profile, chatUnread } = useProfile();
+  const { profile, chatUnread, vieUnread } = useProfile();
 
   return (
     <>
@@ -34,7 +34,8 @@ export default function Navbar() {
       >
         {tabs.map((tab) => {
           const active = pathname === tab.href;
-          const showBadge = tab.href === "/home" && !active && chatUnread > 0;
+          const showBadge = (tab.href === "/home" && !active && chatUnread > 0) || (tab.href === "/vie" && !active && vieUnread > 0);
+          const badgeCount = tab.href === "/home" ? chatUnread : vieUnread;
           return (
             <Link
               key={tab.href}
@@ -55,7 +56,7 @@ export default function Navbar() {
                 {tab.emoji}
                 {showBadge && (
                   <span className="absolute -top-1.5 -right-2.5 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: "var(--red)" }}>
-                    {chatUnread > 9 ? "9+" : chatUnread}
+                    {badgeCount > 9 ? "9+" : badgeCount}
                   </span>
                 )}
               </span>

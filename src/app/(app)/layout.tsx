@@ -16,6 +16,8 @@ interface ProfileContextType {
   refreshProfile: () => Promise<void>;
   chatUnread: number;
   openChat: () => void;
+  vieUnread: number;
+  setVieUnread: (n: number) => void;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
@@ -23,6 +25,8 @@ const ProfileContext = createContext<ProfileContextType>({
   refreshProfile: async () => {},
   chatUnread: 0,
   openChat: () => {},
+  vieUnread: 0,
+  setVieUnread: () => {},
 });
 
 export function useProfile() {
@@ -58,6 +62,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
   const handleUnread = useCallback((n: number) => setChatUnread(n), []);
+  const [vieUnread, setVieUnread] = useState(0);
 
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -125,7 +130,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <I18nProvider initialLang={initialLang}>
-      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true) }}>
+      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread }}>
         <TutorialContext.Provider value={{ tutorialActive, tutorialStep, startTutorial, stopTutorial, nextStep, prevStep }}>
           <ToastProvider>
             <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
