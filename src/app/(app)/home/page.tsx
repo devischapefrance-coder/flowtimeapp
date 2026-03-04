@@ -225,9 +225,12 @@ export default function HomePage() {
 
   const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
+  // En mode perso : seulement les events assignés à mon membre (exclut les events sans membre ou d'autres membres)
   const viewEvents = viewMode === "perso" && myMember
     ? events.filter((e) => e.member_id === myMember.id)
-    : events;
+    : viewMode === "perso" && !myMember
+      ? [] // Pas de membre trouvé pour l'utilisateur, on n'affiche rien en mode perso
+      : events;
 
   const dayEvents = viewEvents.filter((e) => e.date === currentDate);
   const filteredEvents = filter
@@ -256,7 +259,9 @@ export default function HomePage() {
   const monthEventsByDay: Record<string, Event[]> = {};
   const viewMonthEvents = viewMode === "perso" && myMember
     ? monthEvents.filter((e) => e.member_id === myMember.id)
-    : monthEvents;
+    : viewMode === "perso" && !myMember
+      ? []
+      : monthEvents;
   for (const ev of viewMonthEvents) {
     if (!monthEventsByDay[ev.date]) monthEventsByDay[ev.date] = [];
     monthEventsByDay[ev.date].push(ev);
@@ -305,6 +310,15 @@ export default function HomePage() {
     return mem?.id || null;
   }
 
+  // En mode perso, forcer l'assignation au membre de l'utilisateur
+  function resolveFlowMemberId(memberName?: string): string | null {
+    const resolved = resolveMemberId(memberName);
+    if (resolved) return resolved;
+    // Si pas de membre spécifié et mode perso, assigner automatiquement
+    if (viewMode === "perso" && myMember) return myMember.id;
+    return null;
+  }
+
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
 
@@ -315,7 +329,7 @@ export default function HomePage() {
         title,
         time: action.data.time,
         date: action.data.date || currentDate,
-        member_id: resolveMemberId(action.data.member_name as string),
+        member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
       });
@@ -329,12 +343,12 @@ export default function HomePage() {
         title,
         time: action.data.time,
         date: action.data.date || currentDate,
-        member_id: resolveMemberId(action.data.member_name as string),
+        member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
       });
     } else if (action.type === "add_recurring") {
-      const memberId = resolveMemberId(action.data.member_name as string);
+      const memberId = resolveFlowMemberId(action.data.member_name as string);
       const recurringDays = action.data.days as number[];
       const title = action.data.title as string;
       const category = (action.data.category as string) || detectCategory(title);
