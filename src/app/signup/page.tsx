@@ -21,6 +21,14 @@ function getStrengthColor(score: number): string {
   return "var(--green)";
 }
 
+const PROFILE_EMOJIS = [
+  "👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🧑‍🦲","🤴",
+  "👩","👱‍♀️","👩‍🦰","👩‍🦱","👩‍🦳","👸",
+  "👦","👧","🧒","🧑",
+  "👶","👴","👵","🧑‍🍼",
+  "🐱","🐶","🦊","🐻","🐼","🦁","🐸","🌟",
+];
+
 export default function SignupPage() {
   const router = useRouter();
   const [firstName, setFirstName] = useState("");
@@ -28,6 +36,7 @@ export default function SignupPage() {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const [emoji, setEmoji] = useState("👤");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
   const [error, setError] = useState("");
@@ -69,6 +78,7 @@ export default function SignupPage() {
         last_name: lastName,
         phone,
         address,
+        emoji,
       });
     }
 
@@ -112,6 +122,26 @@ export default function SignupPage() {
           <div className="flex flex-col gap-3">
             <input type="text" placeholder="Prénom" value={firstName} onChange={(e) => setFirstName(e.target.value)} />
             <input type="text" placeholder="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} />
+          </div>
+        </div>
+
+        <div>
+          <p className="label">Votre emoji</p>
+          <div className="flex flex-wrap gap-2">
+            {PROFILE_EMOJIS.map((e) => (
+              <button
+                key={e}
+                type="button"
+                className="w-10 h-10 rounded-xl flex items-center justify-center text-xl transition-all"
+                style={{
+                  background: emoji === e ? "var(--accent-soft)" : "var(--surface2)",
+                  border: emoji === e ? "2px solid var(--accent)" : "2px solid transparent",
+                }}
+                onClick={() => setEmoji(e)}
+              >
+                {e}
+              </button>
+            ))}
           </div>
         </div>
 
