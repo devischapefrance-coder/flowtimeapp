@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { uploadAvatar } from "@/lib/storage";
 
 interface AvatarUploadProps {
@@ -25,6 +25,14 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
   const pinchRef = useRef({ active: false, startDist: 0, startScale: 1 });
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
+
+  // Lock body scroll when crop is open
+  useEffect(() => {
+    if (cropSrc) {
+      document.body.style.overflow = "hidden";
+      return () => { document.body.style.overflow = ""; };
+    }
+  }, [cropSrc]);
 
   function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -188,12 +196,16 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
       />
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Crop screen */}
+      {/* Crop screen — blocks all interaction behind */}
       {cropSrc && (
         <div
           className="fixed inset-0 flex flex-col items-center justify-center"
-          style={{ zIndex: 700, background: "rgba(0,0,0,0.9)" }}
+          style={{ zIndex: 700, background: "rgba(0,0,0,0.9)", touchAction: "none" }}
           onClick={(e) => e.stopPropagation()}
+          onTouchStart={(e) => e.stopPropagation()}
+          onTouchMove={(e) => { e.stopPropagation(); e.preventDefault(); }}
+          onTouchEnd={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
         >
           <p className="text-sm font-bold text-white mb-1">Ajuster la photo</p>
           <p className="text-xs mb-6" style={{ color: "rgba(255,255,255,0.5)" }}>Glisse pour repositionner</p>
