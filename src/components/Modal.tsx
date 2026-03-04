@@ -10,145 +10,126 @@ interface ModalProps {
 }
 
 export default function Modal({ open, onClose, title, children }: ModalProps) {
-  const [mounted, setMounted] = useState(false);
+  const [visible, setVisible] = useState(false);
   const [closing, setClosing] = useState(false);
-  const dragY = useRef(0);
+  const [dragY, setDragY] = useState(0);
   const startY = useRef(0);
   const dragging = useRef(false);
-  const sheetRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
-  const rafRef = useRef<number>(0);
 
-  const doClose = useCallback(() => {
-    if (closing) return;
+  // Animated close
+  const animatedClose = useCallback(() => {
     setClosing(true);
     setTimeout(() => {
       setClosing(false);
-      setMounted(false);
-      document.body.style.overflow = "";
+      setVisible(false);
+      setDragY(0);
       onClose();
-    }, 300);
-  }, [closing, onClose]);
+    }, 250);
+  }, [onClose]);
 
   useEffect(() => {
-    if (open && !mounted && !closing) {
-      setMounted(true);
+    if (open) {
+      setVisible(true);
+      setClosing(false);
+      setDragY(0);
       document.body.style.overflow = "hidden";
-    } else if (!open && mounted && !closing) {
-      doClose();
+    } else if (visible && !closing) {
+      // External close (e.g. setState from parent)
+      setVisible(false);
+      document.body.style.overflow = "";
     }
-  }, [open, mounted, closing, doClose]);
-
-  useEffect(() => {
     return () => { document.body.style.overflow = ""; };
-  }, []);
+  }, [open, visible, closing]);
 
   function onTouchStart(e: React.TouchEvent) {
+    // Allow drag from handle area (top 50px) or if content is scrolled to top
     const touch = e.touches[0];
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
-    const isTopArea = touch.clientY - rect.top < 60;
+    const isTopArea = touch.clientY - rect.top < 50;
     const isScrolledTop = contentRef.current ? contentRef.current.scrollTop <= 0 : true;
-    if (!isTopArea && !isScrolledTop) return;
 
+    if (!isTopArea && !isScrolledTop) return;
     startY.current = touch.clientY;
     dragging.current = true;
-    dragY.current = 0;
   }
 
   function onTouchMove(e: React.TouchEvent) {
     if (!dragging.current) return;
     const delta = e.touches[0].clientY - startY.current;
+    // Only allow downward drag, with slight resistance
     if (delta > 0) {
-      dragY.current = delta;
-      cancelAnimationFrame(rafRef.current);
-      rafRef.current = requestAnimationFrame(() => {
-        if (sheetRef.current) {
-          sheetRef.current.style.transition = "none";
-          sheetRef.current.style.transform = `translateY(${delta * 0.85}px)`;
-        }
-      });
+      setDragY(delta * 0.8);
     }
   }
 
   function onTouchEnd() {
     if (!dragging.current) return;
     dragging.current = false;
-    cancelAnimationFrame(rafRef.current);
-
-    if (sheetRef.current) {
-      if (dragY.current > 120) {
-        doClose();
-      } else {
-        sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
-        sheetRef.current.style.transform = "translateY(0)";
-      }
+    if (dragY > 100) {
+      animatedClose();
+    } else {
+      setDragY(0);
     }
-    dragY.current = 0;
   }
 
-  if (!mounted) return null;
+  if (!visible) return null;
+
+  const backdropOpacity = closing ? 0 : Math.max(0.05, 0.5 - dragY / 500);
 
   return (
     <div
-      className="fixed inset-0 flex items-end justify-center"
-      style={{ zIndex: 600 }}
+      className={`fixed inset-0 flex items-end justify-center ${closing ? "modal-backdrop-out" : "modal-backdrop-in"}`}
+      style={{
+        zIndex: 600,
+        background: `rgba(0,0,0,${backdropOpacity})`,
+        backdropFilter: `blur(${Math.max(0, 4 - dragY / 80)}px)`,
+        WebkitBackdropFilter: `blur(${Math.max(0, 4 - dragY / 80)}px)`,
+      }}
+      onClick={animatedClose}
     >
-      {/* Backdrop */}
       <div
-        className="absolute inset-0"
+        ref={contentRef}
+        className={`w-full ${closing ? "modal-slide-down" : "modal-slide-up"}`}
         style={{
-          background: "rgba(0,0,0,0.5)",
-          animation: closing
-            ? "modalFadeOut 0.3s ease forwards"
-            : "modalFadeIn 0.3s ease forwards",
-        }}
-        onClick={doClose}
-      />
-
-      {/* Sheet */}
-      <div
-        ref={sheetRef}
-        style={{
-          width: "100%",
           maxWidth: 430,
           maxHeight: "85vh",
           background: "var(--surface-solid)",
           borderRadius: "24px 24px 0 0",
           padding: "24px 20px",
           paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+          overflowY: dragging.current ? "hidden" : "auto",
           border: "1px solid var(--glass-border)",
           borderBottom: "none",
-          position: "relative",
-          zIndex: 1,
-          animation: closing
-            ? "modalSheetOut 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards"
-            : "modalSheetIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards",
+          transform: dragY > 0 ? `translateY(${dragY}px)` : undefined,
+          transition: dragging.current ? "none" : "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)",
         }}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchMove={onTouchMove}
         onTouchEnd={onTouchEnd}
       >
-        <div
-          ref={contentRef}
-          style={{ maxHeight: "calc(85vh - 100px)", overflowY: "auto" }}
-        >
-          {/* Handle bar */}
-          <div className="flex justify-center mb-4">
-            <div className="w-10 h-1 rounded-full" style={{ background: "var(--faint)" }} />
-          </div>
-          <div className="flex items-center justify-between mb-5">
-            <h2 className="text-base font-bold">{title}</h2>
-            <button
-              onClick={doClose}
-              className="w-10 h-10 flex items-center justify-center rounded-full text-xs active:scale-90 transition-transform"
-              style={{ background: "var(--surface2)" }}
-            >
-              ✕
-            </button>
-          </div>
-          {children}
+        {/* Handle bar */}
+        <div className="flex justify-center mb-4">
+          <div
+            className="w-10 h-1 rounded-full transition-all"
+            style={{
+              background: dragY > 60 ? "var(--accent)" : "var(--faint)",
+              width: dragY > 60 ? 48 : 40,
+            }}
+          />
         </div>
+        <div className="flex items-center justify-between mb-5">
+          <h2 className="text-base font-bold">{title}</h2>
+          <button
+            onClick={animatedClose}
+            className="w-10 h-10 flex items-center justify-center rounded-full text-xs active:scale-90 transition-transform"
+            style={{ background: "var(--surface2)" }}
+          >
+            ✕
+          </button>
+        </div>
+        {children}
       </div>
     </div>
   );
