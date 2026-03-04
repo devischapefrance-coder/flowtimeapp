@@ -34,7 +34,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de https://api.open-meteo.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de https://api.open-meteo.com https://*.tile.openstreetmap.org https://*.basemaps.cartocdn.com https://server.arcgisonline.com",
               "worker-src 'self' blob:",
               "frame-src 'none'",
             ].join("; "),
