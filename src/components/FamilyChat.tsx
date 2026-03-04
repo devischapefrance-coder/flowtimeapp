@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import Modal from "./Modal";
 
@@ -20,6 +20,7 @@ interface FamilyChatProps {
   userId: string;
   userName: string;
   userEmoji: string;
+  onUnread?: (count: number) => void;
 }
 
 const CHAT_STORAGE_KEY = "flowtime-family-chat";
@@ -38,14 +39,18 @@ function saveMessages(familyId: string, messages: ChatMessage[]) {
   localStorage.setItem(`${CHAT_STORAGE_KEY}-${familyId}`, JSON.stringify(messages.slice(-MAX_MESSAGES)));
 }
 
-export default function FamilyChat({ open, onClose, familyId, userId, userName, userEmoji }: FamilyChatProps) {
+export default function FamilyChat({ open, onClose, familyId, userId, userName, userEmoji, onUnread }: FamilyChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
+  const [unread, setUnread] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
+  const openRef = useRef(open);
+  openRef.current = open;
 
+  // Always listen for messages, even when closed
   useEffect(() => {
-    if (!open || !familyId) return;
+    if (!familyId) return;
     setMessages(loadMessages(familyId));
 
     const channel = supabase.channel(`family-chat-${familyId}`);
@@ -59,19 +64,39 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
           saveMessages(familyId, updated);
           return updated;
         });
+
+        // Count unread if chat is closed and message is from someone else
+        if (!openRef.current && msg.sender_id !== userId) {
+          setUnread((prev) => prev + 1);
+        }
       })
       .subscribe();
 
     return () => {
       channel.unsubscribe();
+      channelRef.current = null;
     };
+  }, [familyId, userId]);
+
+  // Reset unread when opening
+  useEffect(() => {
+    if (open) {
+      setUnread(0);
+      setMessages(loadMessages(familyId));
+    }
   }, [open, familyId]);
 
+  // Notify parent of unread count
   useEffect(() => {
-    if (scrollRef.current) {
+    onUnread?.(unread);
+  }, [unread, onUnread]);
+
+  // Auto-scroll on new messages when open
+  useEffect(() => {
+    if (open && scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, open]);
 
   function sendMessage() {
     const trimmed = text.trim();

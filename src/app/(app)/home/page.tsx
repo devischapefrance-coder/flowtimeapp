@@ -172,6 +172,7 @@ export default function HomePage() {
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [familyChatOpen, setFamilyChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
@@ -1323,8 +1324,15 @@ export default function HomePage() {
           <p className="text-sm capitalize mt-0.5" style={{ color: "var(--dim)" }}>{dateDisplay}</p>
         </div>
         <div className="flex items-center gap-2">
-          <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
-            style={{ background: "var(--surface2)" }} onClick={() => setFamilyChatOpen(true)} aria-label="Chat famille" title="Chat famille">💬</button>
+          <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm relative"
+            style={{ background: "var(--surface2)" }} onClick={() => setFamilyChatOpen(true)} aria-label="Chat famille" title="Chat famille">
+            💬
+            {chatUnread > 0 && (
+              <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "var(--red)" }}>
+                {chatUnread > 9 ? "9+" : chatUnread}
+              </span>
+            )}
+          </button>
           <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
             style={{ background: "var(--surface2)" }} onClick={handleExport} aria-label="Exporter" title="Exporter le calendrier">📤</button>
           <Link href="/reglages" className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden active:scale-90 transition-transform"
@@ -1587,6 +1595,7 @@ export default function HomePage() {
           userId={profile.id}
           userName={profile.first_name || "Moi"}
           userEmoji={profile.emoji || "👤"}
+          onUnread={setChatUnread}
         />
       )}
     </div>
