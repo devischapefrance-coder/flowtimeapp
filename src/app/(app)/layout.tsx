@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, createContext, useContext } from "react";
+import { useEffect, useState, useCallback, createContext, useContext } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
@@ -8,6 +8,7 @@ import Navbar from "@/components/Navbar";
 import Logo from "@/components/Logo";
 import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/Toast";
+import FamilyChat from "@/components/FamilyChat";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -27,6 +28,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
+  const [chatUnread, setChatUnread] = useState(0);
+  const handleUnread = useCallback((n: number) => setChatUnread(n), []);
 
   const initialLang = typeof window !== "undefined"
     ? localStorage.getItem("flowtime_lang") || "fr"
@@ -92,6 +96,35 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
             {children}
           </div>
+
+          {/* Floating chat button — visible on all pages */}
+          {profile?.family_id && (
+            <button
+              className="fixed z-[90] w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg active:scale-90 transition-transform"
+              style={{ background: "var(--accent)", color: "#fff", bottom: 90, right: "max(16px, calc((100vw - 430px) / 2 + 16px))" }}
+              onClick={() => setChatOpen(true)}
+              aria-label="Chat famille"
+            >
+              💬
+              {chatUnread > 0 && (
+                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "var(--red)" }}>
+                  {chatUnread > 9 ? "9+" : chatUnread}
+                </span>
+              )}
+            </button>
+          )}
+
+          {profile?.family_id && (
+            <FamilyChat
+              open={chatOpen}
+              onClose={() => setChatOpen(false)}
+              familyId={profile.family_id}
+              userId={profile.id}
+              userName={profile.first_name || "Moi"}
+              userEmoji={profile.emoji || "👤"}
+              onUnread={handleUnread}
+            />
+          )}
 
           <Navbar />
         </ToastProvider>
