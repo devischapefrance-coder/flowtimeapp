@@ -39,105 +39,78 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
       return;
     }
 
-    const term = q.toLowerCase();
     const found: SearchResult[] = [];
+    const pattern = `%${q}%`;
 
     const [evRes, memRes, contRes, addrRes, noteRes] = await Promise.all([
-      supabase.from("events").select("*, members(name,emoji)").eq("family_id", familyId),
-      supabase.from("members").select("*").eq("family_id", familyId),
-      supabase.from("contacts").select("*").eq("family_id", familyId),
-      supabase.from("addresses").select("*").eq("family_id", familyId),
-      supabase.from("notes").select("*").eq("family_id", familyId),
+      supabase.from("events").select("title, date, time, members(name)").eq("family_id", familyId).ilike("title", pattern).limit(10),
+      supabase.from("members").select("name, role, emoji").eq("family_id", familyId).ilike("name", pattern).limit(10),
+      supabase.from("contacts").select("name, phone, relation, emoji").eq("family_id", familyId).ilike("name", pattern).limit(10),
+      supabase.from("addresses").select("name, address, emoji").eq("family_id", familyId).ilike("name", pattern).limit(10),
+      supabase.from("notes").select("title, content").eq("family_id", familyId).ilike("title", pattern).limit(10),
     ]);
 
-    // Events
     if (evRes.data) {
       for (const e of evRes.data) {
-        if (
-          e.title?.toLowerCase().includes(term) ||
-          e.description?.toLowerCase().includes(term)
-        ) {
-          found.push({
-            type: "event",
-            title: e.title,
-            subtitle: `${e.date} a ${e.time}${e.members?.name ? ` · ${e.members.name}` : ""}`,
-            emoji: "📅",
-            href: "/home",
-          });
-        }
+        found.push({
+          type: "event",
+          title: e.title,
+          subtitle: `${e.date} a ${e.time}${(e.members as unknown as { name: string } | null)?.name ? ` · ${(e.members as unknown as { name: string }).name}` : ""}`,
+          emoji: "📅",
+          href: "/home",
+        });
       }
     }
 
-    // Members
     if (memRes.data) {
       for (const m of memRes.data) {
-        if (m.name?.toLowerCase().includes(term)) {
-          found.push({
-            type: "member",
-            title: m.name,
-            subtitle: m.role,
-            emoji: m.emoji || "👤",
-            href: "/famille",
-          });
-        }
+        found.push({
+          type: "member",
+          title: m.name,
+          subtitle: m.role,
+          emoji: m.emoji || "👤",
+          href: "/famille",
+        });
       }
     }
 
-    // Contacts
     if (contRes.data) {
       for (const c of contRes.data) {
-        if (
-          c.name?.toLowerCase().includes(term) ||
-          c.relation?.toLowerCase().includes(term)
-        ) {
-          found.push({
-            type: "contact",
-            title: c.name,
-            subtitle: `${c.relation} · ${c.phone}`,
-            emoji: c.emoji || "📞",
-            href: "/famille",
-          });
-        }
+        found.push({
+          type: "contact",
+          title: c.name,
+          subtitle: `${c.relation} · ${c.phone}`,
+          emoji: c.emoji || "📞",
+          href: "/famille",
+        });
       }
     }
 
-    // Addresses
     if (addrRes.data) {
       for (const a of addrRes.data) {
-        if (
-          a.name?.toLowerCase().includes(term) ||
-          a.address?.toLowerCase().includes(term)
-        ) {
-          found.push({
-            type: "address",
-            title: a.name,
-            subtitle: a.address || "Pas d'adresse",
-            emoji: a.emoji || "📍",
-            href: "/famille",
-          });
-        }
+        found.push({
+          type: "address",
+          title: a.name,
+          subtitle: a.address || "Pas d'adresse",
+          emoji: a.emoji || "📍",
+          href: "/famille",
+        });
       }
     }
 
-    // Notes
     if (noteRes.data) {
       for (const n of noteRes.data) {
-        if (
-          n.title?.toLowerCase().includes(term) ||
-          n.content?.toLowerCase().includes(term)
-        ) {
-          found.push({
-            type: "note",
-            title: n.title,
-            subtitle: n.content?.slice(0, 60) || "",
-            emoji: "📝",
-            href: "/vie",
-          });
-        }
+        found.push({
+          type: "note",
+          title: n.title,
+          subtitle: n.content?.slice(0, 60) || "",
+          emoji: "📝",
+          href: "/vie",
+        });
       }
     }
 
-    setResults(found.slice(0, 20));
+    setResults(found);
   }, [familyId]);
 
   function handleInputChange(value: string) {

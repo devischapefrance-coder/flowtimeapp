@@ -1,6 +1,6 @@
-const CACHE_NAME = "flowtime-v4";
+const CACHE_NAME = "flowtime-v5";
 const OFFLINE_URL = "/";
-const STATIC_ASSETS = ["/", "/home", "/vie", "/famille", "/bienetre", "/reglages"];
+const STATIC_ASSETS = ["/", "/home", "/vie", "/famille", "/reglages"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(

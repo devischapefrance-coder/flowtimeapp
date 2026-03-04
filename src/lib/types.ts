@@ -199,5 +199,5 @@ export interface FlowAction {
 
 export interface FlowResponse {
   response?: string;
-  action?: FlowAction;
+  actions?: FlowAction[];
 }

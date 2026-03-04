@@ -112,7 +112,7 @@ export function useRealtimeNotes(
           ) {
             new Notification("Nouvelle note", {
               body: `${payload.new.author_name} a ajoute une note : ${payload.new.title || ""}`,
-              icon: "/icon-192x192.png",
+              icon: "/icons/icon-192.png",
             });
           }
         }

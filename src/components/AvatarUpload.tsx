@@ -22,9 +22,11 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
 
     setUploading(true);
     // Show preview immediately
-    setPreview(URL.createObjectURL(file));
+    const objectUrl = URL.createObjectURL(file);
+    setPreview(objectUrl);
 
     const url = await uploadAvatar(userId, file);
+    URL.revokeObjectURL(objectUrl);
     if (url) {
       setPreview(url);
       onUploaded(url);

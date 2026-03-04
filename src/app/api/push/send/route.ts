@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import webpush from "web-push";
 import { getAuthUser } from "@/lib/server-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-
-function getWebPush() {
-  const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
-  if (!publicKey || !privateKey) {
-    throw new Error("VAPID keys not configured");
-  }
-  webpush.setVapidDetails("mailto:flowtime@example.com", publicKey, privateKey);
-  return webpush;
-}
+import { getWebPush } from "@/lib/push-utils";
 
 export async function POST(req: NextRequest) {
   const user = await getAuthUser(req);
@@ -26,15 +16,30 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing title" }, { status: 400 });
     }
 
-    // Verify the authenticated user belongs to the target family
-    if (familyId) {
-      const { data: profile } = await supabaseAdmin
+    // Get the caller's profile to verify family membership
+    const { data: callerProfile } = await supabaseAdmin
+      .from("profiles")
+      .select("family_id")
+      .eq("id", user.id)
+      .single();
+
+    if (!callerProfile) {
+      return NextResponse.json({ error: "Profile not found" }, { status: 403 });
+    }
+
+    if (familyId && callerProfile.family_id !== familyId) {
+      return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+    }
+
+    // If targeting a specific user, verify they're in the same family
+    if (userId) {
+      const { data: targetProfile } = await supabaseAdmin
         .from("profiles")
         .select("family_id")
-        .eq("id", user.id)
+        .eq("id", userId)
         .single();
 
-      if (!profile || profile.family_id !== familyId) {
+      if (!targetProfile || targetProfile.family_id !== callerProfile.family_id) {
         return NextResponse.json({ error: "Forbidden" }, { status: 403 });
       }
     }
