@@ -1,4 +1,4 @@
-const CACHE_NAME = "flowtime-v3";
+const CACHE_NAME = "flowtime-v4";
 const OFFLINE_URL = "/";
 const STATIC_ASSETS = ["/", "/home", "/vie", "/famille", "/bienetre", "/reglages"];
 
