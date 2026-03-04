@@ -21,11 +21,9 @@ self.addEventListener("activate", (event) => {
 self.addEventListener("fetch", (event) => {
   const { request } = event;
 
-  // Skip non-GET and API/Supabase requests
   if (request.method !== "GET") return;
   if (request.url.includes("/api/") || request.url.includes("supabase")) return;
 
-  // Navigation: network-first with cache fallback
   if (request.mode === "navigate") {
     event.respondWith(
       fetch(request)
@@ -39,7 +37,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Static assets: cache-first
   if (request.url.match(/\.(js|css|woff2?|png|jpg|svg|ico)$/)) {
     event.respondWith(
       caches.match(request).then((cached) => {
@@ -54,6 +51,23 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 });
+
+// Schedule a notification after a delay (ms)
+function scheduleNotification(title, body, tag, delayMs) {
+  if (delayMs <= 0) return;
+  setTimeout(() => {
+    self.registration.showNotification(title, {
+      body,
+      icon: "/icons/icon-192.png",
+      badge: "/icons/icon-192.png",
+      tag,
+      renotify: true,
+      vibrate: [80, 40, 80, 40, 120],
+      data: { url: "/home" },
+      actions: [{ action: "view", title: "Voir le planning" }],
+    });
+  }, delayMs);
+}
 
 // Push notifications
 self.addEventListener("push", (event) => {
@@ -77,6 +91,17 @@ self.addEventListener("push", (event) => {
     }
   }
 
+  // If morning push includes scheduled reminders, plan them
+  if (data.reminders && Array.isArray(data.reminders)) {
+    const now = Date.now();
+    for (const r of data.reminders) {
+      const delayMs = r.timestamp - now;
+      if (delayMs > 0) {
+        scheduleNotification(r.title, r.body, r.tag || "flowtime-reminder", delayMs);
+      }
+    }
+  }
+
   const options = {
     body: data.body,
     icon: data.icon,
@@ -97,7 +122,6 @@ self.addEventListener("notificationclick", (event) => {
 
   let url = event.notification.data?.url || "/home";
 
-  // Handle action button clicks
   if (event.action === "view") {
     url = "/home";
   } else if (event.action === "dismiss") {

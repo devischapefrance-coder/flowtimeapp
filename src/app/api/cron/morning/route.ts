@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
       // Get today's events for this family
       const { data: events } = await supabaseAdmin
         .from("events")
-        .select("title, time, member_id, members(name)")
+        .select("id, title, time, category, member_id, members(name)")
         .eq("family_id", familyId)
         .eq("date", today)
         .order("time");
@@ -95,6 +95,26 @@ export async function GET(req: NextRequest) {
           body = `${greeting} !\n${lines}${more}`;
         }
 
+        // Build scheduled reminders (15 min before each event)
+        const reminders = eventList
+          .map((e: Record<string, unknown>) => {
+            const [h, m] = (e.time as string).split(":").map(Number);
+            const eventDate = new Date(`${today}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            const reminderTime = eventDate.getTime() - 15 * 60 * 1000;
+            const memberName = (e.members as { name: string } | null)?.name;
+            const cat = (e.category as string) || "general";
+            const emoji = catEmoji(cat);
+            return {
+              timestamp: reminderTime,
+              title: `${emoji} ${e.title} a ${e.time}`,
+              body: memberName
+                ? `C'est bientot l'heure ! ${memberName}, c'est dans 15 min`
+                : "C'est bientot l'heure ! Dans 15 minutes",
+              tag: `flowtime-reminder-${e.id}`,
+            };
+          })
+          .filter((r) => r.timestamp > Date.now());
+
         const payload = JSON.stringify({
           title,
           body,
@@ -103,6 +123,7 @@ export async function GET(req: NextRequest) {
           tag: "flowtime-morning",
           url: "/home",
           actions: eventList.length > 0 ? [{ action: "view", title: "Voir le planning" }] : [],
+          reminders,
         });
 
         for (const sub of memberSubs) {
