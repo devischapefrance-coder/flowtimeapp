@@ -3,9 +3,10 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect } from "react";
+import { useEffect, useRef, useMemo } from "react";
 
 export interface MapMarker {
+  id?: string;
   lat: number;
   lng: number;
   emoji: string;
@@ -14,6 +15,7 @@ export interface MapMarker {
   type: "member" | "address" | "device" | "poi" | "mylocation";
   detail?: string;
   updatedAt?: string;
+  draggable?: boolean;
 }
 
 export type MapStyle = "apple" | "dark" | "satellite";
@@ -46,6 +48,45 @@ interface MapViewProps {
   zoom?: number;
   mapStyle?: MapStyle;
   route?: RouteInfo | null;
+  onMarkerDragEnd?: (marker: MapMarker, newLat: number, newLng: number) => void;
+}
+
+function DraggableMarker({ m, icon, interactive, onDragEnd }: {
+  m: MapMarker;
+  icon: L.DivIcon;
+  interactive?: boolean;
+  onDragEnd?: (marker: MapMarker, lat: number, lng: number) => void;
+}) {
+  const markerRef = useRef<L.Marker>(null);
+  const eventHandlers = useMemo(() => ({
+    dragend() {
+      const mk = markerRef.current;
+      if (mk && onDragEnd) {
+        const pos = mk.getLatLng();
+        onDragEnd(m, pos.lat, pos.lng);
+      }
+    },
+  }), [m, onDragEnd]);
+
+  return (
+    <Marker
+      ref={markerRef}
+      position={[m.lat, m.lng]}
+      icon={icon}
+      draggable={true}
+      eventHandlers={eventHandlers}
+    >
+      {interactive && (
+        <Popup>
+          <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
+            <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
+            {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
+            <p style={{ margin: "4px 0 0", fontSize: 10, color: "#007AFF" }}>Deplacez le marqueur pour ajuster</p>
+          </div>
+        </Popup>
+      )}
+    </Marker>
+  );
 }
 
 function createIcon(marker: MapMarker) {
@@ -170,6 +211,7 @@ export default function MapView({
   zoom = 12,
   mapStyle = "apple",
   route,
+  onMarkerDragEnd,
 }: MapViewProps) {
   const tile = MAP_TILES[mapStyle];
 
@@ -207,17 +249,27 @@ export default function MapView({
           />
         )}
         {markers.map((m, i) => (
-          <Marker key={`${m.lat}-${m.lng}-${i}`} position={[m.lat, m.lng]} icon={createIcon(m)}>
-            {interactive && (
-              <Popup>
-                <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
-                  <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
-                  {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
-                  {m.updatedAt && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#AEAEB2" }}>Mis a jour : {new Date(m.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>}
-                </div>
-              </Popup>
-            )}
-          </Marker>
+          m.draggable && onMarkerDragEnd ? (
+            <DraggableMarker
+              key={`${m.id || i}-drag`}
+              m={m}
+              icon={createIcon(m)}
+              interactive={interactive}
+              onDragEnd={onMarkerDragEnd}
+            />
+          ) : (
+            <Marker key={`${m.lat}-${m.lng}-${i}`} position={[m.lat, m.lng]} icon={createIcon(m)}>
+              {interactive && (
+                <Popup>
+                  <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
+                    <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
+                    {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
+                    {m.updatedAt && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#AEAEB2" }}>Mis a jour : {new Date(m.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>}
+                  </div>
+                </Popup>
+              )}
+            </Marker>
+          )
         ))}
       </MapContainer>
     </div>

@@ -36,6 +36,7 @@ interface MapFullProps {
   center?: [number, number];
   onClose: () => void;
   deviceMarkers?: MapMarker[];
+  onAddressMoved?: (id: string, lat: number, lng: number, address: string) => void;
 }
 
 function formatDistance(meters: number): string {
@@ -53,7 +54,7 @@ function formatDuration(seconds: number): string {
 
 type SideTab = "lieux" | "recherche" | "itineraire" | null;
 
-export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers = [] }: MapFullProps) {
+export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers = [], onAddressMoved }: MapFullProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<MapMarker[]>([]);
   const [poiMarkers, setPoiMarkers] = useState<MapMarker[]>([]);
@@ -92,6 +93,9 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     deviceBg: isLight ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.15)",
     routeInfoBg: isLight ? "rgba(0,122,255,0.06)" : "rgba(0,122,255,0.12)",
   };
+
+  // Drag feedback
+  const [dragToast, setDragToast] = useState<string | null>(null);
 
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
@@ -149,6 +153,27 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
       }
     } catch { /* ignore */ }
     setRouteLoading(false);
+  }
+
+  // Reverse geocode + update address on marker drag
+  async function handleMarkerDragEnd(marker: MapMarker, newLat: number, newLng: number) {
+    if (!marker.id || !onAddressMoved) return;
+    setDragToast("Mise a jour de l'adresse...");
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${newLat}&lon=${newLng}&zoom=18&addressdetails=1`,
+        { headers: { "User-Agent": "FlowTime/1.0" } }
+      );
+      const data = await res.json();
+      const newAddress = data.display_name || `${newLat.toFixed(5)}, ${newLng.toFixed(5)}`;
+      const shortAddr = newAddress.split(",").slice(0, 3).join(",").trim();
+      onAddressMoved(marker.id, newLat, newLng, shortAddr);
+      setDragToast(`${marker.emoji} ${marker.name} → ${shortAddr}`);
+    } catch {
+      onAddressMoved(marker.id, newLat, newLng, `${newLat.toFixed(5)}, ${newLng.toFixed(5)}`);
+      setDragToast(`${marker.emoji} Position mise a jour`);
+    }
+    setTimeout(() => setDragToast(null), 3000);
   }
 
   function locateMe() {
@@ -611,6 +636,16 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         </div>
       </div>
 
+      {/* Drag toast */}
+      {dragToast && (
+        <div
+          className="absolute left-1/2 -translate-x-1/2 bottom-8 px-4 py-2.5 rounded-xl shadow-xl text-xs font-semibold animate-in"
+          style={{ zIndex: 1003, background: t.stripBg, color: t.text, backdropFilter: "blur(20px)", maxWidth: 320 }}
+        >
+          {dragToast}
+        </div>
+      )}
+
       {/* Map */}
       <MapView
         markers={allMarkers}
@@ -620,6 +655,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         zoom={14}
         mapStyle={mapStyle}
         route={route}
+        onMarkerDragEnd={onAddressMoved ? handleMarkerDragEnd : undefined}
       />
     </div>
   );

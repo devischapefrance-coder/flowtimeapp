@@ -252,6 +252,12 @@ export default function FamillePage() {
     }
   }
 
+  // Update address after marker drag on map
+  async function handleAddressMoved(id: string, lat: number, lng: number, address: string) {
+    await supabase.from("addresses").update({ lat, lng, address }).eq("id", id);
+    setAddresses((prev) => prev.map((a) => a.id === id ? { ...a, lat, lng, address } : a));
+  }
+
   // Device location sharing
   async function toggleLocationSharing() {
     if (!familyId || !profile) return;
@@ -326,11 +332,13 @@ export default function FamillePage() {
   const mapMarkers = addresses
     .filter((a) => a.lat && a.lng)
     .map((a) => ({
+      id: a.id,
       lat: a.lat!,
       lng: a.lng!,
       emoji: a.emoji,
       name: a.name,
       type: "address" as const,
+      draggable: true,
     }));
 
   const mapCenter: [number, number] = profile?.lat && profile?.lng
@@ -599,6 +607,7 @@ export default function FamillePage() {
           center={mapCenter}
           onClose={() => setMapFull(false)}
           deviceMarkers={deviceMapMarkers}
+          onAddressMoved={handleAddressMoved}
         />
       )}
 
