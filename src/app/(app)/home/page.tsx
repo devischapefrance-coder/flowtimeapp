@@ -945,7 +945,14 @@ export default function HomePage() {
           }}
         />
       ) : (
-        <DayAgenda events={filteredEvents} onDelete={deleteEvent} />
+        <DayAgenda
+          events={filteredEvents}
+          onDelete={deleteEvent}
+          onReorder={async (eventId, newTime) => {
+            await supabase.from("events").update({ time: newTime }).eq("id", eventId);
+            loadData();
+          }}
+        />
       )}
 
       {filteredEvents.length === 0 && (
