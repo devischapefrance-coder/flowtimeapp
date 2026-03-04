@@ -24,7 +24,7 @@ const nextConfig: NextConfig = {
           },
           {
             key: "Permissions-Policy",
-            value: "camera=(), microphone=(), geolocation=(self)",
+            value: "camera=(self), microphone=(self), geolocation=(self)",
           },
           {
             key: "Content-Security-Policy",
@@ -32,9 +32,9 @@ const nextConfig: NextConfig = {
               "default-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline'",
-              "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com",
+              "img-src 'self' data: blob: https://*.supabase.co https://*.tile.openstreetmap.org https://server.arcgisonline.com https://*.basemaps.cartocdn.com",
               "font-src 'self' data:",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://api.anthropic.com https://router.project-osrm.org https://nominatim.openstreetmap.org https://overpass-api.de https://api.open-meteo.com",
               "worker-src 'self' blob:",
               "frame-src 'none'",
             ].join("; "),
