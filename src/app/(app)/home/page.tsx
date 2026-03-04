@@ -6,7 +6,8 @@ import { useProfile } from "../layout";
 import FlowChat from "@/components/FlowChat";
 import Timeline from "@/components/Timeline";
 import NotificationManager from "@/components/NotificationManager";
-import type { Event, Member, Address, Contact } from "@/lib/types";
+import type { Event, Member, Address, Contact, Meal } from "@/lib/types";
+import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
 import { useRealtimeEvents } from "@/lib/realtime";
 import { checkReminders } from "@/lib/reminders";
@@ -40,8 +41,16 @@ export default function HomePage() {
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
 
+  const [meals, setMeals] = useState<Meal[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
+
+  // Meal state
+  const [mealModal, setMealModal] = useState(false);
+  const [editingMeal, setEditingMeal] = useState<Meal | null>(null);
+  const [mealName, setMealName] = useState("");
+  const [mealType, setMealType] = useState<string>("dejeuner");
+  const [mealEmoji, setMealEmoji] = useState("🍽️");
 
   const days = getDays(7);
   const [selectedDay, setSelectedDay] = useState(0);
@@ -51,7 +60,7 @@ export default function HomePage() {
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
-    const [evRes, memRes, addrRes, contRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes, mealRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -61,11 +70,15 @@ export default function HomePage() {
       supabase.from("members").select("*").eq("family_id", profile.family_id),
       supabase.from("addresses").select("*").eq("family_id", profile.family_id),
       supabase.from("contacts").select("*").eq("family_id", profile.family_id),
+      supabase.from("meals").select("*").eq("family_id", profile.family_id)
+        .gte("date", days[0].date)
+        .lte("date", days[days.length - 1].date),
     ]);
     if (evRes.data) setEvents(evRes.data as Event[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
     if (addrRes.data) setAddresses(addrRes.data as Address[]);
     if (contRes.data) setContacts(contRes.data as Contact[]);
+    if (mealRes.data) setMeals(mealRes.data as Meal[]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id]);
 
@@ -173,6 +186,57 @@ export default function HomePage() {
         }
       }
     }
+    loadData();
+  }
+
+  // --- Meal CRUD ---
+  const MEAL_TYPES = [
+    { value: "petit-dejeuner", label: "Petit-dej", emoji: "🍳" },
+    { value: "dejeuner", label: "Dejeuner", emoji: "🥗" },
+    { value: "diner", label: "Diner", emoji: "🍝" },
+  ];
+
+  const dayMeals = meals.filter((m) => m.date === currentDate);
+
+  function openNewMeal(type: string) {
+    setEditingMeal(null);
+    setMealName("");
+    setMealType(type);
+    setMealEmoji(MEAL_TYPES.find((t) => t.value === type)?.emoji || "🍽️");
+    setMealModal(true);
+  }
+
+  function openEditMeal(m: Meal) {
+    setEditingMeal(m);
+    setMealName(m.name);
+    setMealType(m.meal_type);
+    setMealEmoji(m.emoji);
+    setMealModal(true);
+  }
+
+  async function saveMeal() {
+    if (!profile?.family_id || !mealName.trim()) return;
+    if (editingMeal) {
+      await supabase.from("meals").update({
+        name: mealName.trim(),
+        meal_type: mealType,
+        emoji: mealEmoji,
+      }).eq("id", editingMeal.id);
+    } else {
+      await supabase.from("meals").insert({
+        family_id: profile.family_id,
+        date: currentDate,
+        meal_type: mealType,
+        name: mealName.trim(),
+        emoji: mealEmoji,
+      });
+    }
+    setMealModal(false);
+    loadData();
+  }
+
+  async function deleteMeal(id: string) {
+    await supabase.from("meals").delete().eq("id", id);
     loadData();
   }
 
@@ -369,6 +433,106 @@ export default function HomePage() {
           </button>
         </div>
       )}
+
+      {/* Repas section */}
+      <div className="mt-6">
+        <p className="label">
+          🍽️ Repas {selectedDay === 0 ? "du jour" : `— ${days[selectedDay].label}`}
+        </p>
+        <div className="flex flex-col gap-2">
+          {MEAL_TYPES.map((type) => {
+            const meal = dayMeals.find((m) => m.meal_type === type.value);
+            return (
+              <div
+                key={type.value}
+                className="card !mb-0 flex items-center gap-3 cursor-pointer"
+                onClick={() => meal ? openEditMeal(meal) : openNewMeal(type.value)}
+              >
+                <span className="text-xl">{meal ? meal.emoji : type.emoji}</span>
+                <div className="flex-1">
+                  <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>{type.label}</p>
+                  {meal ? (
+                    <p className="text-sm font-bold">{meal.name}</p>
+                  ) : (
+                    <p className="text-xs" style={{ color: "var(--faint)" }}>Pas encore defini</p>
+                  )}
+                </div>
+                {meal ? (
+                  <button
+                    className="text-xs p-1 rounded-full"
+                    style={{ color: "var(--red, #ef4444)" }}
+                    onClick={(e) => { e.stopPropagation(); deleteMeal(meal.id); }}
+                  >
+                    🗑️
+                  </button>
+                ) : (
+                  <span className="text-lg" style={{ color: "var(--accent)" }}>+</span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Meal Modal */}
+      <Modal open={mealModal} onClose={() => setMealModal(false)} title={editingMeal ? "Modifier le repas" : "Ajouter un repas"}>
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Type de repas</label>
+            <div className="flex gap-2">
+              {MEAL_TYPES.map((t) => (
+                <button
+                  key={t.value}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+                  style={{
+                    background: mealType === t.value ? "var(--accent-soft)" : "var(--surface2)",
+                    color: mealType === t.value ? "var(--accent)" : "var(--dim)",
+                    border: mealType === t.value ? "1px solid var(--accent)" : "1px solid transparent",
+                  }}
+                  onClick={() => { setMealType(t.value); setMealEmoji(t.emoji); }}
+                >
+                  {t.emoji} {t.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Plat</label>
+            <input
+              className="w-full px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+              value={mealName}
+              onChange={(e) => setMealName(e.target.value)}
+              placeholder="Ex: Poulet roti, Pates bolognaise..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Emoji</label>
+            <div className="flex gap-2">
+              {["🍳", "🥗", "🍝", "🍕", "🍔", "🥐", "🍲", "🥩"].map((e) => (
+                <button
+                  key={e}
+                  className="w-9 h-9 rounded-lg flex items-center justify-center text-lg"
+                  style={{
+                    background: mealEmoji === e ? "var(--accent-soft)" : "var(--surface2)",
+                    border: mealEmoji === e ? "1px solid var(--accent)" : "1px solid transparent",
+                  }}
+                  onClick={() => setMealEmoji(e)}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button
+            className="w-full py-3 rounded-xl font-bold text-sm"
+            style={{ background: "var(--accent)", color: "#fff" }}
+            onClick={saveMeal}
+          >
+            {editingMeal ? "Modifier" : "Ajouter"}
+          </button>
+        </div>
+      </Modal>
 
       {/* FAB */}
       <button

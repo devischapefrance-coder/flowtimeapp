@@ -95,6 +95,41 @@ CREATE TABLE device_locations (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Notes partagées
+CREATE TABLE notes (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  content TEXT DEFAULT '',
+  category TEXT NOT NULL DEFAULT 'info',
+  author_name TEXT DEFAULT '',
+  pinned BOOLEAN DEFAULT FALSE,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Anniversaires
+CREATE TABLE birthdays (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  name TEXT NOT NULL,
+  date DATE NOT NULL,
+  emoji TEXT DEFAULT '🎂',
+  member_id UUID REFERENCES members(id) ON DELETE SET NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Repas (meal planning)
+CREATE TABLE meals (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  meal_type TEXT NOT NULL DEFAULT 'dejeuner',
+  name TEXT NOT NULL,
+  emoji TEXT DEFAULT '🍽️',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ===========================================
 -- Row Level Security (RLS)
 -- ===========================================
@@ -106,6 +141,9 @@ ALTER TABLE addresses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellbeing_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE device_locations ENABLE ROW LEVEL SECURITY;
+ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE birthdays ENABLE ROW LEVEL SECURITY;
+ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 
 -- Profiles : lecture/modif de son propre profil uniquement
 CREATE POLICY "Own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -139,5 +177,20 @@ CREATE POLICY "Own wellbeing" ON wellbeing_sessions FOR ALL USING (
 
 -- Localisations : accès par famille
 CREATE POLICY "Family device locations" ON device_locations FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Notes : accès par famille
+CREATE POLICY "Family notes" ON notes FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Anniversaires : accès par famille
+CREATE POLICY "Family birthdays" ON birthdays FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Repas : accès par famille
+CREATE POLICY "Family meals" ON meals FOR ALL USING (
   family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
 );

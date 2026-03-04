@@ -87,6 +87,38 @@ export interface DeviceLocation {
   created_at: string;
 }
 
+export interface Note {
+  id: string;
+  family_id: string;
+  title: string;
+  content: string;
+  category: "info" | "important" | "rappel";
+  author_name: string;
+  pinned: boolean;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Birthday {
+  id: string;
+  family_id: string;
+  name: string;
+  date: string;
+  emoji: string;
+  member_id: string | null;
+  created_at: string;
+}
+
+export interface Meal {
+  id: string;
+  family_id: string;
+  date: string;
+  meal_type: "petit-dejeuner" | "dejeuner" | "diner";
+  name: string;
+  emoji: string;
+  created_at: string;
+}
+
 export interface FlowAction {
   type: "add_event" | "delete_event" | "add_recurring";
   data: Record<string, unknown>;
