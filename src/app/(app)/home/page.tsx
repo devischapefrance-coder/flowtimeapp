@@ -1296,7 +1296,7 @@ export default function HomePage() {
   return (
     <div
       className="px-4 py-4 animate-in gradient-bg"
-      style={{ paddingBottom: 100 }}
+      style={{ paddingBottom: 180 }}
     >
       {/* Offline banner */}
       {isOffline && (
