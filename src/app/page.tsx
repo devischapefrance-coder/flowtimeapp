@@ -47,6 +47,15 @@ export default function Splash() {
         <Link href="/login" className="btn btn-secondary">
           J&apos;ai deja un compte
         </Link>
+        <Link
+          href="/demo"
+          className="text-center text-[13px] mt-2 transition-colors"
+          style={{ color: "var(--dim)" }}
+          onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
+          onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
+        >
+          Essayer la demo →
+        </Link>
       </div>
 
       <p
