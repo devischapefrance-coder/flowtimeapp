@@ -92,17 +92,17 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
           width: 46,
           height: 46,
           background: listening
-            ? "linear-gradient(135deg, #F06B7E, #FF8A9E)"
+            ? "linear-gradient(135deg, var(--red), #FF8A9E)"
             : processing
-              ? "linear-gradient(135deg, #F0A04B, #FFB86C)"
-              : "linear-gradient(135deg, var(--surface-solid), var(--surface2))",
-          border: listening || processing ? "2px solid rgba(255,255,255,0.2)" : "2px solid var(--glass-border)",
+              ? "linear-gradient(135deg, var(--warm), #FFB86C)"
+              : "linear-gradient(135deg, var(--accent), var(--teal))",
+          border: "2px solid rgba(255,255,255,0.15)",
           boxShadow: listening
             ? "0 4px 20px rgba(240,107,126,0.5), 0 0 12px rgba(240,107,126,0.3)"
             : processing
               ? "0 4px 20px rgba(240,160,75,0.4)"
-              : "0 4px 16px rgba(0,0,0,0.25)",
-          color: listening || processing ? "#fff" : "var(--text)",
+              : "0 6px 20px var(--accent-glow)",
+          color: "#fff",
         }}
         onClick={startListening}
         disabled={processing}

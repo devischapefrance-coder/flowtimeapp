@@ -39,7 +39,26 @@ const ROLE_EMOJIS: Record<string, string[]> = {
 
 const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
 const ADDRESS_EMOJIS = ["🏠","🏫","💼","⚽","🏥","👶","👴","🏪","🎭","🏖️"];
-const CONTACT_RELATIONS = ["nounou","voisin","médecin","école","urgence","famille","autre"];
+const CONTACT_CATEGORIES: Record<string, string[]> = {
+  "Famille": ["Conjoint(e)", "Pere", "Mere", "Fils", "Fille", "Frere", "Soeur", "Beau-pere", "Belle-mere", "Gendre", "Belle-fille", "Grand-pere", "Grand-mere", "Petit-fils", "Petite-fille", "Oncle", "Tante", "Cousin(e)", "Parrain", "Marraine"],
+  "Medical": ["Medecin", "Dentiste", "Pediatre", "Kine", "Ophtalmo", "Orthophoniste", "Psychologue", "Pharmacie", "Sage-femme"],
+  "Scolaire": ["Professeur", "Directeur", "Nounou", "Baby-sitter", "Creche", "Garderie", "Centre de loisirs"],
+  "Professionnel": ["Employeur", "Collegue", "Avocat", "Comptable", "Notaire", "Assurance", "Banque"],
+  "Social": ["Voisin(e)", "Ami(e)", "Coach", "Educateur"],
+  "Urgences": ["Pompiers", "Police", "SAMU", "Anti-poison", "SOS Medecins"],
+};
+const CONTACT_EMOJIS: Record<string, string> = {
+  "Famille": "👨‍👩‍👧‍👦", "Medical": "🏥", "Scolaire": "🏫", "Professionnel": "💼", "Social": "🤝", "Urgences": "🚨",
+  "Conjoint(e)": "💑", "Pere": "👨", "Mere": "👩", "Fils": "👦", "Fille": "👧", "Frere": "👦", "Soeur": "👧",
+  "Beau-pere": "👴", "Belle-mere": "👵", "Gendre": "🤵", "Belle-fille": "👰", "Grand-pere": "👴", "Grand-mere": "👵",
+  "Petit-fils": "👶", "Petite-fille": "👶", "Oncle": "👨", "Tante": "👩", "Cousin(e)": "🧑", "Parrain": "🧔", "Marraine": "👩",
+  "Medecin": "🧑‍⚕️", "Dentiste": "🦷", "Pediatre": "👶", "Kine": "💆", "Ophtalmo": "👁️", "Orthophoniste": "🗣️",
+  "Psychologue": "🧠", "Pharmacie": "💊", "Sage-femme": "🤱",
+  "Professeur": "👨‍🏫", "Directeur": "🎓", "Nounou": "🧑‍🍼", "Baby-sitter": "🧑‍🍼", "Creche": "🏠", "Garderie": "🏠", "Centre de loisirs": "🎪",
+  "Employeur": "💼", "Collegue": "🤝", "Avocat": "⚖️", "Comptable": "📊", "Notaire": "📜", "Assurance": "🛡️", "Banque": "🏦",
+  "Voisin(e)": "🏡", "Ami(e)": "🫂", "Coach": "🏋️", "Educateur": "📚",
+  "Pompiers": "🚒", "Police": "🚔", "SAMU": "🚑", "Anti-poison": "☠️", "SOS Medecins": "🏥",
+};
 const DEFAULT_ADDRESSES = [
   { name: "Maison", emoji: "🏠" },
   { name: "École", emoji: "🏫" },
@@ -178,7 +197,7 @@ export default function FamillePage() {
   // CONTACT CRUD
   function openContactModal(c: Contact | "new") {
     if (c === "new") {
-      setForm({ name: "", phone: "", relation: "famille", emoji: "👤" });
+      setForm({ name: "", phone: "", relation: "Ami(e)", emoji: "🫂" });
     } else {
       setForm({ name: c.name, phone: c.phone, relation: c.relation, emoji: c.emoji });
     }
@@ -480,15 +499,60 @@ export default function FamillePage() {
 
       {/* CONTACTS */}
       <p className="label">Contacts de confiance</p>
-      {contacts.map((c) => (
-        <div key={c.id} className="card flex items-center gap-3 cursor-pointer" onClick={() => openContactModal(c)}>
-          <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl" style={{ background: "var(--surface2)" }}>{c.emoji}</div>
-          <div className="flex-1">
-            <p className="font-bold text-sm">{c.name}</p>
-            <p className="text-xs" style={{ color: "var(--dim)" }}>{c.relation} · {c.phone}</p>
+      {Object.entries(CONTACT_CATEGORIES).map(([cat]) => {
+        const catContacts = contacts.filter((c) => {
+          const allRelations = CONTACT_CATEGORIES[cat];
+          return allRelations.includes(c.relation) || c.relation === cat.toLowerCase();
+        });
+        if (catContacts.length === 0) return null;
+        return (
+          <div key={cat} className="mb-3">
+            <p className="text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1" style={{ color: "var(--dim)" }}>
+              {CONTACT_EMOJIS[cat] || "📌"} {cat}
+            </p>
+            {catContacts.map((c) => (
+              <div key={c.id} className="card !mb-1.5 flex items-center gap-3 active:scale-[0.98] transition-transform">
+                <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openContactModal(c)}>
+                  {CONTACT_EMOJIS[c.relation] || c.emoji}
+                </div>
+                <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
+                  <p className="font-bold text-sm">{c.name}</p>
+                  <p className="text-xs" style={{ color: "var(--dim)" }}>{c.relation}</p>
+                </div>
+                {c.phone && (
+                  <a
+                    href={`tel:${c.phone}`}
+                    className="w-10 h-10 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
+                    style={{ background: "rgba(94,200,158,0.12)" }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    📞
+                  </a>
+                )}
+              </div>
+            ))}
           </div>
+        );
+      })}
+      {/* Contacts without matching category */}
+      {contacts.filter((c) => !Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) && !Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation)).length > 0 && (
+        <div className="mb-3">
+          <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "var(--dim)" }}>📌 Autres</p>
+          {contacts.filter((c) => !Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) && !Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation)).map((c) => (
+            <div key={c.id} className="card !mb-1.5 flex items-center gap-3 active:scale-[0.98] transition-transform">
+              <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openContactModal(c)}>{c.emoji}</div>
+              <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
+                <p className="font-bold text-sm">{c.name}</p>
+                <p className="text-xs" style={{ color: "var(--dim)" }}>{c.relation} · {c.phone}</p>
+              </div>
+              {c.phone && (
+                <a href={`tel:${c.phone}`} className="w-10 h-10 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
+                  style={{ background: "rgba(94,200,158,0.12)" }} onClick={(e) => e.stopPropagation()}>📞</a>
+              )}
+            </div>
+          ))}
         </div>
-      ))}
+      )}
       <button className="btn btn-secondary mt-1 mb-6" onClick={() => openContactModal("new")}>＋ Ajouter un contact</button>
 
       {/* ADRESSES */}
@@ -655,15 +719,14 @@ export default function FamillePage() {
         <div className="flex flex-col gap-3">
           <input placeholder="Nom" value={(form.name as string) || ""} onChange={(e) => setForm({ ...form, name: e.target.value })} />
           <input placeholder="Téléphone" type="tel" value={(form.phone as string) || ""} onChange={(e) => setForm({ ...form, phone: e.target.value })} />
-          <select value={(form.relation as string) || "famille"} onChange={(e) => setForm({ ...form, relation: e.target.value })}>
-            {CONTACT_RELATIONS.map((r) => <option key={r} value={r}>{r}</option>)}
-          </select>
-          <p className="label mt-2">Emoji</p>
-          <div className="flex flex-wrap gap-2">
-            {["👤","👨","👩","👴","👵","🧑","👶","🏥","🏫","🏠","📞","🧑‍⚕️"].map((e) => (
-              <button key={e} className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: form.emoji === e ? "var(--accent)" : "var(--surface2)" }} onClick={() => setForm({ ...form, emoji: e })}>{e}</button>
+          <p className="label">Categorie</p>
+          <select value={(form.relation as string) || "Ami(e)"} onChange={(e) => setForm({ ...form, relation: e.target.value, emoji: CONTACT_EMOJIS[e.target.value] || form.emoji })}>
+            {Object.entries(CONTACT_CATEGORIES).map(([cat, relations]) => (
+              <optgroup key={cat} label={`${CONTACT_EMOJIS[cat] || ""} ${cat}`}>
+                {relations.map((r) => <option key={r} value={r}>{CONTACT_EMOJIS[r] || ""} {r}</option>)}
+              </optgroup>
             ))}
-          </div>
+          </select>
           <button className="btn btn-primary mt-3" onClick={saveContact}>Sauvegarder</button>
           {contactModal !== "new" && <button className="btn btn-danger" onClick={deleteContact}>Supprimer</button>}
         </div>

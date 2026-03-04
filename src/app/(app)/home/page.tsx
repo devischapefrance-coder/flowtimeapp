@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import FlowChat from "@/components/FlowChat";
@@ -146,6 +147,7 @@ export default function HomePage() {
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [mapFullOpen, setMapFullOpen] = useState(false);
+  const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
@@ -283,6 +285,7 @@ export default function HomePage() {
     if (expRes.data) setExpenses(expRes.data as Expense[]);
     if (choreRes.data) setChores(choreRes.data as Chore[]);
     if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
+    setDataLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id, weekOffset]);
 
@@ -800,7 +803,17 @@ export default function HomePage() {
 
           {/* Week view */}
           {calendarView === "week" && (
-            <div className="grid grid-cols-7 gap-1">
+            <div className="grid grid-cols-7 gap-1"
+              onTouchStart={(e) => { (e.currentTarget as HTMLElement).dataset.sx = String(e.touches[0].clientX); }}
+              onTouchEnd={(e) => {
+                const sx = Number((e.currentTarget as HTMLElement).dataset.sx || 0);
+                const ex = e.changedTouches[0].clientX;
+                const dx = ex - sx;
+                if (Math.abs(dx) > 60) {
+                  if (dx < 0) { setWeekOffset((o) => o + 1); setSelectedDay(0); }
+                  else { setWeekOffset((o) => o - 1); setSelectedDay(0); }
+                }
+              }}>
               {days.map((d, i) => {
                 const date = new Date(d.date);
                 const dayNum = date.getDate();
@@ -1063,6 +1076,11 @@ export default function HomePage() {
     );
   }
 
+  async function completeChore(choreId: string, currentIndex: number) {
+    await supabase.from("chores").update({ current_index: currentIndex + 1, last_rotated: new Date().toISOString().split("T")[0] }).eq("id", choreId);
+    loadData();
+  }
+
   function renderChores() {
     const displayChores = chores.slice(0, 3);
     const freqLabel = (f: string) => f === "daily" ? "Quotidien" : "Hebdo";
@@ -1077,6 +1095,14 @@ export default function HomePage() {
                 : null;
               return (
                 <div key={ch.id} className="flex items-center gap-3">
+                  <button
+                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 active:scale-90 transition-all"
+                    style={{ background: "rgba(94,200,158,0.12)", color: "var(--green)" }}
+                    onClick={() => completeChore(ch.id, ch.current_index)}
+                    title="Marquer comme fait"
+                  >
+                    ✓
+                  </button>
                   <span className="text-xl">{ch.emoji || "🧹"}</span>
                   <div className="flex-1">
                     <p className="text-sm font-bold">{ch.name}</p>
@@ -1119,10 +1145,10 @@ export default function HomePage() {
         <div className="flex items-center gap-2">
           <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
             style={{ background: "var(--surface2)" }} onClick={handleExport} title="Exporter le calendrier">📤</button>
-          <div className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden"
+          <Link href="/reglages" className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden active:scale-90 transition-transform"
             style={{ background: "var(--surface2)" }}>
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="Profil" className="w-full h-full object-cover" /> : profile?.emoji || "👤"}
-          </div>
+          </Link>
         </div>
       </div>
 
@@ -1138,7 +1164,17 @@ export default function HomePage() {
 
       {/* Widgets */}
       <div className="flex flex-col gap-3 mt-3">
-        {widgetConfig.map((w) => {
+        {!dataLoaded ? (
+          <>
+            {[1,2,3].map((i) => (
+              <div key={i} className="card animate-pulse" style={{ height: 80 }}>
+                <div className="h-3 w-24 rounded-full mb-3" style={{ background: "var(--surface2)" }} />
+                <div className="h-3 w-full rounded-full mb-2" style={{ background: "var(--surface2)" }} />
+                <div className="h-3 w-2/3 rounded-full" style={{ background: "var(--surface2)" }} />
+              </div>
+            ))}
+          </>
+        ) : widgetConfig.map((w) => {
           if (!w.visible) return null;
           const content = renderWidget(w.id);
           if (!content) return null;
@@ -1323,8 +1359,8 @@ export default function HomePage() {
           right: "max(20px, calc(50% - 195px))",
           width: 58,
           height: 58,
-          background: "linear-gradient(135deg, #7C6BF0, #5ED4C8)",
-          boxShadow: "0 6px 28px rgba(124,107,240,0.45), 0 0 16px rgba(94,212,200,0.3)",
+          background: "linear-gradient(135deg, var(--accent), var(--teal))",
+          boxShadow: "0 6px 28px var(--accent-glow), 0 0 16px rgba(94,212,200,0.2)",
           zIndex: 50,
           border: "2px solid rgba(255,255,255,0.15)",
         }}

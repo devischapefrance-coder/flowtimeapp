@@ -11,8 +11,27 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [stayLogged, setStayLogged] = useState(true);
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      setError("Entre ton email d'abord");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/login`,
+    });
+    setLoading(false);
+    if (resetError) {
+      setError(resetError.message);
+    } else {
+      setSuccess("Un email de reinitialisation a ete envoye !");
+    }
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -100,6 +119,18 @@ export default function LoginPage() {
             {error}
           </div>
         )}
+        {success && (
+          <div
+            className="mb-4 p-3 rounded-xl text-xs font-bold text-center"
+            style={{
+              background: "rgba(94,200,158,0.1)",
+              color: "var(--green)",
+              border: "1px solid rgba(94,200,158,0.2)",
+            }}
+          >
+            {success}
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <div>
@@ -127,6 +158,15 @@ export default function LoginPage() {
               style={{ background: "var(--surface2)" }}
             />
           </div>
+
+          <button
+            type="button"
+            className="text-[11px] font-bold self-end -mt-1"
+            style={{ color: "var(--accent)" }}
+            onClick={handleForgotPassword}
+          >
+            Mot de passe oublie ?
+          </button>
 
           {/* Styled checkbox */}
           <label className="flex items-center gap-2.5 cursor-pointer mt-1">

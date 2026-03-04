@@ -48,9 +48,20 @@ function cleanForSpeech(text: string): string {
 }
 
 export default function FlowChat({ open, onClose, context, onAction }: FlowChatProps) {
-  const [messages, setMessages] = useState<Message[]>([
-    { role: "flow", text: "Salut ! Je suis Flow, ton assistant familial. Dis-moi ce que tu veux organiser, je m'occupe de tout !" },
-  ]);
+  const [messages, setMessages] = useState<Message[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = sessionStorage.getItem("flowtime_chat");
+        if (saved) return JSON.parse(saved);
+      } catch { /* ignore */ }
+    }
+    return [{ role: "flow", text: "Salut ! Je suis Flow, ton assistant familial. Dis-moi ce que tu veux organiser, je m'occupe de tout !" }];
+  });
+
+  // Persist messages to sessionStorage
+  useEffect(() => {
+    try { sessionStorage.setItem("flowtime_chat", JSON.stringify(messages)); } catch { /* ignore */ }
+  }, [messages]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
