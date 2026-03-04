@@ -72,6 +72,11 @@ function saveWidgetConfig(config: WidgetConfig[]) {
   localStorage.setItem(WIDGETS_STORAGE_KEY, JSON.stringify(config));
 }
 
+// Local date string (YYYY-MM-DD) — avoids UTC offset bugs from toISOString()
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 // ---- Calendar helpers ----
 function getWeekDays(dayOffset: number) {
   const today = new Date();
@@ -84,8 +89,8 @@ function getWeekDays(dayOffset: number) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(monday);
     d.setDate(monday.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
-    const todayStr = today.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
+    const todayStr = localDateStr(today);
     const isToday = dateStr === todayStr;
     days.push({
       date: dateStr,
@@ -102,12 +107,12 @@ const STRIP_DAYS_BEFORE = 30;
 const STRIP_DAYS_AFTER = 30;
 function getDayStrip() {
   const today = new Date();
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = localDateStr(today);
   const days = [];
   for (let i = -STRIP_DAYS_BEFORE; i <= STRIP_DAYS_AFTER; i++) {
     const d = new Date(today);
     d.setDate(today.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
     days.push({
       date: dateStr,
       isToday: dateStr === todayStr,
@@ -125,20 +130,20 @@ function getMonthDays(year: number, month: number) {
   if (startDow < 0) startDow = 6;
 
   const days: { date: string; dayNum: number; isCurrentMonth: boolean; isToday: boolean }[] = [];
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = localDateStr(new Date());
 
   for (let i = startDow - 1; i >= 0; i--) {
     const d = new Date(year, month, -i);
-    days.push({ date: d.toISOString().split("T")[0], dayNum: d.getDate(), isCurrentMonth: false, isToday: d.toISOString().split("T")[0] === todayStr });
+    days.push({ date: localDateStr(d), dayNum: d.getDate(), isCurrentMonth: false, isToday: localDateStr(d) === todayStr });
   }
   for (let i = 1; i <= lastDay.getDate(); i++) {
     const d = new Date(year, month, i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
     days.push({ date: dateStr, dayNum: i, isCurrentMonth: true, isToday: dateStr === todayStr });
   }
   while (days.length < 42) {
     const d = new Date(year, month + 1, days.length - startDow - lastDay.getDate() + 1);
-    days.push({ date: d.toISOString().split("T")[0], dayNum: d.getDate(), isCurrentMonth: false, isToday: d.toISOString().split("T")[0] === todayStr });
+    days.push({ date: localDateStr(d), dayNum: d.getDate(), isCurrentMonth: false, isToday: localDateStr(d) === todayStr });
   }
   return days;
 }
@@ -173,29 +178,25 @@ export default function HomePage() {
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [selectedDate, setSelectedDate] = useState(() => localDateStr(new Date()));
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
   const scrollStripRef = useRef<HTMLDivElement>(null);
   const scrollInitRef = useRef(false);
 
-  // Live clock: updates every minute
+  // Live clock: updates every 30s
   const [now, setNow] = useState(() => new Date());
   useEffect(() => {
     const interval = setInterval(() => {
       const n = new Date();
+      const newDateStr = localDateStr(n);
+      const oldDateStr = localDateStr(now);
       setNow(n);
-      // If date changed (midnight), update selectedDate to today
-      const newDateStr = n.toISOString().split("T")[0];
-      setSelectedDate((prev) => {
-        const prevDate = new Date(prev + "T00:00:00");
-        const oldToday = new Date();
-        oldToday.setHours(0, 0, 0, 0);
-        // Only auto-update if user was on "today"
-        const wasOnToday = prev === new Date(Date.now() - 60000).toISOString().split("T")[0];
-        return wasOnToday ? newDateStr : prev;
-      });
+      // At midnight, auto-move to the new day
+      if (newDateStr !== oldDateStr) {
+        setSelectedDate(newDateStr);
+      }
     }, 30000); // every 30s
     return () => clearInterval(interval);
   }, []);
@@ -248,11 +249,11 @@ export default function HomePage() {
   const diffToMondaySel = dayOfWeekSel === 0 ? -6 : 1 - dayOfWeekSel;
   const mondaySel = new Date(selectedDateObj);
   mondaySel.setDate(selectedDateObj.getDate() + diffToMondaySel);
-  const todayStr = now.toISOString().split("T")[0];
+  const todayStr = localDateStr(now);
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(mondaySel);
     d.setDate(mondaySel.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = localDateStr(d);
     return {
       date: dateStr,
       isToday: dateStr === todayStr,
@@ -319,9 +320,9 @@ export default function HomePage() {
     const endDate = days[6].date;
 
     // Month boundaries for expenses
-    const now = new Date();
-    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
-    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+    const nowLocal = new Date();
+    const monthStart = localDateStr(new Date(nowLocal.getFullYear(), nowLocal.getMonth(), 1));
+    const monthEnd = localDateStr(new Date(nowLocal.getFullYear(), nowLocal.getMonth() + 1, 0));
 
     const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, expRes, choreRes, devRes] = await Promise.all([
       supabase
@@ -369,8 +370,8 @@ export default function HomePage() {
     if (calendarView !== "month" || !profile?.family_id) return;
     const firstDay = new Date(monthYear, monthMonth, 1);
     const lastDay = new Date(monthYear, monthMonth + 1, 0);
-    const startDate = firstDay.toISOString().split("T")[0];
-    const endDate = lastDay.toISOString().split("T")[0];
+    const startDate = localDateStr(firstDay);
+    const endDate = localDateStr(lastDay);
     supabase
       .from("events")
       .select("*, members(name,emoji,color)")
@@ -600,7 +601,7 @@ export default function HomePage() {
             family_id: profile.family_id,
             title,
             time: action.data.time_start,
-            date: d.toISOString().split("T")[0],
+            date: localDateStr(d),
             member_id: memberId,
             recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
             category,
@@ -651,7 +652,7 @@ export default function HomePage() {
         if (qeRecurrence === "daily") d.setDate(start.getDate() + i);
         else if (qeRecurrence === "weekly") d.setDate(start.getDate() + i * 7);
         else d.setMonth(start.getMonth() + i);
-        dates.push(d.toISOString().split("T")[0]);
+        dates.push(localDateStr(d));
       }
       for (const date of dates) {
         await supabase.from("events").insert({ ...baseEvent, date, recurring: { type: qeRecurrence } });
@@ -1216,7 +1217,7 @@ export default function HomePage() {
   }
 
   async function completeChore(choreId: string, currentIndex: number) {
-    await supabase.from("chores").update({ current_index: currentIndex + 1, last_rotated: new Date().toISOString().split("T")[0] }).eq("id", choreId);
+    await supabase.from("chores").update({ current_index: currentIndex + 1, last_rotated: localDateStr(new Date()) }).eq("id", choreId);
     loadData();
   }
 
