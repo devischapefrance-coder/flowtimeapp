@@ -640,13 +640,27 @@ export default function ViePage() {
         const unchecked = shoppingItems.filter((i) => !i.checked);
         const checked = shoppingItems.filter((i) => i.checked);
 
+        // Map auto-detected categories to existing DB categories
+        const VALID_CATS = new Set(SHOP_CATS.map((c) => c.value));
+        const CAT_MAPPING: Record<string, string> = {
+          "viande-poisson": "viandes",
+          "boulangerie": "epicerie",
+          "boissons": "epicerie",
+          "surgeles": "epicerie",
+          "bebe": "autre",
+        };
+
         async function addShoppingItem() {
           if (!newShoppingText.trim() || !profile?.family_id) return;
-          const autoCategory = shoppingCat === "general" ? detectShoppingCategory(newShoppingText.trim()) : shoppingCat;
+          let category = shoppingCat;
+          if (shoppingCat === "general") {
+            const detected = detectShoppingCategory(newShoppingText.trim());
+            category = CAT_MAPPING[detected] || (VALID_CATS.has(detected) ? detected : "general");
+          }
           await supabase.from("shopping_items").insert({
             family_id: profile.family_id,
             text: newShoppingText.trim(),
-            category: autoCategory,
+            category,
             added_by: profile.first_name || "",
           });
           setNewShoppingText("");
