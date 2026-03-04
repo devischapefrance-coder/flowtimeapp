@@ -1,3 +1,5 @@
+import { getAuthUser } from "@/lib/server-auth";
+
 const SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Tu es chaleureux, malin, un peu taquin mais toujours bienveillant. Tu tutoies l'utilisateur comme un ami proche.
 
 ## Ta personnalité
@@ -147,14 +149,26 @@ ${message}`;
 }
 
 export async function POST(req: Request) {
+  // Auth check
+  const user = await getAuthUser(req);
+  if (!user) {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
-    const { message, context, history, image } = await req.json();
+    const body = await req.json();
+    const { message, context, history, image } = body;
+
+    // Input validation
+    if (typeof message !== "string" || message.length === 0 || message.length > 2000) {
+      return Response.json({ error: "Message invalide (max 2000 caractères)" }, { status: 400 });
+    }
 
     // Build conversation history for multi-turn
     const messages: ChatMessage[] = [];
 
     if (history && Array.isArray(history)) {
-      for (const h of history.slice(-10)) { // Keep last 10 messages for context
+      for (const h of history.slice(-10)) {
         messages.push({
           role: h.role === "user" ? "user" : "assistant",
           content: h.role === "user" ? h.text : JSON.stringify({ response: h.text }),
@@ -163,7 +177,7 @@ export async function POST(req: Request) {
     }
 
     // Add current message with full context, optionally with image
-    const promptText = buildPrompt(message, context);
+    const promptText = buildPrompt(message, context || {});
     if (image) {
       messages.push({
         role: "user",
@@ -179,44 +193,60 @@ export async function POST(req: Request) {
       });
     }
 
-    const response = await fetch("https://api.anthropic.com/v1/messages", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "x-api-key": process.env.ANTHROPIC_API_KEY!,
-        "anthropic-version": "2023-06-01",
-      },
-      body: JSON.stringify({
-        model: "claude-sonnet-4-20250514",
-        max_tokens: 2048,
-        system: SYSTEM_PROMPT,
-        messages,
-      }),
-    });
-
-    const data = await response.json();
-
-    if (!response.ok) {
-      console.error("Anthropic API error:", data);
-      return Response.json(
-        { response: "Oups, j'ai un petit souci technique. Réessaie dans un instant !" },
-        { status: 500 }
-      );
-    }
-
-    const text = data.content[0].text;
+    // 30s timeout
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 30_000);
 
     try {
-      const parsed = JSON.parse(text);
-      // Normalize: support both "action" (single) and "actions" (array)
-      if (parsed.action && !parsed.actions) {
-        parsed.actions = [parsed.action];
-        delete parsed.action;
+      const response = await fetch("https://api.anthropic.com/v1/messages", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-api-key": process.env.ANTHROPIC_API_KEY!,
+          "anthropic-version": "2023-06-01",
+        },
+        body: JSON.stringify({
+          model: "claude-sonnet-4-20250514",
+          max_tokens: 2048,
+          system: SYSTEM_PROMPT,
+          messages,
+        }),
+        signal: controller.signal,
+      });
+
+      clearTimeout(timeout);
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        console.error("Anthropic API error:", response.status);
+        return Response.json(
+          { response: "Oups, j'ai un petit souci technique. Réessaie dans un instant !" },
+          { status: 500 }
+        );
       }
-      return Response.json(parsed);
-    } catch {
-      // If Claude didn't return valid JSON, wrap the text
-      return Response.json({ response: text });
+
+      const text = data.content[0].text;
+
+      try {
+        const parsed = JSON.parse(text);
+        if (parsed.action && !parsed.actions) {
+          parsed.actions = [parsed.action];
+          delete parsed.action;
+        }
+        return Response.json(parsed);
+      } catch {
+        return Response.json({ response: text });
+      }
+    } catch (err) {
+      clearTimeout(timeout);
+      if (err instanceof DOMException && err.name === "AbortError") {
+        return Response.json(
+          { response: "La requête a pris trop de temps. Réessaie !" },
+          { status: 504 }
+        );
+      }
+      throw err;
     }
   } catch (err) {
     console.error("Flow API error:", err);

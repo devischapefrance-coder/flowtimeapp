@@ -17,8 +17,9 @@ function getWebPush() {
 
 export async function GET(req: NextRequest) {
   // Protect with CRON_SECRET
+  // CRON_SECRET must be defined — refuse if missing
   const secret = req.headers.get("authorization")?.replace("Bearer ", "");
-  if (process.env.CRON_SECRET && secret !== process.env.CRON_SECRET) {
+  if (!process.env.CRON_SECRET || secret !== process.env.CRON_SECRET) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 

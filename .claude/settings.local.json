@@ -12,7 +12,11 @@
       "Bash(npm ls:*)",
       "WebFetch(domain:flowtimeapp.vercel.app)",
       "Bash(rm:*)",
-      "Bash(xargs grep:*)"
+      "Bash(xargs grep:*)",
+      "Bash(curl:*)",
+      "Bash(wc:*)",
+      "Bash(npx vercel:*)",
+      "Bash(python3:*)"
     ]
   }
 }

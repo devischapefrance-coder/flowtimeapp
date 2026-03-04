@@ -6,6 +6,7 @@ import Logo from "@/components/Logo";
 interface Message {
   role: "user" | "flow";
   text: string;
+  image?: string; // data URL for display
   actions?: Array<{ type: string; data: Record<string, unknown> }>;
 }
 
@@ -138,9 +139,11 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   }
 
   // ─── Core send logic ───
-  const sendAndGetResponse = useCallback(async (userMsg: string, imgBase64?: string | null): Promise<string | null> => {
+  const sendAndGetResponse = useCallback(async (userMsg: string, imgBase64?: string | null, imgPreview?: string | null): Promise<string | null> => {
     const currentMessages = messagesRef.current;
-    const newMessages: Message[] = [...currentMessages, { role: "user", text: userMsg }];
+    const userMessage: Message = { role: "user", text: userMsg };
+    if (imgPreview) userMessage.image = imgPreview;
+    const newMessages: Message[] = [...currentMessages, userMessage];
     setMessages(newMessages);
     setLoading(true);
 
@@ -386,9 +389,10 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
     const userMsg = (text || input).trim();
     if (!userMsg || loading) return;
     const img = imageBase64;
+    const preview = imagePreview;
     setInput("");
     clearImage();
-    await sendAndGetResponse(userMsg, img);
+    await sendAndGetResponse(userMsg, img, preview);
   }
 
   if (!open) return null;
@@ -452,14 +456,17 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
             )}
             {m.role === "user" && (
               <div
-                className="px-4 py-3 text-sm"
+                className="text-sm overflow-hidden"
                 style={{
                   background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
                   color: "#fff",
                   borderRadius: "18px 18px 4px 18px",
                 }}
               >
-                {m.text}
+                {m.image && (
+                  <img src={m.image} alt="Photo envoyée" className="w-full max-h-48 object-cover" style={{ borderRadius: "18px 18px 0 0" }} />
+                )}
+                <div className="px-4 py-3">{m.text}</div>
               </div>
             )}
           </div>

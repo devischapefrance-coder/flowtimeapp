@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { createClient } from "@supabase/supabase-js";
+import { getAuthUser } from "@/lib/server-auth";
 
 const supabaseAdmin = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -18,6 +19,11 @@ function getWebPush() {
 }
 
 export async function POST(req: NextRequest) {
+  const user = await getAuthUser(req);
+  if (!user) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   try {
     const push = getWebPush();
     const { title, body, userId, familyId } = await req.json();
@@ -25,11 +31,23 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing title" }, { status: 400 });
     }
 
+    // Verify the authenticated user belongs to the target family
+    if (familyId) {
+      const { data: profile } = await supabaseAdmin
+        .from("profiles")
+        .select("family_id")
+        .eq("id", user.id)
+        .single();
+
+      if (!profile || profile.family_id !== familyId) {
+        return NextResponse.json({ error: "Forbidden" }, { status: 403 });
+      }
+    }
+
     let query = supabaseAdmin.from("push_subscriptions").select("*");
     if (userId) {
       query = query.eq("user_id", userId);
     } else if (familyId) {
-      // Get all user IDs in this family, then their subscriptions
       const { data: profiles } = await supabaseAdmin
         .from("profiles")
         .select("id")
@@ -61,7 +79,6 @@ export async function POST(req: NextRequest) {
         );
         sent++;
       } catch {
-        // Remove invalid subscriptions
         await supabaseAdmin.from("push_subscriptions").delete().eq("endpoint", sub.endpoint);
       }
     }

@@ -157,6 +157,40 @@ CREATE TABLE shopping_items (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Dépenses partagées
+CREATE TABLE expenses (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  paid_by UUID REFERENCES auth.users ON DELETE SET NULL,
+  category TEXT DEFAULT 'general',
+  date DATE NOT NULL DEFAULT CURRENT_DATE,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Tâches ménagères
+CREATE TABLE chores (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  title TEXT NOT NULL,
+  assigned_to UUID REFERENCES members(id) ON DELETE SET NULL,
+  done BOOLEAN DEFAULT false,
+  due_date DATE,
+  recurring JSONB DEFAULT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Abonnements push notifications
+CREATE TABLE push_subscriptions (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE,
+  endpoint TEXT NOT NULL UNIQUE,
+  keys JSONB NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ===========================================
 -- Row Level Security (RLS)
 -- ===========================================
@@ -173,11 +207,14 @@ ALTER TABLE note_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE birthdays ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shopping_items ENABLE ROW LEVEL SECURITY;
+ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
+ALTER TABLE chores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 
 -- Profiles : lecture/modif de son propre profil uniquement
 CREATE POLICY "Own profile" ON profiles FOR SELECT USING (auth.uid() = id);
 CREATE POLICY "Update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
-CREATE POLICY "Insert profile" ON profiles FOR INSERT WITH CHECK (true);
+CREATE POLICY "Insert profile" ON profiles FOR INSERT WITH CHECK (id = auth.uid());
 
 -- Membres : accès par famille
 CREATE POLICY "Family members" ON members FOR ALL USING (
@@ -232,4 +269,19 @@ CREATE POLICY "Family meals" ON meals FOR ALL USING (
 -- Liste de courses : accès par famille
 CREATE POLICY "Family shopping" ON shopping_items FOR ALL USING (
   family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Dépenses : accès par famille
+CREATE POLICY "Family expenses" ON expenses FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Tâches : accès par famille
+CREATE POLICY "Family chores" ON chores FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Push subscriptions : accès à ses propres abonnements uniquement
+CREATE POLICY "Own push subscriptions" ON push_subscriptions FOR ALL USING (
+  user_id = auth.uid()
 );
