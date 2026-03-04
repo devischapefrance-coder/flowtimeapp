@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import type { Event } from "@/lib/types";
 import { getCategoryColor } from "@/lib/categories";
 import {
@@ -34,6 +34,7 @@ function SortableEvent({
   onDelete,
   onDeleteSeries,
   onEditSeries,
+  onReorder,
   menuOpen,
   setMenuOpen,
 }: {
@@ -44,9 +45,14 @@ function SortableEvent({
   onDelete: (id: string) => void;
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
+  onReorder?: (eventId: string, newTime: string) => void;
   menuOpen: string | null;
   setMenuOpen: (id: string | null) => void;
 }) {
+  const [editingTime, setEditingTime] = useState(false);
+  const [tempTime, setTempTime] = useState(ev.time);
+  const timeInputRef = useRef<HTMLInputElement>(null);
+
   const {
     attributes,
     listeners,
@@ -61,6 +67,19 @@ function SortableEvent({
     transition,
     opacity: isDragging ? 0.5 : isPast ? 0.4 : 1,
   };
+
+  useEffect(() => {
+    if (editingTime && timeInputRef.current) {
+      timeInputRef.current.focus();
+    }
+  }, [editingTime]);
+
+  function commitTime() {
+    setEditingTime(false);
+    if (tempTime && tempTime !== ev.time && onReorder) {
+      onReorder(ev.id, tempTime);
+    }
+  }
 
   return (
     <div ref={setNodeRef} style={style} className="relative mb-2">
@@ -91,7 +110,31 @@ function SortableEvent({
         </div>
         <div className="flex-1">
           <div className="flex items-center gap-2">
-            <p className="text-sm font-bold" style={{ color: "var(--accent)" }}>{ev.time}</p>
+            {editingTime ? (
+              <input
+                ref={timeInputRef}
+                type="time"
+                value={tempTime}
+                onChange={(e) => setTempTime(e.target.value)}
+                onBlur={commitTime}
+                onKeyDown={(e) => { if (e.key === "Enter") commitTime(); }}
+                className="text-sm font-bold px-1 py-0.5 rounded-lg w-[80px]"
+                style={{
+                  color: "var(--accent)",
+                  background: "var(--surface2)",
+                  border: "1px solid var(--accent)",
+                }}
+              />
+            ) : (
+              <button
+                onClick={() => { setTempTime(ev.time); setEditingTime(true); }}
+                className="text-sm font-bold hover:underline"
+                style={{ color: "var(--accent)" }}
+                title="Modifier l'heure"
+              >
+                {ev.time}
+              </button>
+            )}
             {isNext && (
               <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                 Prochain
@@ -200,7 +243,6 @@ export default function Timeline({ events, onDelete, onDeleteSeries, onEditSerie
     const newIndex = sorted.findIndex((e) => e.id === over.id);
     if (oldIndex === -1 || newIndex === -1) return;
 
-    // Calculate new time based on position
     const targetEvent = sorted[newIndex];
     onReorder(active.id as string, targetEvent.time);
   }
@@ -234,6 +276,7 @@ export default function Timeline({ events, onDelete, onDeleteSeries, onEditSerie
                 onDelete={onDelete}
                 onDeleteSeries={onDeleteSeries}
                 onEditSeries={onEditSeries}
+                onReorder={onReorder}
                 menuOpen={menuOpen}
                 setMenuOpen={setMenuOpen}
               />
