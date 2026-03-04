@@ -57,7 +57,15 @@ self.addEventListener("fetch", (event) => {
 
 // Push notifications
 self.addEventListener("push", (event) => {
-  let data = { title: "FlowTime", body: "", icon: "/icons/icon-192.png", badge: "/icons/icon-192.png" };
+  let data = {
+    title: "FlowTime",
+    body: "",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
+    tag: "flowtime",
+    url: "/home",
+  };
+
   try {
     if (event.data) {
       const parsed = event.data.json();
@@ -69,24 +77,38 @@ self.addEventListener("push", (event) => {
     }
   }
 
-  event.waitUntil(
-    self.registration.showNotification(data.title, {
-      body: data.body,
-      icon: data.icon,
-      badge: data.badge,
-      vibrate: [100, 50, 100],
-      data: { url: "/" },
-    })
-  );
+  const options = {
+    body: data.body,
+    icon: data.icon,
+    badge: data.badge,
+    tag: data.tag,
+    renotify: true,
+    vibrate: [80, 40, 80, 40, 120],
+    data: { url: data.url || "/home" },
+    actions: data.actions || [],
+    silent: false,
+  };
+
+  event.waitUntil(self.registration.showNotification(data.title, options));
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const url = event.notification.data?.url || "/";
+
+  let url = event.notification.data?.url || "/home";
+
+  // Handle action button clicks
+  if (event.action === "view") {
+    url = "/home";
+  } else if (event.action === "dismiss") {
+    return;
+  }
+
   event.waitUntil(
     self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
       for (const client of clients) {
         if (client.url.includes(self.location.origin) && "focus" in client) {
+          client.navigate(url);
           return client.focus();
         }
       }

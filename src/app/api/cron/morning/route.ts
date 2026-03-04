@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+function catEmoji(category: string): string {
+  const map: Record<string, string> = {
+    sport: "⚽", ecole: "📚", medical: "🏥", loisir: "🎭",
+    travail: "💼", famille: "👨‍👩‍👧‍👦", general: "📌",
+  };
+  return map[category] || "📌";
+}
+
 function getWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
@@ -58,28 +66,43 @@ export async function GET(req: NextRequest) {
         .order("time");
 
       const eventList = events || [];
-      let body: string;
-      if (eventList.length === 0) {
-        body = "Aucun evenement prevu aujourd'hui. Bonne journee !";
-      } else {
-        const summary = eventList
-          .slice(0, 4)
-          .map((e: Record<string, unknown>) => {
-            const memberName = (e.members as { name: string } | null)?.name;
-            return `${e.time} ${e.title}${memberName ? ` (${memberName})` : ""}`;
-          })
-          .join(", ");
-        const more = eventList.length > 4 ? ` +${eventList.length - 4} autre(s)` : "";
-        body = `${eventList.length} evenement(s) : ${summary}${more}`;
-      }
+      const greetings = ["Prete pour cette journee", "C'est parti", "Voici ton programme", "Belle journee en vue"];
+      const emptyDay = ["Journee libre ! Profite bien", "Rien de prevu, a toi de jouer", "Journee tranquille aujourd'hui"];
 
       // Send to each member of this family
       for (const member of familyMembers) {
         const memberSubs = subs.filter((s: { user_id: string }) => s.user_id === member.userId);
+
+        let title: string;
+        let body: string;
+
+        if (eventList.length === 0) {
+          title = `Bonjour ${member.name} ☀️`;
+          body = emptyDay[Math.floor(Math.random() * emptyDay.length)] + " 😌";
+        } else {
+          const greeting = greetings[Math.floor(Math.random() * greetings.length)];
+          title = `Bonjour ${member.name} ! ${eventList.length} evenement${eventList.length > 1 ? "s" : ""} aujourd'hui`;
+          const lines = eventList
+            .slice(0, 4)
+            .map((e: Record<string, unknown>) => {
+              const memberName = (e.members as { name: string } | null)?.name;
+              const cat = (e.category as string) || "general";
+              const emoji = catEmoji(cat);
+              return `${emoji} ${e.time} ${e.title}${memberName ? ` · ${memberName}` : ""}`;
+            })
+            .join("\n");
+          const more = eventList.length > 4 ? `\n   +${eventList.length - 4} autre(s)...` : "";
+          body = `${greeting} !\n${lines}${more}`;
+        }
+
         const payload = JSON.stringify({
-          title: `Bonjour ${member.name} !`,
+          title,
           body,
           icon: "/icons/icon-192.png",
+          badge: "/icons/icon-192.png",
+          tag: "flowtime-morning",
+          url: "/home",
+          actions: eventList.length > 0 ? [{ action: "view", title: "Voir le planning" }] : [],
         });
 
         for (const sub of memberSubs) {

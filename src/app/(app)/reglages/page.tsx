@@ -369,8 +369,8 @@ export default function ReglagesPage() {
                 method: "POST",
                 headers,
                 body: JSON.stringify({
-                  title: "FlowTime - Test",
-                  body: "Les notifications fonctionnent ! Meme ecran verrouille.",
+                  title: "FlowTime fonctionne ! 🎉",
+                  body: `Hey ${profile?.first_name || ""} ! Les notifications sont bien activees. Tu recevras tes rappels meme ecran verrouille 🔔`,
                   userId: profile?.id,
                 }),
               });

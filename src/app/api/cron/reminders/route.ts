@@ -2,6 +2,14 @@ import { NextRequest, NextResponse } from "next/server";
 import webpush from "web-push";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+function catEmoji(category: string): string {
+  const map: Record<string, string> = {
+    sport: "⚽", ecole: "📚", medical: "🏥", loisir: "🎭",
+    travail: "💼", famille: "👨‍👩‍👧‍👦", general: "📌",
+  };
+  return map[category] || "📌";
+}
+
 function getWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
   const privateKey = process.env.VAPID_PRIVATE_KEY;
@@ -29,7 +37,7 @@ export async function GET(req: NextRequest) {
     // Get today's events
     const { data: events } = await supabaseAdmin
       .from("events")
-      .select("id, title, time, family_id, member_id, members(name)")
+      .select("id, title, time, family_id, member_id, category, members(name)")
       .eq("date", today);
 
     if (!events || events.length === 0) {
@@ -77,13 +85,19 @@ export async function GET(req: NextRequest) {
       const familyUserIds = familyProfiles.map((p) => p.id);
       const familySubs = subs.filter((s) => familyUserIds.includes(s.user_id));
 
+      const cat = (event.category as string) || "general";
+      const emoji = catEmoji(cat);
+
       const payload = JSON.stringify({
-        title: `${event.time} — ${event.title}`,
+        title: `${emoji} ${event.title} a ${event.time}`,
         body: mName
-          ? `${mName} dans 15 minutes`
-          : "Dans 15 minutes",
+          ? `C'est bientot l'heure ! ${mName}, c'est dans 15 min`
+          : "C'est bientot l'heure ! Dans 15 minutes",
         icon: "/icons/icon-192.png",
         badge: "/icons/icon-192.png",
+        tag: `flowtime-reminder-${event.id}`,
+        url: "/home",
+        actions: [{ action: "view", title: "Voir le planning" }],
       });
 
       for (const sub of familySubs) {
