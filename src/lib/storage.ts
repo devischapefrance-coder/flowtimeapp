@@ -28,14 +28,14 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
     const cropped = await cropToSquare(file, 256);
     const path = `${userId}/avatar.webp`;
 
-    // Delete old avatar if exists
-    await supabase.storage.from("avatars").remove([path]);
-
     const { error } = await supabase.storage
       .from("avatars")
       .upload(path, cropped, { contentType: "image/webp", upsert: true });
 
-    if (error) return null;
+    if (error) {
+      console.error("Avatar upload error:", error.message, error);
+      return null;
+    }
 
     const { data } = supabase.storage.from("avatars").getPublicUrl(path);
     const url = data.publicUrl + "?t=" + Date.now();
@@ -44,7 +44,8 @@ export async function uploadAvatar(userId: string, file: File): Promise<string |
     await supabase.from("profiles").update({ avatar_url: url }).eq("id", userId);
 
     return url;
-  } catch {
+  } catch (err) {
+    console.error("Avatar upload exception:", err);
     return null;
   }
 }
