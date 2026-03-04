@@ -34,10 +34,12 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
     setCropSrc(objectUrl);
     setScale(1);
     setOffset({ x: 0, y: 0 });
+    // Reset input so same file can be re-selected
+    e.target.value = "";
   }
 
-  // Touch handlers for pan
   function onTouchStart(e: React.TouchEvent) {
+    e.preventDefault();
     if (e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -49,6 +51,7 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
   }
 
   function onTouchMove(e: React.TouchEvent) {
+    e.preventDefault();
     if (pinchRef.current.active && e.touches.length === 2) {
       const dx = e.touches[0].clientX - e.touches[1].clientX;
       const dy = e.touches[0].clientY - e.touches[1].clientY;
@@ -59,9 +62,10 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
     }
     if (!dragRef.current.dragging) return;
     const t = e.touches[0];
-    const dx = t.clientX - dragRef.current.startX;
-    const dy = t.clientY - dragRef.current.startY;
-    setOffset({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+    setOffset({
+      x: dragRef.current.origX + (t.clientX - dragRef.current.startX),
+      y: dragRef.current.origY + (t.clientY - dragRef.current.startY),
+    });
   }
 
   function onTouchEnd() {
@@ -69,21 +73,18 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
     pinchRef.current.active = false;
   }
 
-  // Mouse fallback for desktop
   function onMouseDown(e: React.MouseEvent) {
+    e.preventDefault();
     dragRef.current = { dragging: true, startX: e.clientX, startY: e.clientY, origX: offset.x, origY: offset.y };
   }
-
   function onMouseMove(e: React.MouseEvent) {
     if (!dragRef.current.dragging) return;
-    const dx = e.clientX - dragRef.current.startX;
-    const dy = e.clientY - dragRef.current.startY;
-    setOffset({ x: dragRef.current.origX + dx, y: dragRef.current.origY + dy });
+    setOffset({
+      x: dragRef.current.origX + (e.clientX - dragRef.current.startX),
+      y: dragRef.current.origY + (e.clientY - dragRef.current.startY),
+    });
   }
-
-  function onMouseUp() {
-    dragRef.current.dragging = false;
-  }
+  function onMouseUp() { dragRef.current.dragging = false; }
 
   const cropAndUpload = useCallback(async () => {
     if (!cropFile || !imgRef.current) return;
@@ -99,21 +100,16 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
 
-    // The crop circle is 200px in the UI. Map offset/scale to canvas.
     const uiSize = 200;
     const ratio = outputSize / uiSize;
-
-    // Calculate image draw params
     const imgW = img.naturalWidth;
     const imgH = img.naturalHeight;
-    // Image is displayed to fill the uiSize, then scaled
     const fitScale = Math.max(uiSize / imgW, uiSize / imgH);
     const drawW = imgW * fitScale * scale * ratio;
     const drawH = imgH * fitScale * scale * ratio;
     const drawX = (outputSize - drawW) / 2 + offset.x * ratio;
     const drawY = (outputSize - drawH) / 2 + offset.y * ratio;
 
-    // Clip to circle
     ctx.beginPath();
     ctx.arc(outputSize / 2, outputSize / 2, outputSize / 2, 0, Math.PI * 2);
     ctx.closePath();
@@ -128,58 +124,60 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
         setPreview(url);
         onUploaded(url);
       }
+      if (cropSrc) URL.revokeObjectURL(cropSrc);
       setCropSrc(null);
       setCropFile(null);
       setUploading(false);
     }, "image/png", 0.95);
-  }, [cropFile, scale, offset, userId, onUploaded]);
+  }, [cropFile, cropSrc, scale, offset, userId, onUploaded]);
+
+  const badgeSize = Math.round(size * 0.35);
 
   return (
     <>
-      {/* Avatar button */}
-      <button
-        className="flex items-center justify-center rounded-full relative overflow-hidden"
-        style={{
-          width: size,
-          height: size,
-          background: "var(--surface2)",
-          fontSize: size * 0.5,
-        }}
-        onClick={() => inputRef.current?.click()}
-      >
-        {preview ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={preview} alt="Avatar" className="w-full h-full object-cover rounded-full" />
-        ) : (
-          emoji
-        )}
-        {uploading && (
-          <div className="absolute inset-0 flex items-center justify-center rounded-full" style={{ background: "rgba(0,0,0,0.5)" }}>
-            <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-        {/* Edit overlay */}
-        <div
-          className="absolute inset-0 flex items-center justify-center rounded-full opacity-0 hover:opacity-100 transition-opacity"
-          style={{ background: "rgba(0,0,0,0.4)" }}
-        >
-          <span className="text-base">📷</span>
-        </div>
-        {/* Edit badge */}
-        <div
-          className="absolute bottom-0 right-0 flex items-center justify-center rounded-full"
+      {/* Wrapper — no overflow hidden so badge can escape */}
+      <div className="relative" style={{ width: size, height: size }}>
+        {/* Avatar circle */}
+        <button
+          className="flex items-center justify-center rounded-full overflow-hidden"
           style={{
-            width: size * 0.33,
-            height: size * 0.33,
+            width: size,
+            height: size,
+            background: "var(--surface2)",
+            fontSize: size * 0.5,
+          }}
+          onClick={() => inputRef.current?.click()}
+        >
+          {preview ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={preview} alt="Avatar" className="w-full h-full object-cover" />
+          ) : (
+            emoji
+          )}
+          {uploading && (
+            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+            </div>
+          )}
+        </button>
+
+        {/* Badge — outside the button, in front of everything */}
+        <div
+          className="absolute flex items-center justify-center rounded-full pointer-events-none"
+          style={{
+            width: badgeSize,
+            height: badgeSize,
+            bottom: -2,
+            right: -2,
             background: "var(--accent)",
-            color: "#fff",
-            fontSize: size * 0.17,
             border: "2px solid var(--surface-solid)",
+            fontSize: badgeSize * 0.5,
+            zIndex: 10,
           }}
         >
           📷
         </div>
-      </button>
+      </div>
 
       <input
         ref={inputRef}
@@ -188,93 +186,113 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
         className="hidden"
         onChange={handleFile}
       />
-
-      {/* Hidden canvas for cropping */}
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Crop modal */}
+      {/* Crop screen */}
       {cropSrc && (
         <div
-          className="fixed inset-0 flex items-center justify-center"
-          style={{ zIndex: 700, background: "rgba(0,0,0,0.8)" }}
+          className="fixed inset-0 flex flex-col items-center justify-center"
+          style={{ zIndex: 700, background: "rgba(0,0,0,0.9)" }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <div className="flex flex-col items-center gap-4 px-6" style={{ maxWidth: 430, width: "100%" }}>
-            <p className="text-sm font-bold text-white">Ajuster la photo</p>
-            <p className="text-xs" style={{ color: "rgba(255,255,255,0.5)" }}>Glisse pour repositionner, pince pour zoomer</p>
+          <p className="text-sm font-bold text-white mb-1">Ajuster la photo</p>
+          <p className="text-xs mb-6" style={{ color: "rgba(255,255,255,0.5)" }}>Glisse pour repositionner</p>
 
-            {/* Crop area */}
-            <div
-              className="relative rounded-full overflow-hidden"
+          {/* Crop area */}
+          <div
+            className="relative rounded-full overflow-hidden"
+            style={{
+              width: 220,
+              height: 220,
+              border: "3px solid var(--accent)",
+              touchAction: "none",
+              cursor: "move",
+              background: "#000",
+            }}
+            onTouchStart={onTouchStart}
+            onTouchMove={onTouchMove}
+            onTouchEnd={onTouchEnd}
+            onMouseDown={onMouseDown}
+            onMouseMove={onMouseMove}
+            onMouseUp={onMouseUp}
+            onMouseLeave={onMouseUp}
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              ref={imgRef}
+              src={cropSrc}
+              alt="Crop"
+              draggable={false}
               style={{
-                width: 200,
-                height: 200,
-                border: "3px solid var(--accent)",
-                touchAction: "none",
-                cursor: "move",
+                position: "absolute",
+                top: "50%",
+                left: "50%",
+                transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
+                minWidth: "100%",
+                minHeight: "100%",
+                objectFit: "cover",
+                pointerEvents: "none",
+                userSelect: "none",
               }}
-              onTouchStart={onTouchStart}
-              onTouchMove={onTouchMove}
-              onTouchEnd={onTouchEnd}
-              onMouseDown={onMouseDown}
-              onMouseMove={onMouseMove}
-              onMouseUp={onMouseUp}
-              onMouseLeave={onMouseUp}
+              onLoad={() => {
+                // Reset position when new image loads
+                setOffset({ x: 0, y: 0 });
+                setScale(1);
+              }}
+            />
+          </div>
+
+          {/* Zoom controls — custom buttons instead of broken range input */}
+          <div className="flex items-center gap-4 mt-6 mb-6">
+            <button
+              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
+              style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+              onClick={() => setScale((s) => Math.max(0.5, s - 0.15))}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                ref={imgRef}
-                src={cropSrc}
-                alt="Crop"
-                draggable={false}
-                style={{
-                  position: "absolute",
-                  top: "50%",
-                  left: "50%",
-                  transform: `translate(-50%, -50%) translate(${offset.x}px, ${offset.y}px) scale(${scale})`,
-                  minWidth: "100%",
-                  minHeight: "100%",
-                  objectFit: "cover",
-                  pointerEvents: "none",
-                }}
-              />
+              −
+            </button>
+            {/* Visual scale indicator */}
+            <div className="flex items-center gap-1">
+              {[0.5, 1, 1.5, 2, 2.5, 3].map((s) => (
+                <div
+                  key={s}
+                  className="rounded-full transition-all"
+                  style={{
+                    width: scale >= s ? 8 : 5,
+                    height: scale >= s ? 8 : 5,
+                    background: scale >= s ? "var(--accent)" : "rgba(255,255,255,0.2)",
+                  }}
+                />
+              ))}
             </div>
+            <button
+              className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
+              style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+              onClick={() => setScale((s) => Math.min(3, s + 0.15))}
+            >
+              ＋
+            </button>
+          </div>
 
-            {/* Zoom slider */}
-            <div className="flex items-center gap-3 w-full px-4">
-              <span className="text-xs text-white">−</span>
-              <input
-                type="range"
-                min="0.5"
-                max="3"
-                step="0.05"
-                value={scale}
-                onChange={(e) => setScale(parseFloat(e.target.value))}
-                className="flex-1"
-                style={{ accentColor: "var(--accent)" }}
-              />
-              <span className="text-xs text-white">＋</span>
-            </div>
-
-            {/* Actions */}
-            <div className="flex gap-3 w-full">
-              <button
-                className="btn btn-secondary flex-1"
-                onClick={() => {
-                  if (cropSrc) URL.revokeObjectURL(cropSrc);
-                  setCropSrc(null);
-                  setCropFile(null);
-                }}
-              >
-                Annuler
-              </button>
-              <button
-                className="btn btn-primary flex-1"
-                onClick={cropAndUpload}
-                disabled={uploading}
-              >
-                {uploading ? "Envoi..." : "Valider"}
-              </button>
-            </div>
+          {/* Actions */}
+          <div className="flex gap-3 px-6" style={{ width: "100%", maxWidth: 320 }}>
+            <button
+              className="btn btn-secondary flex-1"
+              onClick={() => {
+                if (cropSrc) URL.revokeObjectURL(cropSrc);
+                setCropSrc(null);
+                setCropFile(null);
+              }}
+            >
+              Annuler
+            </button>
+            <button
+              className="btn btn-primary flex-1"
+              onClick={cropAndUpload}
+              disabled={uploading}
+            >
+              {uploading ? "Envoi..." : "Valider"}
+            </button>
           </div>
         </div>
       )}
