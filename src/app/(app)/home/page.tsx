@@ -857,6 +857,7 @@ export default function HomePage() {
     return (
       <div
         className="card flex items-center gap-3 !mb-0 cursor-pointer"
+        data-tutorial="flow-chat-widget"
         style={{ background: "var(--accent-soft)", border: "1px solid rgba(124,107,240,0.15)" }}
         onClick={() => setChatOpen(true)}
       >
@@ -948,6 +949,7 @@ export default function HomePage() {
           {calendarView === "week" && (
             <div
               ref={scrollStripRef}
+              data-tutorial="day-carousel"
               className="flex gap-1 overflow-x-auto pb-1"
               style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", scrollSnapType: "x mandatory" }}
             >
@@ -1063,6 +1065,7 @@ export default function HomePage() {
               onClick={() => { exportPDF(viewEvents, days[0].date, days[6].date); }}
               title="Exporter PDF">📄</button>
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
+              data-tutorial="add-event-btn"
               style={{ background: "var(--accent)", color: "#fff" }}
               onClick={openQuickEvent} title="Ajouter un évènement">+</button>
           </div>

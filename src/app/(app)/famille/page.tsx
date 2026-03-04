@@ -407,6 +407,7 @@ export default function FamillePage() {
       <h1 className="text-xl font-bold mb-6">Famille</h1>
 
       {/* MEMBRES */}
+      <div data-tutorial="famille-membres">
       <p className="label">Membres de la famille</p>
       {members.filter((m) => m.name.toLowerCase() !== (profile?.first_name || "").toLowerCase()).map((m) => {
         const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
@@ -437,6 +438,7 @@ export default function FamillePage() {
         );
       })}
       <button className="btn btn-secondary mt-1 mb-4" onClick={() => openMemberModal("new")}>＋ Ajouter un membre</button>
+      </div>
 
       {/* STATS */}
       {members.length > 0 && (
@@ -713,7 +715,7 @@ export default function FamillePage() {
       </div>
 
       {/* MINI CARTE */}
-      <div className="mb-4 mt-4" style={{ position: "relative", zIndex: 0 }}>
+      <div className="mb-4 mt-4" data-tutorial="famille-map" style={{ position: "relative", zIndex: 0 }}>
         <p className="label">Carte</p>
         <MapViewDynamic
           markers={[...mapMarkers, ...deviceMapMarkers]}

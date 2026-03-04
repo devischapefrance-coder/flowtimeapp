@@ -71,6 +71,7 @@ export default function Navbar() {
         {/* Search button */}
         <button
           className="flex flex-col items-center gap-0.5 py-1 px-3"
+          data-tutorial="navbar-search"
           onClick={() => setSearchOpen(true)}
           aria-label="Rechercher"
         >

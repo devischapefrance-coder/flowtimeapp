@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { useProfile } from "../layout";
+import { useProfile, useTutorial } from "../layout";
 import Modal from "@/components/Modal";
 import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
@@ -24,6 +24,7 @@ const PROFILE_EMOJIS = [
 export default function ReglagesPage() {
   const router = useRouter();
   const { profile, refreshProfile } = useProfile();
+  const { startTutorial } = useTutorial();
 
   const [firstName, setFirstName] = useState(profile?.first_name || "");
   const [lastName, setLastName] = useState(profile?.last_name || "");
@@ -396,7 +397,7 @@ export default function ReglagesPage() {
 
       {/* Famille */}
       <p className="label mt-4">Famille</p>
-      <div className="card">
+      <div className="card" data-tutorial="family-code">
         <p className="text-sm font-bold mb-1">Mon code famille</p>
         <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
           Partage ce code pour que tes proches rejoignent ta famille
@@ -447,10 +448,30 @@ export default function ReglagesPage() {
         </div>
       </div>
 
+      {/* Aide */}
+      <p className="label mt-4">Aide</p>
+      <div className="card">
+        <p className="text-sm font-bold mb-1">Tutoriel interactif</p>
+        <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
+          Redécouvre les fonctionnalités principales de FlowTime avec un guide pas à pas.
+        </p>
+        <button className="btn btn-primary text-xs" onClick={startTutorial}>
+          Lancer le tutoriel
+        </button>
+      </div>
+
       {/* Nouveautés */}
       <p className="label mt-4">Nouveautés</p>
       <div className="flex flex-col gap-2">
         {[
+          {
+            version: "1.9.0", date: "4 mars 2026", tag: "Nouveau",
+            changes: [
+              "Tutoriel interactif avec spotlight sur les éléments clés",
+              "Guide pas à pas cross-page (10 étapes)",
+              "Section Aide dans les Réglages",
+            ],
+          },
           {
             version: "1.8.0", date: "4 mars 2026", tag: "Multi-famille",
             changes: [
@@ -604,7 +625,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.8.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.9.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>

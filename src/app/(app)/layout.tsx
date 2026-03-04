@@ -9,6 +9,7 @@ import Logo from "@/components/Logo";
 import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/Toast";
 import FamilyChat from "@/components/FamilyChat";
+import TutorialOverlay from "@/components/TutorialOverlay";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -28,6 +29,28 @@ export function useProfile() {
   return useContext(ProfileContext);
 }
 
+interface TutorialContextType {
+  tutorialActive: boolean;
+  tutorialStep: number;
+  startTutorial: () => void;
+  stopTutorial: () => void;
+  nextStep: () => void;
+  prevStep: () => void;
+}
+
+const TutorialContext = createContext<TutorialContextType>({
+  tutorialActive: false,
+  tutorialStep: 0,
+  startTutorial: () => {},
+  stopTutorial: () => {},
+  nextStep: () => {},
+  prevStep: () => {},
+});
+
+export function useTutorial() {
+  return useContext(TutorialContext);
+}
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -35,6 +58,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [chatOpen, setChatOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
   const handleUnread = useCallback((n: number) => setChatUnread(n), []);
+
+  const [tutorialActive, setTutorialActive] = useState(false);
+  const [tutorialStep, setTutorialStep] = useState(0);
+  const startTutorial = useCallback(() => { setTutorialStep(0); setTutorialActive(true); }, []);
+  const stopTutorial = useCallback(() => { setTutorialActive(false); setTutorialStep(0); }, []);
+  const nextStep = useCallback(() => setTutorialStep((s) => s + 1), []);
+  const prevStep = useCallback(() => setTutorialStep((s) => Math.max(0, s - 1)), []);
 
   const initialLang = typeof window !== "undefined"
     ? localStorage.getItem("flowtime_lang") || "fr"
@@ -96,25 +126,34 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider initialLang={initialLang}>
       <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true) }}>
-        <ToastProvider>
-          <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-            {children}
-          </div>
+        <TutorialContext.Provider value={{ tutorialActive, tutorialStep, startTutorial, stopTutorial, nextStep, prevStep }}>
+          <ToastProvider>
+            <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+              {children}
+            </div>
 
-          {profile?.family_id && (
-            <FamilyChat
-              open={chatOpen}
-              onClose={() => setChatOpen(false)}
-              familyId={profile.family_id}
-              userId={profile.id}
-              userName={profile.first_name || "Moi"}
-              userEmoji={profile.emoji || "👤"}
-              onUnread={handleUnread}
+            {profile?.family_id && (
+              <FamilyChat
+                open={chatOpen}
+                onClose={() => setChatOpen(false)}
+                familyId={profile.family_id}
+                userId={profile.id}
+                userName={profile.first_name || "Moi"}
+                userEmoji={profile.emoji || "👤"}
+                onUnread={handleUnread}
+              />
+            )}
+
+            <Navbar />
+            <TutorialOverlay
+              active={tutorialActive}
+              step={tutorialStep}
+              onNext={nextStep}
+              onPrev={prevStep}
+              onStop={stopTutorial}
             />
-          )}
-
-          <Navbar />
-        </ToastProvider>
+          </ToastProvider>
+        </TutorialContext.Provider>
       </ProfileContext.Provider>
     </I18nProvider>
   );
