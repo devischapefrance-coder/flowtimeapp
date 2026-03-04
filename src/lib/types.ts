@@ -151,9 +151,8 @@ export interface Meal {
 export interface ShoppingItem {
   id: string;
   family_id: string;
-  text: string;
+  name: string;
   checked: boolean;
-  category: string;
   added_by: string;
   created_at: string;
 }

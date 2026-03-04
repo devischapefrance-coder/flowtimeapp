@@ -7,7 +7,6 @@ import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtime
 import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
 import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
-import { detectShoppingCategory, SHOPPING_CATEGORIES } from "@/lib/shopping-categories";
 
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
@@ -81,7 +80,6 @@ export default function ViePage() {
   // Shopping state
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [newShoppingText, setNewShoppingText] = useState("");
-  const [shoppingCat, setShoppingCat] = useState("general");
 
   // Budget state
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -627,16 +625,6 @@ export default function ViePage() {
 
       {/* Courses tab */}
       {tab === "courses" && (() => {
-        const SHOP_CATS = [
-          { value: "general", label: "Tout", emoji: "🛒" },
-          { value: "fruits-legumes", label: "Fruits/Legumes", emoji: "🥬" },
-          { value: "viandes", label: "Viandes", emoji: "🥩" },
-          { value: "produits-laitiers", label: "Laitiers", emoji: "🧀" },
-          { value: "epicerie", label: "Epicerie", emoji: "🍝" },
-          { value: "hygiene", label: "Hygiene", emoji: "🧴" },
-          { value: "autre", label: "Autre", emoji: "📦" },
-        ];
-
         const unchecked = shoppingItems.filter((i) => !i.checked);
         const checked = shoppingItems.filter((i) => i.checked);
 
@@ -644,8 +632,7 @@ export default function ViePage() {
           if (!newShoppingText.trim() || !profile?.family_id) return;
           await supabase.from("shopping_items").insert({
             family_id: profile.family_id,
-            text: newShoppingText.trim(),
-            category: shoppingCat === "general" ? "general" : shoppingCat,
+            name: newShoppingText.trim(),
             added_by: profile.first_name || "",
           });
           setNewShoppingText("");
@@ -693,23 +680,6 @@ export default function ViePage() {
               </button>
             </div>
 
-            {/* Category chips */}
-            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
-              {SHOP_CATS.map((c) => (
-                <button
-                  key={c.value}
-                  className="px-2.5 py-1.5 rounded-full text-[10px] font-bold shrink-0"
-                  style={{
-                    background: shoppingCat === c.value ? "var(--accent)" : "var(--surface2)",
-                    color: shoppingCat === c.value ? "#fff" : "var(--dim)",
-                  }}
-                  onClick={() => setShoppingCat(c.value)}
-                >
-                  {c.emoji} {c.label}
-                </button>
-              ))}
-            </div>
-
             {/* Unchecked items */}
             {unchecked.length === 0 && checked.length === 0 && (
               <div className="text-center py-8">
@@ -719,9 +689,7 @@ export default function ViePage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              {unchecked.map((item) => {
-                const cat = SHOP_CATS.find((c) => c.value === item.category);
-                return (
+              {unchecked.map((item) => (
                   <div key={item.id} className="card !mb-0 flex items-center gap-3">
                     <input
                       type="checkbox"
@@ -730,10 +698,7 @@ export default function ViePage() {
                       className="rounded w-5 h-5 shrink-0"
                     />
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold">{item.text}</p>
-                      {item.category !== "general" && (
-                        <span className="text-[10px]" style={{ color: "var(--dim)" }}>{cat?.emoji} {cat?.label}</span>
-                      )}
+                      <p className="text-sm font-bold">{item.name}</p>
                     </div>
                     {item.added_by && (
                       <span className="text-[10px] shrink-0" style={{ color: "var(--faint)" }}>{item.added_by}</span>
@@ -746,8 +711,7 @@ export default function ViePage() {
                       ✕
                     </button>
                   </div>
-                );
-              })}
+              ))}
             </div>
 
             {/* Checked items */}
@@ -772,7 +736,7 @@ export default function ViePage() {
                         onChange={() => toggleShoppingItem(item)}
                         className="rounded w-5 h-5 shrink-0"
                       />
-                      <span className="text-sm line-through flex-1">{item.text}</span>
+                      <span className="text-sm line-through flex-1">{item.name}</span>
                     </div>
                   ))}
                 </div>
