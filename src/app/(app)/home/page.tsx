@@ -159,7 +159,7 @@ interface WeatherData {
 }
 
 export default function HomePage() {
-  const { profile } = useProfile();
+  const { profile, chatUnread, openChat } = useProfile();
   const [events, setEvents] = useState<Event[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -1321,6 +1321,15 @@ export default function HomePage() {
           <p className="text-sm capitalize mt-0.5" style={{ color: "var(--dim)" }}>{dateDisplay}</p>
         </div>
         <div className="flex items-center gap-2">
+          <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm relative"
+            style={{ background: "var(--surface2)" }} onClick={() => openChat()} aria-label="Chat famille" title="Chat famille">
+            💬
+            {chatUnread > 0 && (
+              <span className="absolute -top-1 -right-1 w-[18px] h-[18px] rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: "var(--red)" }}>
+                {chatUnread > 9 ? "9+" : chatUnread}
+              </span>
+            )}
+          </button>
           <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
             style={{ background: "var(--surface2)" }} onClick={handleExport} aria-label="Exporter" title="Exporter le calendrier">📤</button>
           <Link href="/reglages" className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden active:scale-90 transition-transform"

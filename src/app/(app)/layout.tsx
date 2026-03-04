@@ -13,11 +13,15 @@ import FamilyChat from "@/components/FamilyChat";
 interface ProfileContextType {
   profile: Profile | null;
   refreshProfile: () => Promise<void>;
+  chatUnread: number;
+  openChat: () => void;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
   profile: null,
   refreshProfile: async () => {},
+  chatUnread: 0,
+  openChat: () => {},
 });
 
 export function useProfile() {
@@ -91,34 +95,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <I18nProvider initialLang={initialLang}>
-      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile }}>
+      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true) }}>
         <ToastProvider>
           <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
             {children}
           </div>
-
-          {/* Floating chat button — above vocal button on all pages */}
-          {profile?.family_id && (
-            <button
-              className="fixed z-[90] w-12 h-12 rounded-full flex items-center justify-center text-lg shadow-lg active:scale-90 transition-transform"
-              style={{
-                background: "var(--surface2)",
-                border: "1.5px solid var(--glass-border)",
-                color: "var(--text)",
-                bottom: "calc(220px + env(safe-area-inset-bottom, 0px))",
-                right: "max(20px, calc(50% - 195px))",
-              }}
-              onClick={() => setChatOpen(true)}
-              aria-label="Chat famille"
-            >
-              💬
-              {chatUnread > 0 && (
-                <span className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold text-white" style={{ background: "var(--red)" }}>
-                  {chatUnread > 9 ? "9+" : chatUnread}
-                </span>
-              )}
-            </button>
-          )}
 
           {profile?.family_id && (
             <FamilyChat
