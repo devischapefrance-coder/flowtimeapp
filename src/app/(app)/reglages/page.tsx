@@ -171,24 +171,25 @@ export default function ReglagesPage() {
     setJoinError("");
     setJoinSuccess("");
     if (!profile || !joinCode.trim()) return;
-    const code = joinCode.trim().toLowerCase();
 
-    // Find a profile whose family_id starts with this code
-    const { data } = await supabase
-      .from("profiles")
-      .select("family_id")
-      .ilike("family_id", `${code}%`)
-      .neq("id", profile.id)
-      .limit(1);
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return setJoinError("Session expirée, reconnecte-toi.");
 
-    if (!data || data.length === 0) {
-      return setJoinError("Code famille introuvable. Vérifie le code et réessaie.");
+    const res = await fetch("/api/family/join", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({ code: joinCode.trim() }),
+    });
+
+    const result = await res.json();
+
+    if (!res.ok) {
+      return setJoinError(result.error || "Erreur inconnue");
     }
 
-    const targetFamilyId = data[0].family_id;
-
-    // Update my profile to join this family
-    await supabase.from("profiles").update({ family_id: targetFamilyId }).eq("id", profile.id);
     setJoinSuccess("Tu as rejoint la famille ! Recharge l'app pour voir les changements.");
     setJoinCode("");
     refreshProfile();
