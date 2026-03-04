@@ -7,6 +7,7 @@ import type { Profile } from "@/lib/types";
 import Navbar from "@/components/Navbar";
 import Logo from "@/components/Logo";
 import { I18nProvider } from "@/lib/i18n";
+import { ToastProvider } from "@/components/Toast";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -87,11 +88,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider initialLang={initialLang}>
       <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile }}>
-        <div className="pb-[80px]" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
-          {children}
-        </div>
+        <ToastProvider>
+          <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            {children}
+          </div>
 
-        <Navbar />
+          <Navbar />
+        </ToastProvider>
       </ProfileContext.Provider>
     </I18nProvider>
   );

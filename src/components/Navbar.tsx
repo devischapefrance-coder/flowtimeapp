@@ -66,6 +66,7 @@ export default function Navbar() {
         <button
           className="flex flex-col items-center gap-0.5 py-1 px-3"
           onClick={() => setSearchOpen(true)}
+          aria-label="Rechercher"
         >
           <span className="text-[20px]">🔍</span>
           <span className="text-[9px] font-bold" style={{ color: "var(--dim)" }}>Chercher</span>

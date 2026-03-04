@@ -7,6 +7,8 @@ import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtime
 import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
 import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
+import { useToast } from "@/components/Toast";
+import EmptyState from "@/components/EmptyState";
 import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
 
 const NOTE_CATEGORIES = [
@@ -43,6 +45,7 @@ function genId() {
 
 export default function ViePage() {
   const { profile } = useProfile();
+  const { toast, toastUndo } = useToast();
   const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -259,8 +262,8 @@ export default function ViePage() {
   }
 
   async function deleteNote(id: string) {
-    // Also delete attachments from storage
     const note = notes.find((n) => n.id === id);
+    // Delete attachments from storage
     if (note?.attachments?.length) {
       const paths = note.attachments.map((a) => {
         const url = new URL(a.url);
@@ -274,6 +277,14 @@ export default function ViePage() {
     await supabase.from("notes").delete().eq("id", id);
     if (detailNote?.id === id) setDetailNote(null);
     loadData();
+    if (note) {
+      toastUndo(`"${note.title}" supprimée`, async () => {
+        const { id: _id, ...rest } = note as unknown as Record<string, unknown>;
+        void _id;
+        await supabase.from("notes").insert(rest);
+        loadData();
+      });
+    }
   }
 
   // --- Checklist helpers ---
@@ -799,10 +810,10 @@ export default function ViePage() {
       {tab === "budget" && (() => {
         const EXPENSE_CATS = [
           { value: "courses", label: "Courses", emoji: "🛒" },
-          { value: "sante", label: "Sante", emoji: "🏥" },
+          { value: "sante", label: "Santé", emoji: "🏥" },
           { value: "loisir", label: "Loisir", emoji: "🎬" },
           { value: "transport", label: "Transport", emoji: "🚗" },
-          { value: "education", label: "Education", emoji: "📚" },
+          { value: "education", label: "Éducation", emoji: "📚" },
           { value: "maison", label: "Maison", emoji: "🏠" },
           { value: "autre", label: "Autre", emoji: "📦" },
         ];
@@ -865,19 +876,80 @@ export default function ViePage() {
               </div>
             )}
 
+            {/* Expense splitting - qui doit combien */}
+            {monthExpenses.length > 0 && members.length > 1 && (() => {
+              const perMember: Record<string, number> = {};
+              for (const m of members) perMember[m.id] = 0;
+              for (const exp of monthExpenses) {
+                if (exp.member_id && perMember[exp.member_id] !== undefined) {
+                  perMember[exp.member_id] += Number(exp.amount);
+                }
+              }
+              const activeMembers = members.filter((m) => perMember[m.id] > 0);
+              if (activeMembers.length < 2) return null;
+              const fairShare = monthTotal / activeMembers.length;
+              const balances = activeMembers.map((m) => ({
+                ...m,
+                paid: perMember[m.id],
+                balance: perMember[m.id] - fairShare,
+              }));
+              // Calculate transfers
+              const debtors = balances.filter((b) => b.balance < 0).map((b) => ({ ...b, balance: -b.balance }));
+              const creditors = balances.filter((b) => b.balance > 0).map((b) => ({ ...b }));
+              const transfers: { from: string; to: string; amount: number }[] = [];
+              let di = 0, ci = 0;
+              while (di < debtors.length && ci < creditors.length) {
+                const amount = Math.min(debtors[di].balance, creditors[ci].balance);
+                if (amount > 0.01) {
+                  transfers.push({ from: debtors[di].name, to: creditors[ci].name, amount });
+                }
+                debtors[di].balance -= amount;
+                creditors[ci].balance -= amount;
+                if (debtors[di].balance < 0.01) di++;
+                if (creditors[ci].balance < 0.01) ci++;
+              }
+              return (
+                <div className="card !mb-3">
+                  <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Répartition</p>
+                  <div className="flex flex-col gap-1.5 mb-2">
+                    {balances.map((b) => (
+                      <div key={b.id} className="flex items-center justify-between text-xs">
+                        <span>{b.emoji} {b.name}</span>
+                        <div className="flex items-center gap-2">
+                          <span style={{ color: "var(--dim)" }}>{b.paid.toFixed(0)}€ payé</span>
+                          <span className="font-bold" style={{ color: b.balance >= 0 ? "var(--green)" : "var(--red)" }}>
+                            {b.balance >= 0 ? "+" : ""}{b.balance.toFixed(2)}€
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                  {transfers.length > 0 && (
+                    <>
+                      <div className="h-px mb-2" style={{ background: "var(--glass-border)" }} />
+                      <div className="flex flex-col gap-1">
+                        {transfers.map((t, i) => (
+                          <p key={i} className="text-xs font-bold" style={{ color: "var(--accent)" }}>
+                            {t.from} → {t.to} : {t.amount.toFixed(2)}€
+                          </p>
+                        ))}
+                      </div>
+                    </>
+                  )}
+                </div>
+              );
+            })()}
+
             <button
               className="btn btn-primary mb-4 text-sm"
               onClick={() => setExpenseModal(true)}
             >
-              + Ajouter une depense
+              + Ajouter une dépense
             </button>
 
             {/* Expenses list */}
             {monthExpenses.length === 0 && (
-              <div className="text-center py-8">
-                <p className="text-3xl mb-2">💰</p>
-                <p className="text-sm" style={{ color: "var(--dim)" }}>Aucune depense ce mois</p>
-              </div>
+              <EmptyState icon="💰" title="Aucune dépense ce mois" subtitle="Ajoute une dépense pour commencer" />
             )}
             <div className="flex flex-col gap-1.5">
               {monthExpenses.map((exp) => {

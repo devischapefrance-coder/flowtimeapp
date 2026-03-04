@@ -250,6 +250,20 @@
     to { opacity: 1; transform: translateY(0); }
   }
 
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes pageEnter {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .page-transition {
+    animation: pageEnter 0.25s ease-out;
+  }
+
   .modal-slide-up {
     animation: modalSlideUp 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards !important;
     opacity: 1 !important;

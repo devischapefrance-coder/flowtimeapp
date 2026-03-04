@@ -297,6 +297,16 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
   const hasQuery = query.trim().length > 0;
   const showEmptyState = !hasQuery;
 
+  function highlightMatch(text: string) {
+    if (!hasQuery || !query.trim()) return text;
+    const idx = text.toLowerCase().indexOf(query.trim().toLowerCase());
+    if (idx === -1) return text;
+    const before = text.slice(0, idx);
+    const match = text.slice(idx, idx + query.trim().length);
+    const after = text.slice(idx + query.trim().length);
+    return <>{before}<span style={{ color: "var(--accent)", fontWeight: 700 }}>{match}</span>{after}</>;
+  }
+
   return (
     <div
       className="fixed inset-0 z-[700] flex flex-col items-center"
@@ -490,8 +500,8 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
                 >
                   <span className="text-lg">{r.emoji}</span>
                   <div className="flex-1 min-w-0">
-                    <p className="text-sm font-bold truncate">{r.title}</p>
-                    <p className="text-xs truncate" style={{ color: "var(--dim)" }}>{r.subtitle}</p>
+                    <p className="text-sm font-bold truncate">{highlightMatch(r.title)}</p>
+                    <p className="text-xs truncate" style={{ color: "var(--dim)" }}>{highlightMatch(r.subtitle)}</p>
                   </div>
                 </button>
               ))}

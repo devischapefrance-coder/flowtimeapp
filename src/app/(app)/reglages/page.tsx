@@ -449,7 +449,24 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
-            version: "1.6.0", date: "4 mars 2026", tag: "Nouveau",
+            version: "1.7.0", date: "4 mars 2026", tag: "Nouveau",
+            changes: [
+              "Notifications toast (remplace les alertes)",
+              "Chat famille en temps réel (Supabase Broadcast)",
+              "Récurrence d'évènements (quotidien, hebdo, mensuel)",
+              "Détection de conflits horaires à la création",
+              "Annuler une suppression (undo sur évènements et notes)",
+              "Fil d'activité récente sur l'accueil",
+              "Répartition des dépenses (qui doit combien à qui)",
+              "Surlignage du texte recherché dans les résultats",
+              "Transitions de page fluides",
+              "États vides améliorés avec composant réutilisable",
+              "Accessibilité : aria-labels sur les boutons",
+              "Accents français corrigés dans toute l'application",
+            ],
+          },
+          {
+            version: "1.6.0", date: "4 mars 2026", tag: "Recherche",
             changes: [
               "Recherche améliorée (repas, tâches, contenu des notes)",
               "Recherches récentes sauvegardées",
@@ -565,7 +582,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.6.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.7.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>

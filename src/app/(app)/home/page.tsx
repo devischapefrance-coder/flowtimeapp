@@ -24,6 +24,9 @@ import { exportPDF } from "@/lib/pdf-export";
 import { EVENT_CATEGORIES, getCategoryColor, detectCategory } from "@/lib/categories";
 import { cacheData, getCachedData } from "@/lib/offline";
 import { getWeatherWithGeolocation } from "@/lib/weather";
+import { useToast } from "@/components/Toast";
+import EmptyState from "@/components/EmptyState";
+import FamilyChat from "@/components/FamilyChat";
 
 // ---- Widget config types ----
 interface WidgetConfig {
@@ -42,6 +45,7 @@ const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
   { id: "family_map", label: "Carte famille", icon: "🗺️" },
   { id: "chores", label: "Tâches", icon: "🧹" },
+  { id: "activity", label: "Activité", icon: "📋" },
 ];
 
 const DEFAULT_WIDGETS: WidgetConfig[] = WIDGET_DEFS.map((w) => ({ id: w.id, visible: true }));
@@ -167,6 +171,7 @@ export default function HomePage() {
   const [chores, setChores] = useState<Chore[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
+  const [familyChatOpen, setFamilyChatOpen] = useState(false);
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
@@ -198,7 +203,10 @@ export default function HomePage() {
   const [qeDescription, setQeDescription] = useState("");
   const [qeShared, setQeShared] = useState(true);
   const [qeReminder, setQeReminder] = useState<number | null>(null);
+  const [qeRecurrence, setQeRecurrence] = useState<"none" | "daily" | "weekly" | "monthly">("none");
+  const [qeConflict, setQeConflict] = useState<string | null>(null);
   const [viewType, setViewType] = useState<"timeline" | "agenda">("timeline");
+  const { toast, toastUndo } = useToast();
 
   // Widget state
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
@@ -458,14 +466,39 @@ export default function HomePage() {
     })
     .sort((a, b) => (a.time || "").localeCompare(b.time || ""))[0];
 
+  // Conflict detection
+  function checkConflict(time: string, date: string): string | null {
+    if (!time) return null;
+    const [h, m] = time.split(":").map(Number);
+    const mins = h * 60 + m;
+    const dayEvs = events.filter((e) => e.date === date && e.time);
+    for (const e of dayEvs) {
+      const [eh, em] = e.time!.split(":").map(Number);
+      const eMins = eh * 60 + em;
+      if (Math.abs(mins - eMins) < 30) {
+        return `Conflit possible avec "${e.title}" à ${e.time}`;
+      }
+    }
+    return null;
+  }
+
   async function deleteEvent(id: string) {
+    const ev = events.find((e) => e.id === id);
     await supabase.from("events").delete().eq("id", id);
     loadData();
+    if (ev) {
+      toastUndo(`"${ev.title}" supprimé`, async () => {
+        const { id: _id, members: _m, ...rest } = ev as unknown as Record<string, unknown>;
+        void _id; void _m;
+        await supabase.from("events").insert(rest);
+        loadData();
+      });
+    }
   }
 
   async function deleteEventSeries(ev: Event) {
     if (!profile?.family_id || !ev.recurring) return;
-    if (!confirm("Supprimer toute la serie ?")) return;
+    if (!confirm("Supprimer toute la série ?")) return;
     const { data } = await supabase
       .from("events")
       .select("id")
@@ -558,23 +591,44 @@ export default function HomePage() {
     setQeDescription("");
     setQeShared(true);
     setQeReminder(null);
+    setQeRecurrence("none");
+    setQeConflict(null);
     setQuickEventModal(true);
   }
 
   async function saveQuickEvent() {
     if (!profile?.family_id || !qeTitle.trim() || !qeTime) return;
     const category = qeCategory === "general" ? detectCategory(qeTitle) : qeCategory;
-    await supabase.from("events").insert({
+    const baseEvent = {
       family_id: profile.family_id,
       title: qeTitle.trim(),
       time: qeTime,
-      date: currentDate,
       member_id: qeMember || null,
       description: qeDescription.trim(),
       category,
       shared: qeShared,
       reminder_minutes: qeReminder,
-    });
+    };
+
+    if (qeRecurrence === "none") {
+      await supabase.from("events").insert({ ...baseEvent, date: currentDate });
+      toast(`"${qeTitle.trim()}" ajouté`, "success");
+    } else {
+      // Generate recurring events for 4 weeks
+      const dates: string[] = [];
+      const start = new Date(currentDate + "T00:00:00");
+      for (let i = 0; i < (qeRecurrence === "daily" ? 28 : qeRecurrence === "weekly" ? 4 : 3); i++) {
+        const d = new Date(start);
+        if (qeRecurrence === "daily") d.setDate(start.getDate() + i);
+        else if (qeRecurrence === "weekly") d.setDate(start.getDate() + i * 7);
+        else d.setMonth(start.getMonth() + i);
+        dates.push(d.toISOString().split("T")[0]);
+      }
+      for (const date of dates) {
+        await supabase.from("events").insert({ ...baseEvent, date, recurring: { type: qeRecurrence } });
+      }
+      toast(`${dates.length} évènements récurrents créés`, "success");
+    }
     setQuickEventModal(false);
     loadData();
   }
@@ -582,8 +636,8 @@ export default function HomePage() {
   // --- Meal CRUD ---
   const MEAL_TYPES = [
     { value: "petit-dejeuner", label: "Petit-dej", emoji: "🍳" },
-    { value: "dejeuner", label: "Dejeuner", emoji: "🥗" },
-    { value: "diner", label: "Diner", emoji: "🍝" },
+    { value: "dejeuner", label: "Déjeuner", emoji: "🥗" },
+    { value: "diner", label: "Dîner", emoji: "🍝" },
   ];
 
   const dayMeals = meals.filter((m) => m.date === currentDate);
@@ -721,6 +775,7 @@ export default function HomePage() {
       case "birthdays": return renderBirthdays();
       case "family_map": return renderFamilyMap();
       case "chores": return renderChores();
+      case "activity": return renderActivity();
       default: return null;
     }
   }
@@ -1004,7 +1059,7 @@ export default function HomePage() {
                 <span className="text-xl">{meal ? meal.emoji : type.emoji}</span>
                 <div className="flex-1">
                   <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>{type.label}</p>
-                  {meal ? <p className="text-sm font-bold">{meal.name}</p> : <p className="text-xs" style={{ color: "var(--faint)" }}>Pas encore defini</p>}
+                  {meal ? <p className="text-sm font-bold">{meal.name}</p> : <p className="text-xs" style={{ color: "var(--faint)" }}>Pas encore défini</p>}
                 </div>
                 {meal ? (
                   <button className="text-xs p-1 rounded-full" style={{ color: "var(--red, #ef4444)" }}
@@ -1162,7 +1217,7 @@ export default function HomePage() {
                   <div className="flex-1">
                     <p className="text-sm font-bold">{ch.name}</p>
                     <p className="text-[10px]" style={{ color: "var(--dim)" }}>
-                      {assignedMember ? `${assignedMember.emoji} ${assignedMember.name}` : "Non assigne"}
+                      {assignedMember ? `${assignedMember.emoji} ${assignedMember.name}` : "Non assigné"}
                     </p>
                   </div>
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
@@ -1173,7 +1228,66 @@ export default function HomePage() {
             })}
           </div>
         ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune tache configuree</p>
+          <EmptyState icon="🧹" title="Aucune tâche configurée" subtitle="Ajoute des tâches dans Vie de famille" />
+        )}
+      </div>
+    );
+  }
+
+  function renderActivity() {
+    // Build activity feed from recent events, chores, and expenses
+    const activities: { emoji: string; text: string; time: string; key: string }[] = [];
+
+    // Recent events created (today or selected date)
+    for (const ev of events.filter((e) => e.date === currentDate).slice(0, 5)) {
+      const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
+      activities.push({
+        emoji: "📅",
+        text: `${mem ? mem.name : "Famille"} — ${ev.title}`,
+        time: ev.time || "",
+        key: `ev-${ev.id}`,
+      });
+    }
+
+    // Recent chore completions
+    for (const ch of chores.filter((c) => c.last_rotated === todayStr).slice(0, 3)) {
+      const mem = ch.assigned_members.length > 0
+        ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
+        : null;
+      activities.push({
+        emoji: "✅",
+        text: `${mem?.name || "Quelqu'un"} a fait "${ch.name}"`,
+        time: "",
+        key: `ch-${ch.id}`,
+      });
+    }
+
+    // Recent expenses
+    for (const exp of expenses.slice(0, 3)) {
+      const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
+      activities.push({
+        emoji: "💰",
+        text: `${mem?.name || "Famille"} — ${exp.description} (${Number(exp.amount).toFixed(0)}€)`,
+        time: exp.date || "",
+        key: `exp-${exp.id}`,
+      });
+    }
+
+    return (
+      <div className="card !mb-0">
+        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Activité récente</p>
+        {activities.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {activities.slice(0, 6).map((a) => (
+              <div key={a.key} className="flex items-center gap-2.5">
+                <span className="text-base">{a.emoji}</span>
+                <p className="text-xs flex-1 truncate">{a.text}</p>
+                {a.time && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{a.time}</span>}
+              </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-xs" style={{ color: "var(--faint)" }}>Rien à afficher pour le moment</p>
         )}
       </div>
     );
@@ -1187,7 +1301,7 @@ export default function HomePage() {
       {/* Offline banner */}
       {isOffline && (
         <div className="mb-3 px-3 py-2 rounded-xl text-xs font-bold text-center" style={{ background: "rgba(240,124,74,0.15)", color: "var(--warm)", border: "1px solid rgba(240,124,74,0.2)" }}>
-          📡 Hors ligne — donnees en cache
+          📡 Hors ligne — données en cache
         </div>
       )}
 
@@ -1199,7 +1313,9 @@ export default function HomePage() {
         </div>
         <div className="flex items-center gap-2">
           <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
-            style={{ background: "var(--surface2)" }} onClick={handleExport} title="Exporter le calendrier">📤</button>
+            style={{ background: "var(--surface2)" }} onClick={() => setFamilyChatOpen(true)} aria-label="Chat famille" title="Chat famille">💬</button>
+          <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm"
+            style={{ background: "var(--surface2)" }} onClick={handleExport} aria-label="Exporter" title="Exporter le calendrier">📤</button>
           <Link href="/reglages" className="w-11 h-11 rounded-full flex items-center justify-center text-xl overflow-hidden active:scale-90 transition-transform"
             style={{ background: "var(--surface2)" }}>
             {profile?.avatar_url ? <img src={profile.avatar_url} alt="Profil" className="w-full h-full object-cover" /> : profile?.emoji || "👤"}
@@ -1303,7 +1419,7 @@ export default function HomePage() {
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Heure</label>
             <input type="time" className="w-full px-3 py-2.5 rounded-xl text-sm"
               style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
-              value={qeTime} onChange={(e) => setQeTime(e.target.value)} />
+              value={qeTime} onChange={(e) => { setQeTime(e.target.value); setQeConflict(checkConflict(e.target.value, currentDate)); }} />
           </div>
           {members.length > 0 && (
             <div>
@@ -1317,7 +1433,7 @@ export default function HomePage() {
             </div>
           )}
           <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Categorie</label>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Catégorie</label>
             <div className="flex flex-wrap gap-1.5">
               {EVENT_CATEGORIES.map((c) => (
                 <button key={c.value} className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all"
@@ -1330,11 +1446,32 @@ export default function HomePage() {
               ))}
             </div>
           </div>
+          {/* Conflict warning */}
+          {qeConflict && (
+            <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold"
+              style={{ background: "rgba(240,124,74,0.12)", color: "var(--warm)", border: "1px solid rgba(240,124,74,0.2)" }}>
+              <span>⚠️</span> {qeConflict}
+            </div>
+          )}
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Récurrence</label>
+            <div className="flex gap-1.5">
+              {([["none", "Aucune"], ["daily", "Quotidien"], ["weekly", "Hebdo"], ["monthly", "Mensuel"]] as const).map(([val, label]) => (
+                <button key={val} className="flex-1 py-2 rounded-xl text-[11px] font-bold transition-all"
+                  style={{
+                    background: qeRecurrence === val ? "var(--accent-soft)" : "var(--surface2)",
+                    color: qeRecurrence === val ? "var(--accent)" : "var(--dim)",
+                    border: qeRecurrence === val ? "1px solid var(--accent)" : "1px solid transparent",
+                  }}
+                  onClick={() => setQeRecurrence(val)}>{label}</button>
+              ))}
+            </div>
+          </div>
           <div>
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Description (optionnel)</label>
             <input className="w-full px-3 py-2.5 rounded-xl text-sm"
               style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
-              value={qeDescription} onChange={(e) => setQeDescription(e.target.value)} placeholder="Details..." />
+              value={qeDescription} onChange={(e) => setQeDescription(e.target.value)} placeholder="Détails..." />
           </div>
           <div>
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Rappel</label>
@@ -1429,6 +1566,18 @@ export default function HomePage() {
 
       {/* Chat */}
       <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} onAction={handleFlowAction} />
+
+      {/* Family Chat */}
+      {profile?.family_id && (
+        <FamilyChat
+          open={familyChatOpen}
+          onClose={() => setFamilyChatOpen(false)}
+          familyId={profile.family_id}
+          userId={profile.id}
+          userName={profile.first_name || "Moi"}
+          userEmoji={profile.emoji || "👤"}
+        />
+      )}
     </div>
   );
 }

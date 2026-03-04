@@ -17,7 +17,8 @@
       "Bash(wc:*)",
       "Bash(npx vercel:*)",
       "Bash(python3:*)",
-      "Bash(vercel:*)"
+      "Bash(vercel:*)",
+      "Bash(grep:*)"
     ]
   }
 }
