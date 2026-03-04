@@ -587,7 +587,7 @@ export default function FamillePage() {
       </div>
 
       {/* MINI CARTE */}
-      <div className="mb-4 mt-4">
+      <div className="mb-4 mt-4" style={{ position: "relative", zIndex: 0 }}>
         <p className="label">Carte</p>
         <MapViewDynamic
           markers={[...mapMarkers, ...deviceMapMarkers]}
