@@ -134,6 +134,13 @@ export default function FamillePage() {
   useRealtimeContacts(familyId, load);
   useRealtimeAddresses(familyId, load);
 
+  // Polling fallback: refresh every 10s in case realtime isn't enabled
+  useEffect(() => {
+    if (!familyId) return;
+    const interval = setInterval(load, 10000);
+    return () => clearInterval(interval);
+  }, [familyId, load]);
+
   // Suggest default addresses if none exist
   useEffect(() => {
     if (familyId && addresses.length === 0 && members.length >= 0) {

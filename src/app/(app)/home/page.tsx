@@ -370,6 +370,13 @@ export default function HomePage() {
   useRealtimeMembers(profile?.family_id, loadData);
   useRealtimeExpenses(profile?.family_id, loadData);
 
+  // Polling fallback: refresh every 10s
+  useEffect(() => {
+    if (!profile?.family_id) return;
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
+  }, [profile?.family_id, loadData]);
+
   // Scroll day strip to selected date
   useEffect(() => {
     if (!scrollStripRef.current) return;

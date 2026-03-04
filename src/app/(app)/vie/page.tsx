@@ -177,6 +177,13 @@ export default function ViePage() {
   useRealtimeExpenses(profile?.family_id, loadData);
   useRealtimeChores(profile?.family_id, loadData);
 
+  // Polling fallback: refresh every 10s
+  useEffect(() => {
+    if (!profile?.family_id) return;
+    const interval = setInterval(loadData, 10000);
+    return () => clearInterval(interval);
+  }, [profile?.family_id, loadData]);
+
   // --- Filtered notes ---
   const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
