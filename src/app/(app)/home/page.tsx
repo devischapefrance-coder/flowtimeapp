@@ -70,12 +70,12 @@ function saveWidgetConfig(config: WidgetConfig[]) {
 }
 
 // ---- Calendar helpers ----
-function getWeekDays(offset: number) {
+function getWeekDays(dayOffset: number) {
   const today = new Date();
   const dayOfWeek = today.getDay();
   const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const monday = new Date(today);
-  monday.setDate(today.getDate() + diffToMonday + offset * 7);
+  monday.setDate(today.getDate() + diffToMonday + dayOffset);
 
   const days = [];
   for (let i = 0; i < 7; i++) {
@@ -88,7 +88,7 @@ function getWeekDays(offset: number) {
       date: dateStr,
       isToday,
       label: isToday ? "Aujourd'hui" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
-      dayName: d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+      dayName: d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", year: "numeric" }),
     });
   }
   return days;
@@ -149,7 +149,7 @@ export default function HomePage() {
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-  const [weekOffset, setWeekOffset] = useState(0);
+  const [dayOffset, setDayOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
@@ -187,7 +187,7 @@ export default function HomePage() {
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
-  const days = getWeekDays(weekOffset);
+  const days = getWeekDays(dayOffset);
   const [selectedDay, setSelectedDay] = useState(() => {
     const idx = getWeekDays(0).findIndex((d) => d.isToday);
     return idx >= 0 ? idx : 0;
@@ -244,7 +244,7 @@ export default function HomePage() {
       return;
     }
 
-    const weekDays = getWeekDays(weekOffset);
+    const weekDays = getWeekDays(dayOffset);
     const startDate = weekDays[0].date;
     const endDate = weekDays[6].date;
 
@@ -290,7 +290,7 @@ export default function HomePage() {
     if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
     setDataLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.family_id, weekOffset]);
+  }, [profile?.family_id, dayOffset]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -592,8 +592,9 @@ export default function HomePage() {
     const targetMonday = new Date(d);
     const diff = targetDow === 0 ? -6 : 1 - targetDow;
     targetMonday.setDate(d.getDate() + diff);
-    const weekDiff = Math.round((targetMonday.getTime() - thisMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
-    setWeekOffset(weekDiff);
+    // Calculate day offset from current week's Monday
+    const dayDiff = Math.round((targetMonday.getTime() - thisMonday.getTime()) / (24 * 60 * 60 * 1000));
+    setDayOffset(dayDiff);
     const dayIdx = targetDow === 0 ? 6 : targetDow - 1;
     setSelectedDay(dayIdx);
     setCalendarView("week");
@@ -767,17 +768,17 @@ export default function HomePage() {
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
               style={{ background: "var(--surface2)", color: "var(--text)" }}
               onClick={() => {
-                if (calendarView === "week") { setWeekOffset((o) => o - 1); setSelectedDay(0); }
+                if (calendarView === "week") { setDayOffset((o) => o - 1); }
                 else prevMonth();
               }}
             >‹</button>
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold capitalize" style={{ color: "var(--dim)" }}>{weekMonthLabel}</span>
-              {calendarView === "week" && weekOffset !== 0 && (
+              {calendarView === "week" && dayOffset !== 0 && (
                 <button
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-                  onClick={() => { setWeekOffset(0); const idx = getWeekDays(0).findIndex((d) => d.isToday); setSelectedDay(idx >= 0 ? idx : 0); }}
+                  onClick={() => { setDayOffset(0); const idx = getWeekDays(0).findIndex((d) => d.isToday); setSelectedDay(idx >= 0 ? idx : 0); }}
                 >Aujourd&apos;hui</button>
               )}
               <button
@@ -798,7 +799,7 @@ export default function HomePage() {
               className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
               style={{ background: "var(--surface2)", color: "var(--text)" }}
               onClick={() => {
-                if (calendarView === "week") { setWeekOffset((o) => o + 1); setSelectedDay(0); }
+                if (calendarView === "week") { setDayOffset((o) => o + 1); }
                 else nextMonth();
               }}
             >›</button>
@@ -831,8 +832,7 @@ export default function HomePage() {
                   setWeekSlideAnim(true);
                   setWeekSlideX(dir * -400);
                   setTimeout(() => {
-                    setWeekOffset((o) => o + dir);
-                    setSelectedDay(0);
+                    setDayOffset((o) => o + dir);
                     // Reset position instantly on opposite side, then slide in
                     setWeekSlideAnim(false);
                     setWeekSlideX(dir * 400);
@@ -950,7 +950,7 @@ export default function HomePage() {
           <div className="flex items-center gap-1.5">
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-sm mb-2"
               style={{ background: "var(--surface2)", color: "var(--dim)" }}
-              onClick={() => { const weekDays = getWeekDays(weekOffset); exportPDF(viewEvents, weekDays[0].date, weekDays[6].date); }}
+              onClick={() => { const weekDays = getWeekDays(dayOffset); exportPDF(viewEvents, weekDays[0].date, weekDays[6].date); }}
               title="Exporter PDF">📄</button>
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
               style={{ background: "var(--accent)", color: "#fff" }}

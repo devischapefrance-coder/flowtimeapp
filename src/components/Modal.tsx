@@ -35,9 +35,14 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       setDragY(0);
       document.body.style.overflow = "hidden";
     } else if (visible && !closing) {
-      // External close (e.g. setState from parent)
-      setVisible(false);
-      document.body.style.overflow = "";
+      // External close — animate out smoothly
+      setClosing(true);
+      setTimeout(() => {
+        setClosing(false);
+        setVisible(false);
+        setDragY(0);
+        document.body.style.overflow = "";
+      }, 250);
     }
     return () => { document.body.style.overflow = ""; };
   }, [open, visible, closing]);
