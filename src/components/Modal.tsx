@@ -11,7 +11,7 @@ interface ModalProps {
 
 export default function Modal({ open, onClose, title, children }: ModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [show, setShow] = useState(false);
+  const [animState, setAnimState] = useState<"idle" | "entering" | "open" | "leaving">("idle");
   const dragY = useRef(0);
   const startY = useRef(0);
   const dragging = useRef(false);
@@ -20,60 +20,82 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
-  // Apply transform directly on the DOM for 60fps (no React re-render)
-  const applyTransform = useCallback((y: number, animated: boolean) => {
-    if (!sheetRef.current) return;
-    sheetRef.current.style.transform = `translateY(${y}px) translateZ(0)`;
-    sheetRef.current.style.transition = animated
-      ? "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)"
-      : "none";
-    // Backdrop opacity based on drag
-    if (backdropRef.current) {
-      const opacity = Math.max(0, 1 - y / 400);
-      backdropRef.current.style.opacity = String(opacity);
-      backdropRef.current.style.transition = animated
-        ? "opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)"
-        : "none";
+  // Direct DOM updates for 60fps drag
+  const setSheetY = useCallback((y: number, animated: boolean) => {
+    const sheet = sheetRef.current;
+    const backdrop = backdropRef.current;
+    if (!sheet) return;
+    const t = animated ? "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)" : "none";
+    sheet.style.transition = t;
+    sheet.style.transform = `translate3d(0, ${y}px, 0)`;
+    if (backdrop) {
+      backdrop.style.transition = animated ? "opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)" : "none";
+      backdrop.style.opacity = String(Math.max(0, 1 - y / 400));
     }
   }, []);
 
-  // Open
-  useEffect(() => {
-    if (open) {
-      setMounted(true);
-      // Force a frame so the initial translateY(100%) is painted, then animate to 0
-      requestAnimationFrame(() => {
-        requestAnimationFrame(() => {
-          setShow(true);
-        });
-      });
-      document.body.style.overflow = "hidden";
-    } else if (mounted) {
-      // Close with animation
-      setShow(false);
-      const timer = setTimeout(() => {
-        setMounted(false);
-        document.body.style.overflow = "";
-      }, 350);
-      return () => clearTimeout(timer);
+  const closeModal = useCallback(() => {
+    setAnimState("leaving");
+    const h = sheetRef.current?.offsetHeight || 700;
+    setSheetY(h, true);
+    if (backdropRef.current) {
+      backdropRef.current.style.transition = "opacity 0.3s ease";
+      backdropRef.current.style.opacity = "0";
     }
-    return () => { document.body.style.overflow = ""; };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open]);
+    setTimeout(() => {
+      setMounted(false);
+      setAnimState("idle");
+      document.body.style.overflow = "";
+      onClose();
+    }, 350);
+  }, [onClose, setSheetY]);
 
-  // Sync show state to DOM transforms
+  // Handle open/close
   useEffect(() => {
-    if (!mounted) return;
-    if (show) {
-      applyTransform(0, true);
-    } else {
-      // Slide out to bottom
-      const sheetHeight = sheetRef.current?.offsetHeight || 600;
-      applyTransform(sheetHeight, true);
+    if (open && animState === "idle") {
+      setMounted(true);
+      setAnimState("entering");
+      document.body.style.overflow = "hidden";
+    } else if (!open && (animState === "open" || animState === "entering")) {
+      closeModal();
     }
-  }, [show, mounted, applyTransform]);
+  }, [open, animState, closeModal]);
+
+  // After mount, animate in on next frame
+  useEffect(() => {
+    if (animState !== "entering" || !mounted) return;
+    // Wait for DOM to paint the off-screen position, then slide in
+    const frame1 = requestAnimationFrame(() => {
+      // Ensure sheet starts off-screen
+      const sheet = sheetRef.current;
+      if (sheet) {
+        sheet.style.transition = "none";
+        sheet.style.transform = `translate3d(0, ${sheet.offsetHeight || 700}px, 0)`;
+      }
+      if (backdropRef.current) {
+        backdropRef.current.style.transition = "none";
+        backdropRef.current.style.opacity = "0";
+      }
+      const frame2 = requestAnimationFrame(() => {
+        setSheetY(0, true);
+        if (backdropRef.current) {
+          backdropRef.current.style.transition = "opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)";
+          backdropRef.current.style.opacity = "1";
+        }
+        setAnimState("open");
+      });
+      return () => cancelAnimationFrame(frame2);
+    });
+    return () => cancelAnimationFrame(frame1);
+  }, [animState, mounted, setSheetY]);
+
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => { document.body.style.overflow = ""; };
+  }, []);
 
   function onTouchStart(e: React.TouchEvent) {
+    if (animState !== "open") return;
     const touch = e.touches[0];
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const isTopArea = touch.clientY - rect.top < 60;
@@ -83,13 +105,8 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     startY.current = touch.clientY;
     dragging.current = true;
     dragY.current = 0;
-    // Kill any ongoing transition for immediate response
-    if (sheetRef.current) {
-      sheetRef.current.style.transition = "none";
-    }
-    if (backdropRef.current) {
-      backdropRef.current.style.transition = "none";
-    }
+    if (sheetRef.current) sheetRef.current.style.transition = "none";
+    if (backdropRef.current) backdropRef.current.style.transition = "none";
   }
 
   function onTouchMove(e: React.TouchEvent) {
@@ -97,10 +114,9 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     const delta = e.touches[0].clientY - startY.current;
     if (delta > 0) {
       dragY.current = delta;
-      // Use rAF for smooth 60fps updates
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
-        applyTransform(delta * 0.85, false);
+        setSheetY(delta * 0.85, false);
       });
     }
   }
@@ -111,18 +127,9 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     cancelAnimationFrame(rafRef.current);
 
     if (dragY.current > 120) {
-      // Dismiss
-      const sheetHeight = sheetRef.current?.offsetHeight || 600;
-      applyTransform(sheetHeight, true);
-      setTimeout(() => {
-        setMounted(false);
-        setShow(false);
-        document.body.style.overflow = "";
-        onClose();
-      }, 350);
+      closeModal();
     } else {
-      // Snap back
-      applyTransform(0, true);
+      setSheetY(0, true);
     }
     dragY.current = 0;
   }
@@ -131,23 +138,12 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
 
   return (
     <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 600 }}>
-      {/* Backdrop — separate layer for GPU compositing */}
+      {/* Backdrop */}
       <div
         ref={backdropRef}
         className="absolute inset-0"
-        style={{
-          background: "rgba(0,0,0,0.5)",
-          opacity: 0,
-          willChange: "opacity",
-        }}
-        onClick={() => {
-          setShow(false);
-          setTimeout(() => {
-            setMounted(false);
-            document.body.style.overflow = "";
-            onClose();
-          }, 350);
-        }}
+        style={{ background: "rgba(0,0,0,0.5)", opacity: 0, willChange: "opacity" }}
+        onClick={closeModal}
       />
 
       {/* Sheet */}
@@ -163,7 +159,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
           border: "1px solid var(--glass-border)",
           borderBottom: "none",
-          transform: "translateY(100%) translateZ(0)",
+          transform: "translate3d(0, 100vh, 0)",
           willChange: "transform",
           position: "relative",
           zIndex: 1,
@@ -175,26 +171,16 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       >
         <div
           ref={contentRef}
-          style={{ maxHeight: "calc(85vh - 100px)", overflowY: dragging.current ? "hidden" : "auto" }}
+          style={{ maxHeight: "calc(85vh - 100px)", overflowY: "auto" }}
         >
           {/* Handle bar */}
           <div className="flex justify-center mb-4">
-            <div
-              className="w-10 h-1 rounded-full"
-              style={{ background: "var(--faint)" }}
-            />
+            <div className="w-10 h-1 rounded-full" style={{ background: "var(--faint)" }} />
           </div>
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-bold">{title}</h2>
             <button
-              onClick={() => {
-                setShow(false);
-                setTimeout(() => {
-                  setMounted(false);
-                  document.body.style.overflow = "";
-                  onClose();
-                }, 350);
-              }}
+              onClick={closeModal}
               className="w-10 h-10 flex items-center justify-center rounded-full text-xs active:scale-90 transition-transform"
               style={{ background: "var(--surface2)" }}
             >

@@ -94,6 +94,27 @@ function getWeekDays(dayOffset: number) {
   return days;
 }
 
+// Generate a continuous strip of days for the scrollable carousel
+const STRIP_DAYS_BEFORE = 30;
+const STRIP_DAYS_AFTER = 30;
+function getDayStrip() {
+  const today = new Date();
+  const todayStr = today.toISOString().split("T")[0];
+  const days = [];
+  for (let i = -STRIP_DAYS_BEFORE; i <= STRIP_DAYS_AFTER; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    const dateStr = d.toISOString().split("T")[0];
+    days.push({
+      date: dateStr,
+      isToday: dateStr === todayStr,
+      offset: i,
+      dayName: d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    });
+  }
+  return days;
+}
+
 function getMonthDays(year: number, month: number) {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
@@ -149,12 +170,12 @@ export default function HomePage() {
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-  const [dayOffset, setDayOffset] = useState(0);
+  const [selectedDate, setSelectedDate] = useState(() => new Date().toISOString().split("T")[0]);
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
-  const weekGridRef = useRef<HTMLDivElement>(null);
-  const weekTouchRef = useRef({ startX: 0, startY: 0, swiping: false, slideX: 0 });
+  const scrollStripRef = useRef<HTMLDivElement>(null);
+  const scrollInitRef = useRef(false);
 
   // Month view state
   const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
@@ -186,13 +207,28 @@ export default function HomePage() {
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
-  const days = getWeekDays(dayOffset);
-  const [selectedDay, setSelectedDay] = useState(() => {
-    const idx = getWeekDays(0).findIndex((d) => d.isToday);
-    return idx >= 0 ? idx : 0;
+  // Compute week days around selected date for data fetching
+  const selectedDateObj = new Date(selectedDate + "T00:00:00");
+  const dayOfWeekSel = selectedDateObj.getDay();
+  const diffToMondaySel = dayOfWeekSel === 0 ? -6 : 1 - dayOfWeekSel;
+  const mondaySel = new Date(selectedDateObj);
+  mondaySel.setDate(selectedDateObj.getDate() + diffToMondaySel);
+  const todayStr = new Date().toISOString().split("T")[0];
+  const days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(mondaySel);
+    d.setDate(mondaySel.getDate() + i);
+    const dateStr = d.toISOString().split("T")[0];
+    return {
+      date: dateStr,
+      isToday: dateStr === todayStr,
+      label: dateStr === todayStr ? "Aujourd'hui" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
+      dayName: d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
+    };
   });
-  const currentDate = days[selectedDay].date;
-  const dateDisplay = days[selectedDay].dayName;
+  const selectedDay = days.findIndex((d) => d.date === selectedDate);
+  const currentDate = selectedDate;
+  const dateDisplay = selectedDateObj.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const dayStrip = getDayStrip();
 
   const weekMonthLabel = (() => {
     if (calendarView === "month") {
@@ -243,9 +279,8 @@ export default function HomePage() {
       return;
     }
 
-    const weekDays = getWeekDays(dayOffset);
-    const startDate = weekDays[0].date;
-    const endDate = weekDays[6].date;
+    const startDate = days[0].date;
+    const endDate = days[6].date;
 
     // Month boundaries for expenses
     const now = new Date();
@@ -289,7 +324,7 @@ export default function HomePage() {
     if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
     setDataLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.family_id, dayOffset]);
+  }, [profile?.family_id, selectedDate]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -313,6 +348,23 @@ export default function HomePage() {
 
   useRealtimeEvents(profile?.family_id, loadData);
   useRealtimeChores(profile?.family_id, loadData);
+
+  // Scroll day strip to selected date
+  useEffect(() => {
+    if (!scrollStripRef.current) return;
+    const el = scrollStripRef.current.querySelector(`[data-date="${selectedDate}"]`) as HTMLElement | null;
+    if (el) {
+      const container = scrollStripRef.current;
+      const scrollLeft = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
+      if (!scrollInitRef.current) {
+        // First render: jump instantly
+        container.scrollLeft = scrollLeft;
+        scrollInitRef.current = true;
+      } else {
+        container.scrollTo({ left: scrollLeft, behavior: "smooth" });
+      }
+    }
+  }, [selectedDate]);
 
   // Proactive reminders check every minute
   useEffect(() => {
@@ -386,7 +438,6 @@ export default function HomePage() {
     monthEventsByDay[ev.date].push(ev);
   }
 
-  const todayStr = new Date().toISOString().split("T")[0];
   const todayEvents = viewEvents.filter((e) => e.date === todayStr);
 
   const now = new Date();
@@ -581,21 +632,7 @@ export default function HomePage() {
   }
 
   function selectMonthDay(dateStr: string) {
-    const d = new Date(dateStr);
-    const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
-    const thisMonday = new Date(today);
-    thisMonday.setDate(today.getDate() + diffToMonday);
-    const targetDow = d.getDay();
-    const targetMonday = new Date(d);
-    const diff = targetDow === 0 ? -6 : 1 - targetDow;
-    targetMonday.setDate(d.getDate() + diff);
-    // Calculate day offset from current week's Monday
-    const dayDiff = Math.round((targetMonday.getTime() - thisMonday.getTime()) / (24 * 60 * 60 * 1000));
-    setDayOffset(dayDiff);
-    const dayIdx = targetDow === 0 ? 6 : targetDow - 1;
-    setSelectedDay(dayIdx);
+    setSelectedDate(dateStr);
     setCalendarView("week");
   }
 
@@ -656,7 +693,7 @@ export default function HomePage() {
     addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
     contacts: contacts.map((c) => ({ name: c.name, relation: c.relation, phone: c.phone })),
     selectedDate: currentDate,
-    selectedDayName: days[selectedDay].dayName,
+    selectedDayName: dateDisplay,
     today: todayStr,
     currentTime: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
     viewMode,
@@ -763,21 +800,20 @@ export default function HomePage() {
         {/* Calendar header */}
         <div className="mb-2">
           <div className="flex items-center justify-between mb-2 px-1">
-            <button
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-              style={{ background: "var(--surface2)", color: "var(--text)" }}
-              onClick={() => {
-                if (calendarView === "week") { setDayOffset((o) => o - 1); }
-                else prevMonth();
-              }}
-            >‹</button>
+            {calendarView === "month" && (
+              <button
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                style={{ background: "var(--surface2)", color: "var(--text)" }}
+                onClick={prevMonth}
+              >‹</button>
+            )}
             <div className="flex items-center gap-2">
               <span className="text-xs font-bold capitalize" style={{ color: "var(--dim)" }}>{weekMonthLabel}</span>
-              {calendarView === "week" && dayOffset !== 0 && (
+              {calendarView === "week" && selectedDate !== todayStr && (
                 <button
                   className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                   style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-                  onClick={() => { setDayOffset(0); const idx = getWeekDays(0).findIndex((d) => d.isToday); setSelectedDay(idx >= 0 ? idx : 0); }}
+                  onClick={() => setSelectedDate(todayStr)}
                 >Aujourd&apos;hui</button>
               )}
               <button
@@ -785,7 +821,7 @@ export default function HomePage() {
                 style={{ background: "var(--surface2)", color: "var(--dim)" }}
                 onClick={() => {
                   if (calendarView === "week") {
-                    const d = new Date(days[selectedDay].date);
+                    const d = new Date(selectedDate);
                     setMonthYear(d.getFullYear());
                     setMonthMonth(d.getMonth());
                     setCalendarView("month");
@@ -794,85 +830,54 @@ export default function HomePage() {
                 title={calendarView === "week" ? "Vue mois" : "Vue semaine"}
               >{calendarView === "week" ? "📅" : "📋"}</button>
             </div>
-            <button
-              className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
-              style={{ background: "var(--surface2)", color: "var(--text)" }}
-              onClick={() => {
-                if (calendarView === "week") { setDayOffset((o) => o + 1); }
-                else nextMonth();
-              }}
-            >›</button>
+            {calendarView === "month" && (
+              <button
+                className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+                style={{ background: "var(--surface2)", color: "var(--text)" }}
+                onClick={nextMonth}
+              >›</button>
+            )}
           </div>
 
           {/* Week view */}
           {calendarView === "week" && (
-            <div className="overflow-hidden"
-              onTouchStart={(e) => {
-                const t = e.touches[0];
-                weekTouchRef.current = { startX: t.clientX, startY: t.clientY, swiping: false, slideX: 0 };
-                if (weekGridRef.current) {
-                  weekGridRef.current.style.transition = "none";
-                }
-              }}
-              onTouchMove={(e) => {
-                const ref = weekTouchRef.current;
-                const dx = e.touches[0].clientX - ref.startX;
-                const dy = e.touches[0].clientY - ref.startY;
-                if (!ref.swiping && Math.abs(dx) > 10 && Math.abs(dx) > Math.abs(dy)) {
-                  ref.swiping = true;
-                }
-                if (ref.swiping && weekGridRef.current) {
-                  ref.slideX = dx;
-                  weekGridRef.current.style.transform = `translateX(${dx}px) translateZ(0)`;
-                }
-              }}
-              onTouchEnd={() => {
-                const ref = weekTouchRef.current;
-                const grid = weekGridRef.current;
-                if (!grid) { ref.swiping = false; return; }
-                if (ref.swiping && Math.abs(ref.slideX) > 60) {
-                  const dir = ref.slideX < 0 ? 1 : -1;
-                  // Slide out
-                  grid.style.transition = "transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)";
-                  grid.style.transform = `translateX(${dir * -420}px) translateZ(0)`;
-                  setTimeout(() => {
-                    setDayOffset((o) => o + dir);
-                    // Jump to other side instantly, then slide in
-                    grid.style.transition = "none";
-                    grid.style.transform = `translateX(${dir * 420}px) translateZ(0)`;
-                    requestAnimationFrame(() => {
-                      grid.style.transition = "transform 0.25s cubic-bezier(0.32, 0.72, 0, 1)";
-                      grid.style.transform = "translateX(0) translateZ(0)";
-                    });
-                  }, 200);
-                } else {
-                  grid.style.transition = "transform 0.2s cubic-bezier(0.32, 0.72, 0, 1)";
-                  grid.style.transform = "translateX(0) translateZ(0)";
-                }
-                ref.swiping = false;
-              }}
+            <div
+              ref={scrollStripRef}
+              className="flex gap-1 overflow-x-auto pb-1"
+              style={{ scrollbarWidth: "none", WebkitOverflowScrolling: "touch", scrollSnapType: "x mandatory" }}
             >
-            <div ref={weekGridRef} className="grid grid-cols-7 gap-1"
-              style={{ willChange: "transform", transform: "translateZ(0)" }}>
-              {days.map((d, i) => {
+              {dayStrip.map((d) => {
                 const date = new Date(d.date);
                 const dayNum = date.getDate();
-                const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3);
-                const isSelected = selectedDay === i;
+                const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 1).toUpperCase();
+                const isSelected = d.date === selectedDate;
                 const count = eventCounts[d.date] || 0;
                 const dotColor = dayCategoryColors[d.date] || "var(--accent)";
+                // Show month label on 1st of month
+                const showMonth = dayNum === 1;
                 return (
-                  <button key={d.date} className="flex flex-col items-center py-2 rounded-2xl transition-all"
-                    style={{ background: isSelected ? "var(--accent)" : "transparent", boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none" }}
-                    onClick={() => setSelectedDay(i)}
+                  <button
+                    key={d.date}
+                    data-date={d.date}
+                    className="flex flex-col items-center shrink-0 rounded-2xl"
+                    style={{
+                      width: 46,
+                      padding: "8px 0",
+                      background: isSelected ? "var(--accent)" : "transparent",
+                      boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none",
+                      scrollSnapAlign: "center",
+                      transition: "background 0.15s, box-shadow 0.15s",
+                    }}
+                    onClick={() => setSelectedDate(d.date)}
                   >
-                    <span className="text-[10px] font-bold uppercase" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>{dayLetter}</span>
+                    <span className="text-[10px] font-bold" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>
+                      {showMonth ? date.toLocaleDateString("fr-FR", { month: "short" }).slice(0, 3) : dayLetter}
+                    </span>
                     <span className="text-base font-bold mt-0.5" style={{ color: isSelected ? "#fff" : d.isToday ? "var(--accent)" : "var(--text)" }}>{dayNum}</span>
                     {count > 0 && <span className="w-1.5 h-1.5 rounded-full mt-1" style={{ background: isSelected ? "#fff" : dotColor }} />}
                   </button>
                 );
               })}
-            </div>
             </div>
           )}
 
@@ -937,7 +942,7 @@ export default function HomePage() {
         {/* Timeline / Agenda toggle */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <p className="label !mb-0">{days[selectedDay].isToday ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}</p>
+            <p className="label !mb-0">{selectedDate === todayStr ? "Planning du jour" : `Planning — ${selectedDateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}`}</p>
             <div className="flex gap-0.5 p-0.5 rounded-lg mb-2" style={{ background: "var(--surface2)" }}>
               <button className="px-2 py-1 rounded-md text-[10px] font-bold"
                 style={{ background: viewType === "timeline" ? "var(--accent)" : "transparent", color: viewType === "timeline" ? "#fff" : "var(--dim)" }}
@@ -950,7 +955,7 @@ export default function HomePage() {
           <div className="flex items-center gap-1.5">
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-sm mb-2"
               style={{ background: "var(--surface2)", color: "var(--dim)" }}
-              onClick={() => { const weekDays = getWeekDays(dayOffset); exportPDF(viewEvents, weekDays[0].date, weekDays[6].date); }}
+              onClick={() => { exportPDF(viewEvents, days[0].date, days[6].date); }}
               title="Exporter PDF">📄</button>
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
               style={{ background: "var(--accent)", color: "#fff" }}
@@ -969,7 +974,7 @@ export default function HomePage() {
         {filteredEvents.length === 0 && (
           <div className="text-center py-8">
             <p className="text-3xl mb-2">📭</p>
-            <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun evenement {days[selectedDay].isToday ? "aujourd'hui" : "ce jour"}</p>
+            <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun evenement {selectedDate === todayStr ? "aujourd'hui" : "ce jour"}</p>
             <button className="text-xs font-bold mt-2" style={{ color: "var(--accent)" }} onClick={openQuickEvent}>+ Ajouter un evenement</button>
           </div>
         )}
@@ -980,7 +985,7 @@ export default function HomePage() {
   function renderMeals() {
     return (
       <div>
-        <p className="label">🍽️ Repas {days[selectedDay].isToday ? "du jour" : `— ${days[selectedDay].label}`}</p>
+        <p className="label">🍽️ Repas {selectedDate === todayStr ? "du jour" : `— ${selectedDateObj.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" })}`}</p>
         <div className="flex flex-col gap-2">
           {MEAL_TYPES.map((type) => {
             const meal = dayMeals.find((m) => m.meal_type === type.value);
