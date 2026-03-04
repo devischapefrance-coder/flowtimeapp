@@ -88,6 +88,19 @@ export interface DeviceLocation {
   created_at: string;
 }
 
+export interface ChecklistItem {
+  id: string;
+  text: string;
+  checked: boolean;
+}
+
+export interface Attachment {
+  id: string;
+  url: string;
+  name: string;
+  type: string;
+}
+
 export interface Note {
   id: string;
   family_id: string;
@@ -96,8 +109,19 @@ export interface Note {
   category: "info" | "important" | "rappel";
   author_name: string;
   pinned: boolean;
+  checklist: ChecklistItem[];
+  attachments: Attachment[];
   created_at: string;
   updated_at: string;
+}
+
+export interface NoteComment {
+  id: string;
+  note_id: string;
+  family_id: string;
+  author_name: string;
+  content: string;
+  created_at: string;
 }
 
 export interface Birthday {

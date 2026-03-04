@@ -105,8 +105,20 @@ CREATE TABLE notes (
   category TEXT NOT NULL DEFAULT 'info',
   author_name TEXT DEFAULT '',
   pinned BOOLEAN DEFAULT FALSE,
+  checklist JSONB DEFAULT '[]',
+  attachments JSONB DEFAULT '[]',
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Commentaires sur les notes
+CREATE TABLE note_comments (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  note_id UUID REFERENCES notes(id) ON DELETE CASCADE,
+  family_id UUID NOT NULL,
+  author_name TEXT DEFAULT '',
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Anniversaires
@@ -143,6 +155,7 @@ ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wellbeing_sessions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE device_locations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
+ALTER TABLE note_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE birthdays ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 
@@ -183,6 +196,11 @@ CREATE POLICY "Family device locations" ON device_locations FOR ALL USING (
 
 -- Notes : accès par famille
 CREATE POLICY "Family notes" ON notes FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Commentaires de notes : accès par famille
+CREATE POLICY "Family note comments" ON note_comments FOR ALL USING (
   family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
 );
 

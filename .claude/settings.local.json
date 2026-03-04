@@ -11,7 +11,8 @@
       "Bash(npm i:*)",
       "Bash(npm ls:*)",
       "WebFetch(domain:flowtimeapp.vercel.app)",
-      "Bash(rm:*)"
+      "Bash(rm:*)",
+      "Bash(xargs grep:*)"
     ]
   }
 }
