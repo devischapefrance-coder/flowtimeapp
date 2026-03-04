@@ -92,7 +92,7 @@ export default function ResetPasswordPage() {
               <button
                 className="font-bold"
                 style={{ color: "var(--accent)" }}
-                onClick={() => router.push("/login")}
+                onClick={() => router.push("/")}
               >
                 Retour au login
               </button>
