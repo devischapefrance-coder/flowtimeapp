@@ -32,6 +32,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           background: "var(--surface-solid)",
           borderRadius: "24px 24px 0 0",
           padding: "24px 20px",
+          paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
           overflowY: "auto",
           border: "1px solid var(--glass-border)",
           borderBottom: "none",

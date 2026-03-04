@@ -40,7 +40,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-dvh px-5 py-4 animate-in">
+    <div className="min-h-dvh px-5 py-4 animate-in" style={{ paddingTop: "max(16px, env(safe-area-inset-top, 16px))" }}>
       <header className="flex items-center gap-3 mb-6">
         <Link href="/" className="flex items-center justify-center w-9 h-9 rounded-xl" style={{ background: "var(--surface2)" }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">

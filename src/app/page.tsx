@@ -5,7 +5,7 @@ import Logo from "@/components/Logo";
 
 export default function Splash() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-dvh px-6 animate-in gradient-bg">
+    <div className="flex flex-col items-center justify-center min-h-dvh px-6 animate-in gradient-bg" style={{ paddingTop: "env(safe-area-inset-top, 0px)", paddingBottom: "env(safe-area-inset-bottom, 0px)" }}>
       {/* Decorative orb */}
       <div
         className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full"

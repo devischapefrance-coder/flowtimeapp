@@ -175,8 +175,8 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
       onClick={onClose}
     >
       <div
-        className="w-full pt-12 px-4"
-        style={{ maxWidth: 430 }}
+        className="w-full px-4"
+        style={{ maxWidth: 430, paddingTop: "max(48px, calc(env(safe-area-inset-top, 0px) + 16px))" }}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Search input */}

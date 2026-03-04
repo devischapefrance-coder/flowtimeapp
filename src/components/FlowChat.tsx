@@ -107,7 +107,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   return (
     <div className="fixed inset-0 flex flex-col" style={{ zIndex: 700, background: "var(--bg)", maxWidth: 430, margin: "0 auto" }}>
       {/* Header */}
-      <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)" }}>
+      <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)", paddingTop: "max(12px, calc(env(safe-area-inset-top, 0px) + 4px))" }}>
         <div
           className="w-10 h-10 flex items-center justify-center rounded-full text-lg"
           style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}

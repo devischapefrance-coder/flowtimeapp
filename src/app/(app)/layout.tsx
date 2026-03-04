@@ -89,7 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider initialLang={initialLang}>
       <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile }}>
-        <div className="pb-[80px]">
+        <div className="pb-[80px]" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
           {children}
         </div>
 
