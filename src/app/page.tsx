@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
@@ -14,6 +14,21 @@ export default function LoginPage() {
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
   const [stayLogged, setStayLogged] = useState(true);
+
+  // Detect OAuth redirect (Google) and redirect to /home
+  useEffect(() => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        router.push("/home");
+      }
+    });
+    // Also check if already signed in
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) router.push("/home");
+    });
+    return () => subscription.unsubscribe();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleForgotPassword() {
     if (!email.trim()) {
