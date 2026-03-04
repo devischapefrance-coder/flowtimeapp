@@ -179,7 +179,7 @@ export default function HomePage() {
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [selectedDate, setSelectedDate] = useState(() => localDateStr(new Date()));
-  const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
+  const [viewMode, setViewMode] = useState<"famille" | "perso">("perso");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
   const scrollStripRef = useRef<HTMLDivElement>(null);
@@ -1377,11 +1377,11 @@ export default function HomePage() {
       {/* Toggle perso / famille */}
       <div className="flex gap-1 mt-5 p-1 rounded-2xl" style={{ background: "var(--surface2)" }}>
         <button className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
-          style={{ background: viewMode === "famille" ? "var(--accent)" : "transparent", color: viewMode === "famille" ? "#fff" : "var(--dim)" }}
-          onClick={() => { setViewMode("famille"); setFilter(null); }}>👨‍👩‍👧‍👦 Famille</button>
-        <button className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
           style={{ background: viewMode === "perso" ? "var(--accent)" : "transparent", color: viewMode === "perso" ? "#fff" : "var(--dim)" }}
           onClick={() => { setViewMode("perso"); setFilter(null); }}>👤 Mon planning</button>
+        <button className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+          style={{ background: viewMode === "famille" ? "var(--accent)" : "transparent", color: viewMode === "famille" ? "#fff" : "var(--dim)" }}
+          onClick={() => { setViewMode("famille"); setFilter(null); }}>👨‍👩‍👧‍👦 Famille</button>
       </div>
 
       {/* Widgets */}
