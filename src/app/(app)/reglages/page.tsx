@@ -444,6 +444,118 @@ export default function ReglagesPage() {
         </div>
       </div>
 
+      {/* Nouveautés */}
+      <p className="label mt-4">Nouveautes</p>
+      <div className="flex flex-col gap-2">
+        {[
+          {
+            version: "1.4.0", date: "4 mars 2025", tag: "Nouveau",
+            changes: [
+              "Refonte des contacts de confiance (50+ relations, 6 categories, appel rapide)",
+              "Swipe gauche/droite sur le calendrier",
+              "Swipe vers le bas pour fermer les modals",
+              "Taches cochables depuis l'accueil",
+              "Historique Flow conserve entre ouverture/fermeture",
+              "Skeletons de chargement",
+              "Feedback tactile sur les cartes et boutons",
+              "Logo et boutons adaptes au theme choisi",
+              "Bouton vocal plus visible et theme-aware",
+              "Avatar cliquable vers les reglages",
+              "Mot de passe oublie sur la page login",
+              "Export PDF sans quitter l'application",
+            ],
+          },
+          {
+            version: "1.3.0", date: "3 mars 2025", tag: "Securite",
+            changes: [
+              "Securisation de toutes les routes API (authentification)",
+              "Headers de securite (CSP, HSTS, X-Frame-Options)",
+              "Rate limiting sur les APIs sensibles",
+              "Correction des politiques RLS Supabase",
+              "Validation des inputs sur l'API Flow",
+              "Protection CRON avec secret",
+            ],
+          },
+          {
+            version: "1.2.0", date: "2 mars 2025", tag: "Notifications",
+            changes: [
+              "Notifications push iOS/Android",
+              "Resume matinal a 7h avec le programme du jour",
+              "Rappels 15 min avant chaque evenement",
+              "Notifications meme app fermee (Service Worker)",
+              "Emojis et messages personnalises par categorie",
+              "Bouton tester les notifications dans les reglages",
+            ],
+          },
+          {
+            version: "1.1.0", date: "1 mars 2025", tag: "Cartes",
+            changes: [
+              "Carte interactive multi-couches (Sombre, Standard, Satellite)",
+              "Itineraires gratuits (voiture, marche, velo)",
+              "Recherche POI (12 categories)",
+              "Localisation GPS en temps reel",
+              "Partage de position entre appareils",
+              "Widget carte sur l'accueil",
+            ],
+          },
+          {
+            version: "1.0.0", date: "28 fevrier 2025", tag: "Lancement",
+            changes: [
+              "Planning familial avec Flow IA",
+              "Gestion des membres, contacts, adresses",
+              "Mode vocal et photo dans Flow",
+              "Notes collaboratives avec commentaires",
+              "Listes de courses partagees",
+              "Suivi des depenses et taches menageres",
+              "5 themes (Sombre, Ocean, Foret, Coucher de soleil, Clair)",
+              "Mode hors-ligne avec cache",
+              "PWA installable sur mobile",
+            ],
+          },
+        ].map((release) => (
+          <details key={release.version} className="card !mb-0 group">
+            <summary className="flex items-center justify-between cursor-pointer list-none">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold">v{release.version}</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{
+                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Securite" ? "rgba(240,107,126,0.12)" : "rgba(94,200,158,0.12)",
+                  color: release.tag === "Nouveau" ? "var(--accent)" : release.tag === "Securite" ? "var(--red)" : "var(--green)",
+                }}>{release.tag}</span>
+              </div>
+              <span className="text-[10px]" style={{ color: "var(--dim)" }}>{release.date}</span>
+            </summary>
+            <ul className="mt-3 flex flex-col gap-1.5">
+              {release.changes.map((c, i) => (
+                <li key={i} className="text-xs flex gap-2" style={{ color: "var(--dim)" }}>
+                  <span style={{ color: "var(--accent)" }}>•</span>
+                  <span>{c}</span>
+                </li>
+              ))}
+            </ul>
+          </details>
+        ))}
+      </div>
+
+      {/* A propos */}
+      <p className="label mt-4">A propos</p>
+      <div className="card">
+        <div className="flex items-center gap-3 mb-2">
+          <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--accent), var(--teal))" }}>
+            <span className="text-lg">🌊</span>
+          </div>
+          <div>
+            <p className="font-bold text-sm">FlowTime</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.4.0</p>
+          </div>
+        </div>
+        <p className="text-xs" style={{ color: "var(--dim)" }}>
+          Votre famille, parfaitement synchronisee.
+        </p>
+        <p className="text-[10px] mt-2" style={{ color: "var(--faint)" }}>
+          Fait avec 💜 par FlowTime Team
+        </p>
+      </div>
+
       {/* Déconnexion */}
       <button className="btn btn-danger mt-6 mb-4" onClick={signOut}>
         🚪 Se déconnecter
