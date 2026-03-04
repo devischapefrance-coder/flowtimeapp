@@ -70,6 +70,7 @@ CREATE TABLE events (
   member_id UUID REFERENCES members(id) ON DELETE SET NULL,
   recurring JSONB DEFAULT NULL,
   category TEXT DEFAULT 'general',
+  shared BOOLEAN DEFAULT TRUE,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -108,6 +109,7 @@ CREATE TABLE notes (
   pinned BOOLEAN DEFAULT FALSE,
   checklist JSONB DEFAULT '[]',
   attachments JSONB DEFAULT '[]',
+  visible_to JSONB DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );

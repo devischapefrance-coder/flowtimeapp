@@ -126,6 +126,7 @@ export default function HomePage() {
   const [qeMember, setQeMember] = useState<string>("");
   const [qeCategory, setQeCategory] = useState("general");
   const [qeDescription, setQeDescription] = useState("");
+  const [qeShared, setQeShared] = useState(true);
 
   const days = getWeekDays(weekOffset);
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -225,12 +226,13 @@ export default function HomePage() {
 
   const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
-  // En mode perso : seulement les events assignés à mon membre (exclut les events sans membre ou d'autres membres)
+  // En mode perso : seulement les events assignés à mon membre
+  // En mode famille : exclure les events privés des autres membres
   const viewEvents = viewMode === "perso" && myMember
     ? events.filter((e) => e.member_id === myMember.id)
     : viewMode === "perso" && !myMember
-      ? [] // Pas de membre trouvé pour l'utilisateur, on n'affiche rien en mode perso
-      : events;
+      ? []
+      : events.filter((e) => e.shared !== false || (myMember && e.member_id === myMember.id));
 
   const dayEvents = viewEvents.filter((e) => e.date === currentDate);
   const filteredEvents = filter
@@ -332,6 +334,7 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
+        shared: action.data.shared !== false,
       });
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
@@ -346,6 +349,7 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
+        shared: action.data.shared !== false,
       });
     } else if (action.type === "add_recurring") {
       const memberId = resolveFlowMemberId(action.data.member_name as string);
@@ -379,6 +383,7 @@ export default function HomePage() {
     setQeMember(viewMode === "perso" && myMember ? myMember.id : "");
     setQeCategory("general");
     setQeDescription("");
+    setQeShared(true);
     setQuickEventModal(true);
   }
 
@@ -393,6 +398,7 @@ export default function HomePage() {
       member_id: qeMember || null,
       description: qeDescription.trim(),
       category,
+      shared: qeShared,
     });
     setQuickEventModal(false);
     loadData();
@@ -980,6 +986,23 @@ export default function HomePage() {
               placeholder="Details..."
             />
           </div>
+          {qeMember && (
+            <label className="flex items-center gap-3 cursor-pointer py-1">
+              <div
+                className="relative w-11 h-6 rounded-full transition-colors"
+                style={{ background: qeShared ? "var(--accent)" : "var(--surface2)", border: "1px solid var(--glass-border)" }}
+                onClick={() => setQeShared(!qeShared)}
+              >
+                <div
+                  className="absolute top-0.5 w-5 h-5 rounded-full transition-all"
+                  style={{ background: "#fff", left: qeShared ? 20 : 2 }}
+                />
+              </div>
+              <span className="text-sm" style={{ color: "var(--text)" }}>
+                {qeShared ? "👨‍👩‍👧‍👦 Visible par la famille" : "🔒 Perso uniquement"}
+              </span>
+            </label>
+          )}
           <button
             className="w-full py-3 rounded-xl font-bold text-sm"
             style={{ background: "var(--accent)", color: "#fff" }}

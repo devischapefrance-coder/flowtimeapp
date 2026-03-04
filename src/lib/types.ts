@@ -57,6 +57,7 @@ export interface Event {
   member_id: string | null;
   recurring: RecurringConfig | null;
   category: string;
+  shared: boolean;
   created_at: string;
   members?: Member;
 }
@@ -112,6 +113,7 @@ export interface Note {
   pinned: boolean;
   checklist: ChecklistItem[];
   attachments: Attachment[];
+  visible_to: string[] | null;
   created_at: string;
   updated_at: string;
 }

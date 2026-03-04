@@ -54,6 +54,7 @@ export default function ViePage() {
   const [notePinned, setNotePinned] = useState(false);
   const [noteChecklist, setNoteChecklist] = useState<ChecklistItem[]>([]);
   const [noteAttachments, setNoteAttachments] = useState<Attachment[]>([]);
+  const [noteVisibleTo, setNoteVisibleTo] = useState<string[] | null>(null);
   const [newCheckItem, setNewCheckItem] = useState("");
   const [uploading, setUploading] = useState(false);
 
@@ -98,6 +99,7 @@ export default function ViePage() {
         ...n,
         checklist: Array.isArray(n.checklist) ? n.checklist : [],
         attachments: Array.isArray(n.attachments) ? n.attachments : [],
+        visible_to: Array.isArray(n.visible_to) ? n.visible_to : null,
       })) as Note[];
       setNotes(parsed);
 
@@ -136,7 +138,15 @@ export default function ViePage() {
   useRealtimeShopping(profile?.family_id, loadData);
 
   // --- Filtered notes ---
+  const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+
   const filteredNotes = notes.filter((n) => {
+    // Visibility: if visible_to is set, only show to listed members
+    if (n.visible_to && n.visible_to.length > 0 && myMember) {
+      if (!n.visible_to.includes(myMember.id) && n.author_name.toLowerCase() !== (profile?.first_name || "").toLowerCase()) {
+        return false;
+      }
+    }
     if (filterCat !== "all" && n.category !== filterCat) return false;
     if (search.trim()) {
       const q = search.toLowerCase();
@@ -154,6 +164,7 @@ export default function ViePage() {
     setNotePinned(false);
     setNoteChecklist([]);
     setNoteAttachments([]);
+    setNoteVisibleTo(null);
     setNoteModal(true);
   }
 
@@ -165,6 +176,7 @@ export default function ViePage() {
     setNotePinned(n.pinned);
     setNoteChecklist(n.checklist || []);
     setNoteAttachments(n.attachments || []);
+    setNoteVisibleTo(n.visible_to || null);
     setNoteModal(true);
   }
 
@@ -189,6 +201,7 @@ export default function ViePage() {
         pinned: notePinned,
         checklist: noteChecklist,
         attachments: noteAttachments,
+        visible_to: noteVisibleTo && noteVisibleTo.length > 0 ? noteVisibleTo : null,
         updated_at: new Date().toISOString(),
       }).eq("id", editingNote.id);
     } else {
@@ -200,6 +213,7 @@ export default function ViePage() {
         pinned: notePinned,
         checklist: noteChecklist,
         attachments: noteAttachments,
+        visible_to: noteVisibleTo && noteVisibleTo.length > 0 ? noteVisibleTo : null,
         author_name: profile.first_name || "",
       });
     }
@@ -483,6 +497,11 @@ export default function ViePage() {
                         )}
                         {n.author_name && (
                           <span className="text-[10px]" style={{ color: "var(--faint)" }}>par {n.author_name}</span>
+                        )}
+                        {n.visible_to && n.visible_to.length > 0 && (
+                          <span className="text-[10px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+                            🔒 {n.visible_to.length} membre{n.visible_to.length > 1 ? "s" : ""}
+                          </span>
                         )}
                       </div>
                     </div>
@@ -991,6 +1010,59 @@ export default function ViePage() {
             />
             <span className="text-sm">📌 Epingler cette note</span>
           </label>
+
+          {/* Visibility / access control */}
+          {members.length > 0 && (
+            <div>
+              <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>👁️ Qui peut voir cette note ?</label>
+              <div className="flex flex-wrap gap-1.5">
+                <button
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                  style={{
+                    background: !noteVisibleTo ? "var(--accent-soft)" : "var(--surface2)",
+                    color: !noteVisibleTo ? "var(--accent)" : "var(--dim)",
+                    border: !noteVisibleTo ? "1px solid var(--accent)" : "1px solid transparent",
+                  }}
+                  onClick={() => setNoteVisibleTo(null)}
+                >
+                  👨‍👩‍👧‍👦 Toute la famille
+                </button>
+                {members.map((m) => {
+                  const selected = noteVisibleTo?.includes(m.id) || false;
+                  return (
+                    <button
+                      key={m.id}
+                      className="px-3 py-1.5 rounded-xl text-xs font-bold transition-all"
+                      style={{
+                        background: selected ? "var(--accent-soft)" : "var(--surface2)",
+                        color: selected ? "var(--accent)" : "var(--dim)",
+                        border: selected ? "1px solid var(--accent)" : "1px solid transparent",
+                      }}
+                      onClick={() => {
+                        if (!noteVisibleTo) {
+                          // Switching from "all" to specific selection
+                          setNoteVisibleTo([m.id]);
+                        } else if (selected) {
+                          const next = noteVisibleTo.filter((id) => id !== m.id);
+                          setNoteVisibleTo(next.length > 0 ? next : null);
+                        } else {
+                          setNoteVisibleTo([...noteVisibleTo, m.id]);
+                        }
+                      }}
+                    >
+                      {m.emoji} {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+              {noteVisibleTo && noteVisibleTo.length > 0 && (
+                <p className="text-[10px] mt-1" style={{ color: "var(--dim)" }}>
+                  🔒 Seuls les membres selectionnes verront cette note
+                </p>
+              )}
+            </div>
+          )}
+
           <button
             className="w-full py-3 rounded-xl font-bold text-sm"
             style={{ background: "var(--accent)", color: "#fff" }}
