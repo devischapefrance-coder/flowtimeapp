@@ -178,7 +178,7 @@ export default function HomePage() {
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState(() => localDateStr(new Date()));
+  const [selectedDate, setSelectedDate] = useState("");
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
@@ -234,8 +234,10 @@ export default function HomePage() {
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
-  // Navigate to a specific date from search overlay
+  // On mount: ensure selectedDate is today, then check goto-date override
   useEffect(() => {
+    const todayLocal = localDateStr(new Date());
+    setSelectedDate(todayLocal);
     const gotoDate = localStorage.getItem("flowtime-goto-date");
     if (gotoDate) {
       setSelectedDate(gotoDate);

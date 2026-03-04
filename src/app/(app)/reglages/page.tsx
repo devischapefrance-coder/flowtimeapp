@@ -452,6 +452,25 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "1.8.0", date: "4 mars 2026", tag: "Multi-famille",
+            changes: [
+              "Système multi-famille : rejoindre une famille avec un code",
+              "Création automatique de membre à la jointure",
+              "Contacts de confiance : visibilité Famille / Personnel",
+              "Adresses : visibilité Famille / Personnel",
+              "Synchronisation temps réel sur toutes les pages",
+              "Rafraîchissement auto toutes les 10s",
+              "Chat famille disponible sur toutes les pages",
+              "Badge messages non lus sur l'icône Accueil",
+              "Notifications web + vibration pour les messages",
+              "Masquer son propre profil dans la liste des membres",
+              "Horloge en direct + carrousel de dates synchronisé",
+              "Correction bug de date (fuseau horaire UTC)",
+              "Correction photo lightbox sur iPhone",
+              "Réinitialisation mot de passe corrigée",
+            ],
+          },
+          {
             version: "1.7.0", date: "4 mars 2026", tag: "Nouveau",
             changes: [
               "Notifications toast (remplace les alertes)",
@@ -585,7 +604,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.7.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.8.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>
