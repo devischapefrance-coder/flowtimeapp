@@ -38,6 +38,7 @@ export default function Navbar() {
             <Link
               key={tab.href}
               href={tab.href}
+              onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
               className="flex flex-col items-center gap-0.5 py-1 px-3 relative"
             >
               {active && (
