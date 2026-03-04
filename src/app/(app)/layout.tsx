@@ -32,7 +32,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     : "fr";
 
   async function loadProfile() {
-    const { data: { user } } = await supabase.auth.getUser();
+    // Use getSession (reads local token) instead of getUser (network call)
+    // to avoid losing session when iOS purges cookies on app kill
+    const { data: { session } } = await supabase.auth.getSession();
+    const user = session?.user;
     if (!user) {
       router.push("/");
       return;
@@ -57,23 +60,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
   }
 
-  // "Rester connecté" logic: if user chose session-only and this is a new browser session, sign out
   useEffect(() => {
+    // "Rester connecté" logic: if user chose session-only and this is a new browser session, sign out
     const sessionOnly = localStorage.getItem("flowtime_session_only");
     if (sessionOnly) {
       const stillActive = sessionStorage.getItem("flowtime_session_active");
       if (!stillActive) {
-        // New browser session → sign out
         localStorage.removeItem("flowtime_session_only");
         supabase.auth.signOut().then(() => router.push("/"));
         return;
       }
     }
-    // Mark this browser session as active
     sessionStorage.setItem("flowtime_session_active", "true");
-  }, [router]);
-
-  useEffect(() => {
     loadProfile();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
