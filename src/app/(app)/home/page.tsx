@@ -8,10 +8,14 @@ import Timeline from "@/components/Timeline";
 import DayAgenda from "@/components/DayAgenda";
 import QuickVoice from "@/components/QuickVoice";
 import NotificationManager from "@/components/NotificationManager";
-import type { Event, Member, Address, Contact, Meal, Birthday, Expense } from "@/lib/types";
+import type { Event, Member, Address, Contact, Meal, Birthday, Expense, Chore, DeviceLocation } from "@/lib/types";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
-import { useRealtimeEvents } from "@/lib/realtime";
+import { useRealtimeEvents, useRealtimeChores } from "@/lib/realtime";
+import dynamic from "next/dynamic";
+import type { MapMarker } from "@/components/MapView";
+
+const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 import { checkReminders, checkEventReminders } from "@/lib/reminders";
 import { downloadICS, shareICS } from "@/lib/ical";
 import { exportPDF } from "@/lib/pdf-export";
@@ -34,6 +38,8 @@ const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "meals", label: "Repas", icon: "🍽️" },
   { id: "expenses", label: "Depenses", icon: "💰" },
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
+  { id: "family_map", label: "Carte famille", icon: "🗺️" },
+  { id: "chores", label: "Taches", icon: "🧹" },
 ];
 
 const DEFAULT_WIDGETS: WidgetConfig[] = WIDGET_DEFS.map((w) => ({ id: w.id, visible: true }));
@@ -135,6 +141,8 @@ export default function HomePage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [chores, setChores] = useState<Chore[]>([]);
+  const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
@@ -245,7 +253,7 @@ export default function HomePage() {
     const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
     const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
 
-    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, expRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, expRes, choreRes, devRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -262,6 +270,8 @@ export default function HomePage() {
       supabase.from("expenses").select("*").eq("family_id", profile.family_id)
         .gte("date", monthStart)
         .lte("date", monthEnd),
+      supabase.from("chores").select("*").eq("family_id", profile.family_id),
+      supabase.from("device_locations").select("*").eq("family_id", profile.family_id),
     ]);
     if (evRes.data) {
       setEvents(evRes.data as Event[]);
@@ -276,6 +286,8 @@ export default function HomePage() {
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
     if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
     if (expRes.data) setExpenses(expRes.data as Expense[]);
+    if (choreRes.data) setChores(choreRes.data as Chore[]);
+    if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id, weekOffset]);
 
@@ -300,6 +312,7 @@ export default function HomePage() {
   }, [calendarView, monthYear, monthMonth, profile?.family_id]);
 
   useRealtimeEvents(profile?.family_id, loadData);
+  useRealtimeChores(profile?.family_id, loadData);
 
   // Proactive reminders check every minute
   useEffect(() => {
@@ -736,6 +749,8 @@ export default function HomePage() {
       case "meals": return renderMeals();
       case "expenses": return renderExpenses();
       case "birthdays": return renderBirthdays();
+      case "family_map": return renderFamilyMap();
+      case "chores": return renderChores();
       default: return null;
     }
   }
@@ -1068,6 +1083,88 @@ export default function HomePage() {
           </div>
         ) : (
           <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun anniversaire enregistre</p>
+        )}
+      </div>
+    );
+  }
+
+  function renderFamilyMap() {
+    const mapMarkers: MapMarker[] = [
+      ...devices.map((d) => ({
+        id: d.id,
+        lat: d.lat,
+        lng: d.lng,
+        emoji: d.emoji || "📱",
+        name: d.device_name,
+        type: "device" as const,
+        detail: new Date(d.updated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+      })),
+      ...addresses.filter((a) => a.lat && a.lng).map((a) => ({
+        id: a.id,
+        lat: a.lat!,
+        lng: a.lng!,
+        emoji: a.emoji || "📍",
+        name: a.name,
+        type: "address" as const,
+      })),
+    ];
+    const center: [number, number] = devices.length > 0
+      ? [devices[0].lat, devices[0].lng]
+      : profile?.lat && profile?.lng
+        ? [profile.lat, profile.lng]
+        : [46.6, 2.5];
+    return (
+      <div className="card !mb-0">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+            {devices.length} appareil{devices.length !== 1 ? "s" : ""}
+          </span>
+        </div>
+        <div className="rounded-xl overflow-hidden" style={{ height: 180 }}>
+          <MapView
+            markers={mapMarkers}
+            center={center}
+            zoom={mapMarkers.length > 0 ? 12 : 6}
+            height="180px"
+            mapStyle="dark"
+            interactive={false}
+          />
+        </div>
+      </div>
+    );
+  }
+
+  function renderChores() {
+    const displayChores = chores.slice(0, 3);
+    const freqLabel = (f: string) => f === "daily" ? "Quotidien" : "Hebdo";
+    return (
+      <div className="card !mb-0">
+        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Taches menageres</p>
+        {displayChores.length > 0 ? (
+          <div className="flex flex-col gap-2">
+            {displayChores.map((ch) => {
+              const assignedMember = ch.assigned_members.length > 0
+                ? members.find((m) => m.id === ch.assigned_members[ch.current_index % ch.assigned_members.length])
+                : null;
+              return (
+                <div key={ch.id} className="flex items-center gap-3">
+                  <span className="text-xl">{ch.emoji || "🧹"}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold">{ch.name}</p>
+                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+                      {assignedMember ? `${assignedMember.emoji} ${assignedMember.name}` : "Non assigne"}
+                    </p>
+                  </div>
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+                    {freqLabel(ch.frequency)}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        ) : (
+          <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune tache configuree</p>
         )}
       </div>
     );
