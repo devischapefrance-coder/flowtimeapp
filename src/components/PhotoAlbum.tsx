@@ -136,11 +136,17 @@ export default function PhotoAlbum({ photos, familyId, userName, onUpdate }: Pho
       {lightbox && (
         <div
           className="fixed inset-0 z-[800] flex flex-col"
-          style={{ background: "rgba(0,0,0,0.9)", maxWidth: 430, margin: "0 auto" }}
+          style={{ background: "rgba(0,0,0,0.95)", maxWidth: 430, margin: "0 auto" }}
           onClick={() => setLightbox(null)}
         >
-          <div className="flex justify-end p-4">
-            <button className="text-white text-xl" onClick={() => setLightbox(null)}>✕</button>
+          <div className="flex justify-end" style={{ padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 8px 16px" }}>
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-full text-white text-lg"
+              style={{ background: "rgba(255,255,255,0.15)" }}
+              onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
+            >
+              ✕
+            </button>
           </div>
           <div className="flex-1 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
             <img src={lightbox.url} alt={lightbox.caption} className="max-w-full max-h-[60vh] rounded-xl object-contain" />
