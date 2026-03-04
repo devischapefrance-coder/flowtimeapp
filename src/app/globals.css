@@ -251,12 +251,22 @@
     to { opacity: 1; transform: translateY(0) translateZ(0); }
   }
 
-  /* GPU-accelerated utility */
-  .gpu-accelerated {
-    will-change: transform;
-    -webkit-backface-visibility: hidden;
-    backface-visibility: hidden;
-    transform: translateZ(0);
+  /* Modal animations */
+  @keyframes modalSheetIn {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
+  }
+  @keyframes modalSheetOut {
+    from { transform: translateY(0); }
+    to { transform: translateY(100%); }
+  }
+  @keyframes modalFadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+  @keyframes modalFadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
   }
 
   @keyframes pulse {

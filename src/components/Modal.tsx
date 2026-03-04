@@ -11,91 +11,39 @@ interface ModalProps {
 
 export default function Modal({ open, onClose, title, children }: ModalProps) {
   const [mounted, setMounted] = useState(false);
-  const [animState, setAnimState] = useState<"idle" | "entering" | "open" | "leaving">("idle");
+  const [closing, setClosing] = useState(false);
   const dragY = useRef(0);
   const startY = useRef(0);
   const dragging = useRef(false);
   const sheetRef = useRef<HTMLDivElement>(null);
-  const backdropRef = useRef<HTMLDivElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const rafRef = useRef<number>(0);
 
-  // Direct DOM updates for 60fps drag
-  const setSheetY = useCallback((y: number, animated: boolean) => {
-    const sheet = sheetRef.current;
-    const backdrop = backdropRef.current;
-    if (!sheet) return;
-    const t = animated ? "transform 0.35s cubic-bezier(0.32, 0.72, 0, 1)" : "none";
-    sheet.style.transition = t;
-    sheet.style.transform = `translate3d(0, ${y}px, 0)`;
-    if (backdrop) {
-      backdrop.style.transition = animated ? "opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)" : "none";
-      backdrop.style.opacity = String(Math.max(0, 1 - y / 400));
-    }
-  }, []);
-
-  const closeModal = useCallback(() => {
-    setAnimState("leaving");
-    const h = sheetRef.current?.offsetHeight || 700;
-    setSheetY(h, true);
-    if (backdropRef.current) {
-      backdropRef.current.style.transition = "opacity 0.3s ease";
-      backdropRef.current.style.opacity = "0";
-    }
+  const doClose = useCallback(() => {
+    if (closing) return;
+    setClosing(true);
     setTimeout(() => {
+      setClosing(false);
       setMounted(false);
-      setAnimState("idle");
       document.body.style.overflow = "";
       onClose();
-    }, 350);
-  }, [onClose, setSheetY]);
+    }, 300);
+  }, [closing, onClose]);
 
-  // Handle open/close
   useEffect(() => {
-    if (open && animState === "idle") {
+    if (open && !mounted && !closing) {
       setMounted(true);
-      setAnimState("entering");
       document.body.style.overflow = "hidden";
-    } else if (!open && (animState === "open" || animState === "entering")) {
-      closeModal();
+    } else if (!open && mounted && !closing) {
+      doClose();
     }
-  }, [open, animState, closeModal]);
+  }, [open, mounted, closing, doClose]);
 
-  // After mount, animate in on next frame
-  useEffect(() => {
-    if (animState !== "entering" || !mounted) return;
-    // Wait for DOM to paint the off-screen position, then slide in
-    const frame1 = requestAnimationFrame(() => {
-      // Ensure sheet starts off-screen
-      const sheet = sheetRef.current;
-      if (sheet) {
-        sheet.style.transition = "none";
-        sheet.style.transform = `translate3d(0, ${sheet.offsetHeight || 700}px, 0)`;
-      }
-      if (backdropRef.current) {
-        backdropRef.current.style.transition = "none";
-        backdropRef.current.style.opacity = "0";
-      }
-      const frame2 = requestAnimationFrame(() => {
-        setSheetY(0, true);
-        if (backdropRef.current) {
-          backdropRef.current.style.transition = "opacity 0.35s cubic-bezier(0.32, 0.72, 0, 1)";
-          backdropRef.current.style.opacity = "1";
-        }
-        setAnimState("open");
-      });
-      return () => cancelAnimationFrame(frame2);
-    });
-    return () => cancelAnimationFrame(frame1);
-  }, [animState, mounted, setSheetY]);
-
-  // Cleanup on unmount
   useEffect(() => {
     return () => { document.body.style.overflow = ""; };
   }, []);
 
   function onTouchStart(e: React.TouchEvent) {
-    if (animState !== "open") return;
     const touch = e.touches[0];
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
     const isTopArea = touch.clientY - rect.top < 60;
@@ -105,8 +53,6 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     startY.current = touch.clientY;
     dragging.current = true;
     dragY.current = 0;
-    if (sheetRef.current) sheetRef.current.style.transition = "none";
-    if (backdropRef.current) backdropRef.current.style.transition = "none";
   }
 
   function onTouchMove(e: React.TouchEvent) {
@@ -116,7 +62,10 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       dragY.current = delta;
       cancelAnimationFrame(rafRef.current);
       rafRef.current = requestAnimationFrame(() => {
-        setSheetY(delta * 0.85, false);
+        if (sheetRef.current) {
+          sheetRef.current.style.transition = "none";
+          sheetRef.current.style.transform = `translateY(${delta * 0.85}px)`;
+        }
       });
     }
   }
@@ -126,10 +75,13 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
     dragging.current = false;
     cancelAnimationFrame(rafRef.current);
 
-    if (dragY.current > 120) {
-      closeModal();
-    } else {
-      setSheetY(0, true);
+    if (sheetRef.current) {
+      if (dragY.current > 120) {
+        doClose();
+      } else {
+        sheetRef.current.style.transition = "transform 0.3s cubic-bezier(0.32, 0.72, 0, 1)";
+        sheetRef.current.style.transform = "translateY(0)";
+      }
     }
     dragY.current = 0;
   }
@@ -137,13 +89,20 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
   if (!mounted) return null;
 
   return (
-    <div className="fixed inset-0 flex items-end justify-center" style={{ zIndex: 600 }}>
+    <div
+      className="fixed inset-0 flex items-end justify-center"
+      style={{ zIndex: 600 }}
+    >
       {/* Backdrop */}
       <div
-        ref={backdropRef}
         className="absolute inset-0"
-        style={{ background: "rgba(0,0,0,0.5)", opacity: 0, willChange: "opacity" }}
-        onClick={closeModal}
+        style={{
+          background: "rgba(0,0,0,0.5)",
+          animation: closing
+            ? "modalFadeOut 0.3s ease forwards"
+            : "modalFadeIn 0.3s ease forwards",
+        }}
+        onClick={doClose}
       />
 
       {/* Sheet */}
@@ -159,10 +118,11 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           paddingBottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
           border: "1px solid var(--glass-border)",
           borderBottom: "none",
-          transform: "translate3d(0, 100vh, 0)",
-          willChange: "transform",
           position: "relative",
           zIndex: 1,
+          animation: closing
+            ? "modalSheetOut 0.3s cubic-bezier(0.32, 0.72, 0, 1) forwards"
+            : "modalSheetIn 0.35s cubic-bezier(0.32, 0.72, 0, 1) forwards",
         }}
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
@@ -180,7 +140,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
           <div className="flex items-center justify-between mb-5">
             <h2 className="text-base font-bold">{title}</h2>
             <button
-              onClick={closeModal}
+              onClick={doClose}
               className="w-10 h-10 flex items-center justify-center rounded-full text-xs active:scale-90 transition-transform"
               style={{ background: "var(--surface2)" }}
             >
