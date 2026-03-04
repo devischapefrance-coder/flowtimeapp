@@ -472,7 +472,7 @@ export default function ViePage() {
       <h1 className="text-xl font-bold mb-4">Vie de famille</h1>
 
       {/* Tab switcher */}
-      <div data-tutorial="vie-tabs" className="flex gap-1 mb-5 overflow-x-auto pb-1">
+      <div data-tutorial="vie-tabs" className="flex gap-1 mb-5 overflow-x-auto overflow-y-visible pb-1 pt-2">
         {([
           ["notes", "📝", "Notes"],
           ["anniversaires", "🎂", "Anniv."],
