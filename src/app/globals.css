@@ -230,7 +230,6 @@
     padding: 16px;
     margin-bottom: 10px;
     transition: transform 0.15s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.15s ease;
-    will-change: transform;
   }
   .card:hover { border-color: var(--card-hover); }
   .card:active { transform: scale(0.97); opacity: 0.9; }
@@ -244,11 +243,11 @@
     margin-bottom: 10px;
   }
 
-  .animate-in { animation: fadeIn 0.3s cubic-bezier(0.32, 0.72, 0, 1) both; }
+  .animate-in { animation: fadeIn 0.35s ease-out; }
 
   @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(8px) translateZ(0); }
-    to { opacity: 1; transform: translateY(0) translateZ(0); }
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
   }
 
   .modal-slide-up {
