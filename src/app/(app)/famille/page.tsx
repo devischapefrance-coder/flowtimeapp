@@ -5,7 +5,8 @@ import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import Modal from "@/components/Modal";
-import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
+import type { Member, Contact, Address, DeviceLocation, Event } from "@/lib/types";
+import { getCategoryColor, EVENT_CATEGORIES } from "@/lib/categories";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
@@ -57,6 +58,8 @@ export default function FamillePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
+  const [monthEvents, setMonthEvents] = useState<Event[]>([]);
+  const [showStats, setShowStats] = useState(false);
   const [mapFull, setMapFull] = useState(false);
   const [sharingLocation, setSharingLocation] = useState(false);
   const [showFamilyCode, setShowFamilyCode] = useState(false);
@@ -73,11 +76,17 @@ export default function FamillePage() {
 
   const load = useCallback(async () => {
     if (!familyId) return;
-    const [m, c, a, d] = await Promise.all([
+    // Get month date range for stats
+    const now = new Date();
+    const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString().split("T")[0];
+    const monthEnd = new Date(now.getFullYear(), now.getMonth() + 1, 0).toISOString().split("T")[0];
+
+    const [m, c, a, d, ev] = await Promise.all([
       supabase.from("members").select("*").eq("family_id", familyId),
       supabase.from("contacts").select("*").eq("family_id", familyId),
       supabase.from("addresses").select("*").eq("family_id", familyId),
       supabase.from("device_locations").select("*").eq("family_id", familyId),
+      supabase.from("events").select("*").eq("family_id", familyId).gte("date", monthStart).lte("date", monthEnd),
     ]);
     if (m.data) {
       const roleOrder: Record<string, number> = {
@@ -95,6 +104,7 @@ export default function FamillePage() {
     if (c.data) setContacts(c.data as Contact[]);
     if (a.data) setAddresses(a.data as Address[]);
     if (d.data) setDevices(d.data as DeviceLocation[]);
+    if (ev.data) setMonthEvents(ev.data as Event[]);
   }, [familyId]);
 
   useEffect(() => { load(); }, [load]);
@@ -363,7 +373,102 @@ export default function FamillePage() {
           </div>
         );
       })}
-      <button className="btn btn-secondary mt-1 mb-6" onClick={() => openMemberModal("new")}>＋ Ajouter un membre</button>
+      <button className="btn btn-secondary mt-1 mb-4" onClick={() => openMemberModal("new")}>＋ Ajouter un membre</button>
+
+      {/* STATS */}
+      {members.length > 0 && (
+        <div className="mb-6">
+          <button
+            className="flex items-center gap-2 mb-2"
+            onClick={() => setShowStats(!showStats)}
+          >
+            <p className="label !mb-0">📊 Statistiques</p>
+            <span className="text-xs" style={{ color: "var(--dim)" }}>{showStats ? "▲" : "▼"}</span>
+          </button>
+          {showStats && (() => {
+            const now = new Date();
+            const weekStart = new Date(now);
+            const dow = now.getDay();
+            weekStart.setDate(now.getDate() - (dow === 0 ? 6 : dow - 1));
+            const weekStartStr = weekStart.toISOString().split("T")[0];
+
+            // Find busiest member
+            const memberEventCounts = members.map((m) => ({
+              member: m,
+              monthCount: monthEvents.filter((e) => e.member_id === m.id).length,
+              weekCount: monthEvents.filter((e) => e.member_id === m.id && e.date >= weekStartStr).length,
+            }));
+            const busiest = [...memberEventCounts].sort((a, b) => b.monthCount - a.monthCount)[0];
+            const maxCount = busiest?.monthCount || 1;
+
+            return (
+              <div className="flex flex-col gap-2">
+                {memberEventCounts.map(({ member, monthCount, weekCount }) => {
+                  // Category breakdown
+                  const memberEvents = monthEvents.filter((e) => e.member_id === member.id);
+                  const catCounts: Record<string, number> = {};
+                  for (const e of memberEvents) {
+                    const cat = e.category || "general";
+                    catCounts[cat] = (catCounts[cat] || 0) + 1;
+                  }
+                  const catEntries = Object.entries(catCounts).sort((a, b) => b[1] - a[1]);
+
+                  return (
+                    <div
+                      key={member.id}
+                      className="card !mb-0"
+                      style={{
+                        borderLeft: busiest?.member.id === member.id ? "3px solid var(--accent)" : undefined,
+                      }}
+                    >
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="text-lg">{member.emoji}</span>
+                        <span className="text-sm font-bold flex-1">{member.name}</span>
+                        <span className="text-xs" style={{ color: "var(--dim)" }}>{weekCount} sem. · {monthCount} mois</span>
+                        {busiest?.member.id === member.id && monthCount > 0 && (
+                          <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
+                            Top
+                          </span>
+                        )}
+                      </div>
+                      {/* Category bars */}
+                      {catEntries.length > 0 && (
+                        <div className="flex gap-0.5 h-2 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+                          {catEntries.map(([cat, count]) => (
+                            <div
+                              key={cat}
+                              className="h-full rounded-full"
+                              style={{
+                                width: `${(count / maxCount) * 100}%`,
+                                minWidth: 4,
+                                background: getCategoryColor(cat),
+                              }}
+                              title={`${cat}: ${count}`}
+                            />
+                          ))}
+                        </div>
+                      )}
+                      {catEntries.length > 0 && (
+                        <div className="flex flex-wrap gap-1.5 mt-1.5">
+                          {catEntries.map(([cat, count]) => (
+                            <span
+                              key={cat}
+                              className="text-[9px] px-1.5 py-0.5 rounded-full"
+                              style={{ background: `${getCategoryColor(cat)}20`, color: getCategoryColor(cat) }}
+                            >
+                              {EVENT_CATEGORIES.find((c) => c.value === cat)?.emoji || "📋"} {count}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })()}
+        </div>
+      )}
 
       {/* CONTACTS */}
       <p className="label">Contacts de confiance</p>

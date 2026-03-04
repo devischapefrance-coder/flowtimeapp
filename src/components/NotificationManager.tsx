@@ -1,15 +1,76 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import type { Event } from "@/lib/types";
+import { useEffect, useRef, useCallback } from "react";
+import type { Event, Birthday } from "@/lib/types";
+
+const BDAY_STORAGE_KEY = "flowtime_bday_notified";
 
 interface NotificationManagerProps {
   events: Event[];
+  birthdays?: Birthday[];
   enabled: boolean;
 }
 
-export default function NotificationManager({ events, enabled }: NotificationManagerProps) {
+function getBdayNotifiedToday(): Set<string> {
+  try {
+    const raw = localStorage.getItem(BDAY_STORAGE_KEY);
+    if (!raw) return new Set();
+    const parsed = JSON.parse(raw);
+    const today = new Date().toISOString().split("T")[0];
+    if (parsed.date !== today) return new Set();
+    return new Set(parsed.keys || []);
+  } catch {
+    return new Set();
+  }
+}
+
+function setBdayNotified(key: string) {
+  const today = new Date().toISOString().split("T")[0];
+  const current = getBdayNotifiedToday();
+  current.add(key);
+  localStorage.setItem(BDAY_STORAGE_KEY, JSON.stringify({ date: today, keys: Array.from(current) }));
+}
+
+export default function NotificationManager({ events, birthdays, enabled }: NotificationManagerProps) {
   const notifiedRef = useRef<Set<string>>(new Set());
+
+  const checkBirthdays = useCallback(() => {
+    if (!birthdays?.length || Notification.permission !== "granted") return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const notified = getBdayNotifiedToday();
+
+    for (const bday of birthdays) {
+      const [, month, day] = bday.date.split("-").map(Number);
+      const next = new Date(today.getFullYear(), month - 1, day);
+      if (next < today) next.setFullYear(next.getFullYear() + 1);
+      const diff = Math.round((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
+
+      if (diff === 0 && !notified.has(`${bday.id}-0`)) {
+        setBdayNotified(`${bday.id}-0`);
+        new Notification("FlowTime 🎂", {
+          body: `Bon anniversaire ${bday.name} !`,
+          icon: "/icons/icon.svg",
+          tag: `bday-${bday.id}-0`,
+        });
+      } else if (diff === 1 && !notified.has(`${bday.id}-1`)) {
+        setBdayNotified(`${bday.id}-1`);
+        new Notification("FlowTime 🎂", {
+          body: `Anniversaire de ${bday.name} demain !`,
+          icon: "/icons/icon.svg",
+          tag: `bday-${bday.id}-1`,
+        });
+      } else if (diff === 7 && !notified.has(`${bday.id}-7`)) {
+        setBdayNotified(`${bday.id}-7`);
+        new Notification("FlowTime 🎂", {
+          body: `Anniversaire de ${bday.name} dans 7 jours !`,
+          icon: "/icons/icon.svg",
+          tag: `bday-${bday.id}-7`,
+        });
+      }
+    }
+  }, [birthdays]);
 
   useEffect(() => {
     if (!enabled || !("Notification" in window)) return;
@@ -40,7 +101,7 @@ export default function NotificationManager({ events, enabled }: NotificationMan
           notifiedRef.current.add(key15);
           const memberName = ev.members?.name ? ` (${ev.members.name})` : "";
           new Notification("FlowTime ⏰", {
-            body: `Dans 15 min : ${ev.title}${memberName} à ${ev.time}`,
+            body: `Dans 15 min : ${ev.title}${memberName} a ${ev.time}`,
             icon: "/icons/icon.svg",
             tag: key15,
           });
@@ -57,10 +118,17 @@ export default function NotificationManager({ events, enabled }: NotificationMan
           });
         }
       }
-    }, 30000); // Check every 30 seconds
+    }, 30000);
 
-    return () => clearInterval(interval);
-  }, [events, enabled]);
+    // Check birthdays on mount and every 30 min
+    checkBirthdays();
+    const bdayInterval = setInterval(checkBirthdays, 30 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+      clearInterval(bdayInterval);
+    };
+  }, [events, enabled, checkBirthdays]);
 
   return null;
 }

@@ -4,6 +4,32 @@ import { useEffect, useRef } from "react";
 import { supabase } from "./supabase";
 import type { RealtimePostgresChangesPayload } from "@supabase/supabase-js";
 
+export function useRealtimeShopping(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+
+    const channel = supabase
+      .channel(`shopping:${familyId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "shopping_items",
+          filter: `family_id=eq.${familyId}`,
+        },
+        () => {
+          onUpdate();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [familyId, onUpdate]);
+}
+
 export function useRealtimeEvents(familyId: string | undefined, onUpdate: () => void) {
   useEffect(() => {
     if (!familyId) return;

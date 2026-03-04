@@ -69,6 +69,7 @@ CREATE TABLE events (
   date DATE NOT NULL DEFAULT CURRENT_DATE,
   member_id UUID REFERENCES members(id) ON DELETE SET NULL,
   recurring JSONB DEFAULT NULL,
+  category TEXT DEFAULT 'general',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -143,6 +144,17 @@ CREATE TABLE meals (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Liste de courses
+CREATE TABLE shopping_items (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  text TEXT NOT NULL,
+  checked BOOLEAN DEFAULT false,
+  category TEXT DEFAULT 'general',
+  added_by TEXT DEFAULT '',
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- ===========================================
 -- Row Level Security (RLS)
 -- ===========================================
@@ -158,6 +170,7 @@ ALTER TABLE notes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE note_comments ENABLE ROW LEVEL SECURITY;
 ALTER TABLE birthdays ENABLE ROW LEVEL SECURITY;
 ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
+ALTER TABLE shopping_items ENABLE ROW LEVEL SECURITY;
 
 -- Profiles : lecture/modif de son propre profil uniquement
 CREATE POLICY "Own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -211,5 +224,10 @@ CREATE POLICY "Family birthdays" ON birthdays FOR ALL USING (
 
 -- Repas : accès par famille
 CREATE POLICY "Family meals" ON meals FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Liste de courses : accès par famille
+CREATE POLICY "Family shopping" ON shopping_items FOR ALL USING (
   family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
 );

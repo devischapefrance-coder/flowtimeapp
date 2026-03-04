@@ -3,9 +3,9 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
-import { useRealtimeNotes } from "@/lib/realtime";
+import { useRealtimeNotes, useRealtimeShopping } from "@/lib/realtime";
 import Modal from "@/components/Modal";
-import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment } from "@/lib/types";
+import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem } from "@/lib/types";
 
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
@@ -41,7 +41,7 @@ function genId() {
 
 export default function ViePage() {
   const { profile } = useProfile();
-  const [tab, setTab] = useState<"notes" | "anniversaires">("notes");
+  const [tab, setTab] = useState<"notes" | "anniversaires" | "courses">("notes");
 
   // Notes state
   const [notes, setNotes] = useState<Note[]>([]);
@@ -75,6 +75,11 @@ export default function ViePage() {
   const [bdayEmoji, setBdayEmoji] = useState("🎂");
   const [bdayMemberId, setBdayMemberId] = useState<string>("");
 
+  // Shopping state
+  const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
+  const [newShoppingText, setNewShoppingText] = useState("");
+  const [shoppingCat, setShoppingCat] = useState("general");
+
   // Comment counts per note
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
@@ -82,10 +87,11 @@ export default function ViePage() {
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
-    const [notesRes, bdayRes, memRes] = await Promise.all([
+    const [notesRes, bdayRes, memRes, shopRes] = await Promise.all([
       supabase.from("notes").select("*").eq("family_id", profile.family_id).order("pinned", { ascending: false }).order("updated_at", { ascending: false }),
       supabase.from("birthdays").select("*").eq("family_id", profile.family_id),
       supabase.from("members").select("*").eq("family_id", profile.family_id),
+      supabase.from("shopping_items").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
     ]);
     if (notesRes.data) {
       const parsed = (notesRes.data as Record<string, unknown>[]).map((n) => ({
@@ -113,6 +119,7 @@ export default function ViePage() {
     }
     if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
+    if (shopRes.data) setShoppingItems(shopRes.data as ShoppingItem[]);
   }, [profile?.family_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -124,8 +131,9 @@ export default function ViePage() {
     }
   }, []);
 
-  // Realtime notes
+  // Realtime notes & shopping
   useRealtimeNotes(profile?.family_id, profile?.first_name || "", loadData);
+  useRealtimeShopping(profile?.family_id, loadData);
 
   // --- Filtered notes ---
   const filteredNotes = notes.filter((n) => {
@@ -348,11 +356,11 @@ export default function ViePage() {
       <h1 className="text-xl font-bold mb-4">Vie de famille</h1>
 
       {/* Tab switcher */}
-      <div className="flex gap-2 mb-5">
-        {(["notes", "anniversaires"] as const).map((t) => (
+      <div className="flex gap-1.5 mb-5">
+        {(["notes", "anniversaires", "courses"] as const).map((t) => (
           <button
             key={t}
-            className="flex-1 py-2.5 rounded-xl text-sm font-bold transition-all"
+            className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
             style={{
               background: tab === t ? "var(--accent)" : "var(--surface2)",
               color: tab === t ? "#fff" : "var(--dim)",
@@ -360,7 +368,7 @@ export default function ViePage() {
             }}
             onClick={() => setTab(t)}
           >
-            {t === "notes" ? "📝 Notes" : "🎂 Anniversaires"}
+            {t === "notes" ? "📝 Notes" : t === "anniversaires" ? "🎂 Anniv." : "🛒 Courses"}
           </button>
         ))}
       </div>
@@ -560,6 +568,163 @@ export default function ViePage() {
           </div>
         </div>
       )}
+
+      {/* Courses tab */}
+      {tab === "courses" && (() => {
+        const SHOP_CATS = [
+          { value: "general", label: "Tout", emoji: "🛒" },
+          { value: "fruits-legumes", label: "Fruits/Legumes", emoji: "🥬" },
+          { value: "viandes", label: "Viandes", emoji: "🥩" },
+          { value: "produits-laitiers", label: "Laitiers", emoji: "🧀" },
+          { value: "epicerie", label: "Epicerie", emoji: "🍝" },
+          { value: "hygiene", label: "Hygiene", emoji: "🧴" },
+          { value: "autre", label: "Autre", emoji: "📦" },
+        ];
+
+        const unchecked = shoppingItems.filter((i) => !i.checked);
+        const checked = shoppingItems.filter((i) => i.checked);
+
+        async function addShoppingItem() {
+          if (!newShoppingText.trim() || !profile?.family_id) return;
+          await supabase.from("shopping_items").insert({
+            family_id: profile.family_id,
+            text: newShoppingText.trim(),
+            category: shoppingCat === "general" ? "general" : shoppingCat,
+            added_by: profile.first_name || "",
+          });
+          setNewShoppingText("");
+          loadData();
+        }
+
+        async function toggleShoppingItem(item: ShoppingItem) {
+          await supabase.from("shopping_items").update({ checked: !item.checked }).eq("id", item.id);
+          loadData();
+        }
+
+        async function deleteShoppingItem(id: string) {
+          await supabase.from("shopping_items").delete().eq("id", id);
+          loadData();
+        }
+
+        async function clearChecked() {
+          if (!confirm("Vider les articles coches ?")) return;
+          for (const item of checked) {
+            await supabase.from("shopping_items").delete().eq("id", item.id);
+          }
+          loadData();
+        }
+
+        return (
+          <div>
+            <p className="label">Liste de courses</p>
+
+            {/* Add item input */}
+            <div className="flex gap-2 mb-3">
+              <input
+                className="flex-1 px-3 py-2.5 rounded-xl text-sm"
+                style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+                value={newShoppingText}
+                onChange={(e) => setNewShoppingText(e.target.value)}
+                onKeyDown={(e) => { if (e.key === "Enter") addShoppingItem(); }}
+                placeholder="Ajouter un article..."
+              />
+              <button
+                className="px-4 py-2.5 rounded-xl text-sm font-bold"
+                style={{ background: "var(--accent)", color: "#fff" }}
+                onClick={addShoppingItem}
+              >
+                +
+              </button>
+            </div>
+
+            {/* Category chips */}
+            <div className="flex gap-1.5 mb-4 overflow-x-auto pb-1">
+              {SHOP_CATS.map((c) => (
+                <button
+                  key={c.value}
+                  className="px-2.5 py-1.5 rounded-full text-[10px] font-bold shrink-0"
+                  style={{
+                    background: shoppingCat === c.value ? "var(--accent)" : "var(--surface2)",
+                    color: shoppingCat === c.value ? "#fff" : "var(--dim)",
+                  }}
+                  onClick={() => setShoppingCat(c.value)}
+                >
+                  {c.emoji} {c.label}
+                </button>
+              ))}
+            </div>
+
+            {/* Unchecked items */}
+            {unchecked.length === 0 && checked.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-3xl mb-2">🛒</p>
+                <p className="text-sm" style={{ color: "var(--dim)" }}>Liste de courses vide</p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-1.5">
+              {unchecked.map((item) => {
+                const cat = SHOP_CATS.find((c) => c.value === item.category);
+                return (
+                  <div key={item.id} className="card !mb-0 flex items-center gap-3">
+                    <input
+                      type="checkbox"
+                      checked={false}
+                      onChange={() => toggleShoppingItem(item)}
+                      className="rounded w-5 h-5 shrink-0"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold">{item.text}</p>
+                      {item.category !== "general" && (
+                        <span className="text-[10px]" style={{ color: "var(--dim)" }}>{cat?.emoji} {cat?.label}</span>
+                      )}
+                    </div>
+                    {item.added_by && (
+                      <span className="text-[10px] shrink-0" style={{ color: "var(--faint)" }}>{item.added_by}</span>
+                    )}
+                    <button
+                      className="text-xs p-1 shrink-0"
+                      style={{ color: "var(--red, #ef4444)" }}
+                      onClick={() => deleteShoppingItem(item.id)}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* Checked items */}
+            {checked.length > 0 && (
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-bold" style={{ color: "var(--dim)" }}>Coches ({checked.length})</p>
+                  <button
+                    className="text-[10px] font-bold px-2 py-1 rounded-full"
+                    style={{ background: "var(--surface2)", color: "var(--red, #ef4444)" }}
+                    onClick={clearChecked}
+                  >
+                    Vider les coches
+                  </button>
+                </div>
+                <div className="flex flex-col gap-1">
+                  {checked.map((item) => (
+                    <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: "var(--surface2)", opacity: 0.5 }}>
+                      <input
+                        type="checkbox"
+                        checked={true}
+                        onChange={() => toggleShoppingItem(item)}
+                        className="rounded w-5 h-5 shrink-0"
+                      />
+                      <span className="text-sm line-through flex-1">{item.text}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* Note Detail Modal */}
       <Modal open={!!detailNote} onClose={() => setDetailNote(null)} title={detailNote?.title || ""}>

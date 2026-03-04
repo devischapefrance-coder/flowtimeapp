@@ -56,6 +56,7 @@ export interface Event {
   date: string;
   member_id: string | null;
   recurring: RecurringConfig | null;
+  category: string;
   created_at: string;
   members?: Member;
 }
@@ -144,8 +145,18 @@ export interface Meal {
   created_at: string;
 }
 
+export interface ShoppingItem {
+  id: string;
+  family_id: string;
+  text: string;
+  checked: boolean;
+  category: string;
+  added_by: string;
+  created_at: string;
+}
+
 export interface FlowAction {
-  type: "add_event" | "delete_event" | "add_recurring";
+  type: "add_event" | "delete_event" | "edit_event" | "add_recurring";
   data: Record<string, unknown>;
 }
 

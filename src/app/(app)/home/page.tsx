@@ -6,17 +6,17 @@ import { useProfile } from "../layout";
 import FlowChat from "@/components/FlowChat";
 import Timeline from "@/components/Timeline";
 import NotificationManager from "@/components/NotificationManager";
-import type { Event, Member, Address, Contact, Meal } from "@/lib/types";
+import type { Event, Member, Address, Contact, Meal, Birthday } from "@/lib/types";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
 import { useRealtimeEvents } from "@/lib/realtime";
 import { checkReminders } from "@/lib/reminders";
 import { downloadICS, shareICS } from "@/lib/ical";
+import { EVENT_CATEGORIES, getCategoryColor, detectCategory } from "@/lib/categories";
 
 function getWeekDays(offset: number) {
   const today = new Date();
-  // Find Monday of current week
-  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+  const dayOfWeek = today.getDay();
   const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
   const monday = new Date(today);
   monday.setDate(today.getDate() + diffToMonday + offset * 7);
@@ -38,6 +38,53 @@ function getWeekDays(offset: number) {
   return days;
 }
 
+function getMonthDays(year: number, month: number) {
+  const firstDay = new Date(year, month, 1);
+  const lastDay = new Date(year, month + 1, 0);
+  // Day of week of first day (Mon=0 ... Sun=6)
+  let startDow = firstDay.getDay() - 1;
+  if (startDow < 0) startDow = 6;
+
+  const days: { date: string; dayNum: number; isCurrentMonth: boolean; isToday: boolean }[] = [];
+  const todayStr = new Date().toISOString().split("T")[0];
+
+  // Previous month padding
+  for (let i = startDow - 1; i >= 0; i--) {
+    const d = new Date(year, month, -i);
+    days.push({
+      date: d.toISOString().split("T")[0],
+      dayNum: d.getDate(),
+      isCurrentMonth: false,
+      isToday: d.toISOString().split("T")[0] === todayStr,
+    });
+  }
+
+  // Current month
+  for (let i = 1; i <= lastDay.getDate(); i++) {
+    const d = new Date(year, month, i);
+    const dateStr = d.toISOString().split("T")[0];
+    days.push({
+      date: dateStr,
+      dayNum: i,
+      isCurrentMonth: true,
+      isToday: dateStr === todayStr,
+    });
+  }
+
+  // Next month padding to fill 6 rows
+  while (days.length < 42) {
+    const d = new Date(year, month + 1, days.length - startDow - lastDay.getDate() + 1);
+    days.push({
+      date: d.toISOString().split("T")[0],
+      dayNum: d.getDate(),
+      isCurrentMonth: false,
+      isToday: d.toISOString().split("T")[0] === todayStr,
+    });
+  }
+
+  return days;
+}
+
 function getGreeting(): string {
   const h = new Date().getHours();
   if (h < 12) return "Bonjour";
@@ -53,10 +100,17 @@ export default function HomePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
 
   const [meals, setMeals] = useState<Meal[]>([]);
+  const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
+  const [calendarView, setCalendarView] = useState<"week" | "month">("week");
+
+  // Month view state
+  const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
+  const [monthMonth, setMonthMonth] = useState(() => new Date().getMonth());
+  const [monthEvents, setMonthEvents] = useState<Event[]>([]);
 
   // Meal state
   const [mealModal, setMealModal] = useState(false);
@@ -65,9 +119,16 @@ export default function HomePage() {
   const [mealType, setMealType] = useState<string>("dejeuner");
   const [mealEmoji, setMealEmoji] = useState("🍽️");
 
+  // Quick event creation state
+  const [quickEventModal, setQuickEventModal] = useState(false);
+  const [qeTitle, setQeTitle] = useState("");
+  const [qeTime, setQeTime] = useState("09:00");
+  const [qeMember, setQeMember] = useState<string>("");
+  const [qeCategory, setQeCategory] = useState("general");
+  const [qeDescription, setQeDescription] = useState("");
+
   const days = getWeekDays(weekOffset);
   const [selectedDay, setSelectedDay] = useState(() => {
-    // Default to today's index in the week
     const idx = getWeekDays(0).findIndex((d) => d.isToday);
     return idx >= 0 ? idx : 0;
   });
@@ -75,8 +136,11 @@ export default function HomePage() {
 
   const dateDisplay = days[selectedDay].dayName;
 
-  // Month/year label for the week header
   const weekMonthLabel = (() => {
+    if (calendarView === "month") {
+      const d = new Date(monthYear, monthMonth);
+      return d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    }
     const first = new Date(days[0].date);
     const last = new Date(days[6].date);
     const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
@@ -89,7 +153,7 @@ export default function HomePage() {
     const weekDays = getWeekDays(weekOffset);
     const startDate = weekDays[0].date;
     const endDate = weekDays[6].date;
-    const [evRes, memRes, addrRes, contRes, mealRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -102,18 +166,37 @@ export default function HomePage() {
       supabase.from("meals").select("*").eq("family_id", profile.family_id)
         .gte("date", startDate)
         .lte("date", endDate),
+      supabase.from("birthdays").select("*").eq("family_id", profile.family_id),
     ]);
     if (evRes.data) setEvents(evRes.data as Event[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
     if (addrRes.data) setAddresses(addrRes.data as Address[]);
     if (contRes.data) setContacts(contRes.data as Contact[]);
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
+    if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id, weekOffset]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
-  // Realtime: auto-refresh when family events change
+  // Load month events when in month view
+  useEffect(() => {
+    if (calendarView !== "month" || !profile?.family_id) return;
+    const firstDay = new Date(monthYear, monthMonth, 1);
+    const lastDay = new Date(monthYear, monthMonth + 1, 0);
+    const startDate = firstDay.toISOString().split("T")[0];
+    const endDate = lastDay.toISOString().split("T")[0];
+    supabase
+      .from("events")
+      .select("*, members(name,emoji,color)")
+      .eq("family_id", profile.family_id)
+      .gte("date", startDate)
+      .lte("date", endDate)
+      .then(({ data }) => {
+        if (data) setMonthEvents(data as Event[]);
+      });
+  }, [calendarView, monthYear, monthMonth, profile?.family_id]);
+
   useRealtimeEvents(profile?.family_id, loadData);
 
   // Proactive reminders check every 5 minutes
@@ -132,7 +215,6 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, [events, profile?.first_name]);
 
-  // Calendar export
   function handleExport() {
     if (typeof navigator !== "undefined" && "canShare" in navigator) {
       shareICS(events);
@@ -141,10 +223,8 @@ export default function HomePage() {
     }
   }
 
-  // Find user's own member for perso mode
   const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
-  // Apply perso/famille filter first
   const viewEvents = viewMode === "perso" && myMember
     ? events.filter((e) => e.member_id === myMember.id)
     : events;
@@ -159,11 +239,32 @@ export default function HomePage() {
     eventCounts[ev.date] = (eventCounts[ev.date] || 0) + 1;
   }
 
-  // Today's events (always real today, not selected day)
+  // Dominant category per day for week calendar dots
+  const dayCategoryColors: Record<string, string> = {};
+  for (const date of Object.keys(eventCounts)) {
+    const dayEvs = viewEvents.filter((e) => e.date === date);
+    const catCount: Record<string, number> = {};
+    for (const e of dayEvs) {
+      const cat = e.category || "general";
+      catCount[cat] = (catCount[cat] || 0) + 1;
+    }
+    const dominant = Object.entries(catCount).sort((a, b) => b[1] - a[1])[0];
+    dayCategoryColors[date] = dominant ? getCategoryColor(dominant[0]) : getCategoryColor("general");
+  }
+
+  // Month view: events per day with categories
+  const monthEventsByDay: Record<string, Event[]> = {};
+  const viewMonthEvents = viewMode === "perso" && myMember
+    ? monthEvents.filter((e) => e.member_id === myMember.id)
+    : monthEvents;
+  for (const ev of viewMonthEvents) {
+    if (!monthEventsByDay[ev.date]) monthEventsByDay[ev.date] = [];
+    monthEventsByDay[ev.date].push(ev);
+  }
+
   const todayStr = new Date().toISOString().split("T")[0];
   const todayEvents = viewEvents.filter((e) => e.date === todayStr);
 
-  // Next upcoming event
   const now = new Date();
   const nextEvent = dayEvents
     .filter((e) => {
@@ -178,6 +279,26 @@ export default function HomePage() {
     loadData();
   }
 
+  async function deleteEventSeries(ev: Event) {
+    if (!profile?.family_id || !ev.recurring) return;
+    if (!confirm("Supprimer toute la serie ?")) return;
+    // Find all events with same title, member, and recurring config
+    const { data } = await supabase
+      .from("events")
+      .select("id")
+      .eq("family_id", profile.family_id)
+      .eq("title", ev.title)
+      .eq("member_id", ev.member_id);
+    if (data) {
+      const ids = data
+        .map((e: { id: string }) => e.id);
+      for (const id of ids) {
+        await supabase.from("events").delete().eq("id", id);
+      }
+    }
+    loadData();
+  }
+
   function resolveMemberId(memberName?: string): string | null {
     if (!memberName) return null;
     const mem = members.find((m) => m.name.toLowerCase() === memberName.toLowerCase());
@@ -188,29 +309,35 @@ export default function HomePage() {
     if (!profile?.family_id) return;
 
     if (action.type === "add_event") {
+      const title = action.data.title as string;
       await supabase.from("events").insert({
         family_id: profile.family_id,
-        title: action.data.title,
+        title,
         time: action.data.time,
         date: action.data.date || currentDate,
         member_id: resolveMemberId(action.data.member_name as string),
         description: action.data.description || "",
+        category: (action.data.category as string) || detectCategory(title),
       });
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
     } else if (action.type === "edit_event") {
+      const title = (action.data.title as string) || "";
       await supabase.from("events").delete().eq("id", action.data.event_id);
       await supabase.from("events").insert({
         family_id: profile.family_id,
-        title: action.data.title,
+        title,
         time: action.data.time,
         date: action.data.date || currentDate,
         member_id: resolveMemberId(action.data.member_name as string),
         description: action.data.description || "",
+        category: (action.data.category as string) || detectCategory(title),
       });
     } else if (action.type === "add_recurring") {
       const memberId = resolveMemberId(action.data.member_name as string);
       const recurringDays = action.data.days as number[];
+      const title = action.data.title as string;
+      const category = (action.data.category as string) || detectCategory(title);
       const startDate = new Date();
       for (let week = 0; week < 4; week++) {
         for (const day of recurringDays) {
@@ -218,15 +345,42 @@ export default function HomePage() {
           d.setDate(d.getDate() + ((day - d.getDay() + 7) % 7) + week * 7);
           await supabase.from("events").insert({
             family_id: profile.family_id,
-            title: action.data.title,
+            title,
             time: action.data.time_start,
             date: d.toISOString().split("T")[0],
             member_id: memberId,
             recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
+            category,
           });
         }
       }
     }
+    loadData();
+  }
+
+  // --- Quick event creation ---
+  function openQuickEvent() {
+    setQeTitle("");
+    setQeTime("09:00");
+    setQeMember(viewMode === "perso" && myMember ? myMember.id : "");
+    setQeCategory("general");
+    setQeDescription("");
+    setQuickEventModal(true);
+  }
+
+  async function saveQuickEvent() {
+    if (!profile?.family_id || !qeTitle.trim() || !qeTime) return;
+    const category = qeCategory === "general" ? detectCategory(qeTitle) : qeCategory;
+    await supabase.from("events").insert({
+      family_id: profile.family_id,
+      title: qeTitle.trim(),
+      time: qeTime,
+      date: currentDate,
+      member_id: qeMember || null,
+      description: qeDescription.trim(),
+      category,
+    });
+    setQuickEventModal(false);
     loadData();
   }
 
@@ -281,14 +435,54 @@ export default function HomePage() {
     loadData();
   }
 
+  // Month navigation
+  function prevMonth() {
+    if (monthMonth === 0) {
+      setMonthMonth(11);
+      setMonthYear(monthYear - 1);
+    } else {
+      setMonthMonth(monthMonth - 1);
+    }
+  }
+
+  function nextMonth() {
+    if (monthMonth === 11) {
+      setMonthMonth(0);
+      setMonthYear(monthYear + 1);
+    } else {
+      setMonthMonth(monthMonth + 1);
+    }
+  }
+
+  function selectMonthDay(dateStr: string) {
+    // Find which week contains this date and switch to week view
+    const d = new Date(dateStr);
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+    const thisMonday = new Date(today);
+    thisMonday.setDate(today.getDate() + diffToMonday);
+
+    const targetDow = d.getDay();
+    const targetMonday = new Date(d);
+    const diff = targetDow === 0 ? -6 : 1 - targetDow;
+    targetMonday.setDate(d.getDate() + diff);
+
+    const weekDiff = Math.round((targetMonday.getTime() - thisMonday.getTime()) / (7 * 24 * 60 * 60 * 1000));
+    setWeekOffset(weekDiff);
+
+    const dayIdx = targetDow === 0 ? 6 : targetDow - 1;
+    setSelectedDay(dayIdx);
+    setCalendarView("week");
+  }
+
   const flowContext = {
     userName: profile?.first_name,
     members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji })),
-    todayEvents: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
-    weekEvents: viewEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name })),
+    todayEvents: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name, category: e.category })),
+    weekEvents: viewEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name, category: e.category })),
     addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
     contacts: contacts.map((c) => ({ name: c.name, relation: c.relation, phone: c.phone })),
-
     selectedDate: currentDate,
     selectedDayName: days[selectedDay].dayName,
     today: todayStr,
@@ -296,6 +490,7 @@ export default function HomePage() {
   };
 
   const totalWeekEvents = viewEvents.length;
+  const monthDays = calendarView === "month" ? getMonthDays(monthYear, monthMonth) : [];
 
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
@@ -365,7 +560,10 @@ export default function HomePage() {
 
       {/* Next event card */}
       {nextEvent && (
-        <div className="card flex items-center gap-3 mt-4 !mb-0" style={{ borderLeft: `3px solid var(--accent)` }}>
+        <div
+          className="card flex items-center gap-3 mt-4 !mb-0"
+          style={{ borderLeft: `3px solid ${getCategoryColor(nextEvent.category)}` }}
+        >
           <div className="flex-1">
             <p className="text-[10px] font-bold uppercase" style={{ color: "var(--accent)" }}>Prochain</p>
             <p className="text-sm font-bold mt-0.5">{nextEvent.title}</p>
@@ -394,14 +592,21 @@ export default function HomePage() {
         <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--green)", color: "#fff" }}>En ligne</span>
       </div>
 
-      {/* Week calendar */}
+      {/* Calendar section */}
       <div className="mt-6 mb-2">
-        {/* Month label + navigation */}
+        {/* Month label + navigation + view toggle */}
         <div className="flex items-center justify-between mb-2 px-1">
           <button
             className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
             style={{ background: "var(--surface2)", color: "var(--text)" }}
-            onClick={() => { setWeekOffset((o) => o - 1); setSelectedDay(0); }}
+            onClick={() => {
+              if (calendarView === "week") {
+                setWeekOffset((o) => o - 1);
+                setSelectedDay(0);
+              } else {
+                prevMonth();
+              }
+            }}
           >
             ‹
           </button>
@@ -409,7 +614,7 @@ export default function HomePage() {
             <span className="text-xs font-bold capitalize" style={{ color: "var(--dim)" }}>
               {weekMonthLabel}
             </span>
-            {weekOffset !== 0 && (
+            {calendarView === "week" && weekOffset !== 0 && (
               <button
                 className="text-[10px] font-bold px-2 py-0.5 rounded-full"
                 style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
@@ -422,54 +627,144 @@ export default function HomePage() {
                 Aujourd&apos;hui
               </button>
             )}
+            <button
+              className="w-7 h-7 rounded-full flex items-center justify-center text-xs"
+              style={{ background: "var(--surface2)", color: "var(--dim)" }}
+              onClick={() => {
+                if (calendarView === "week") {
+                  // Switch to month, set to the month of the current week
+                  const d = new Date(days[selectedDay].date);
+                  setMonthYear(d.getFullYear());
+                  setMonthMonth(d.getMonth());
+                  setCalendarView("month");
+                } else {
+                  setCalendarView("week");
+                }
+              }}
+              title={calendarView === "week" ? "Vue mois" : "Vue semaine"}
+            >
+              {calendarView === "week" ? "📅" : "📋"}
+            </button>
           </div>
           <button
             className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
             style={{ background: "var(--surface2)", color: "var(--text)" }}
-            onClick={() => { setWeekOffset((o) => o + 1); setSelectedDay(0); }}
+            onClick={() => {
+              if (calendarView === "week") {
+                setWeekOffset((o) => o + 1);
+                setSelectedDay(0);
+              } else {
+                nextMonth();
+              }
+            }}
           >
             ›
           </button>
         </div>
 
-        {/* Day buttons */}
-        <div className="grid grid-cols-7 gap-1">
-          {days.map((d, i) => {
-            const date = new Date(d.date);
-            const dayNum = date.getDate();
-            const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3);
-            const isSelected = selectedDay === i;
-            const count = eventCounts[d.date] || 0;
+        {/* Week view */}
+        {calendarView === "week" && (
+          <div className="grid grid-cols-7 gap-1">
+            {days.map((d, i) => {
+              const date = new Date(d.date);
+              const dayNum = date.getDate();
+              const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3);
+              const isSelected = selectedDay === i;
+              const count = eventCounts[d.date] || 0;
+              const dotColor = dayCategoryColors[d.date] || "var(--accent)";
 
-            return (
-              <button
-                key={d.date}
-                className="flex flex-col items-center py-2 rounded-2xl transition-all"
-                style={{
-                  background: isSelected ? "var(--accent)" : "transparent",
-                  boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none",
-                }}
-                onClick={() => setSelectedDay(i)}
-              >
-                <span className="text-[10px] font-bold uppercase" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>
-                  {dayLetter}
-                </span>
-                <span
-                  className="text-base font-bold mt-0.5"
-                  style={{ color: isSelected ? "#fff" : d.isToday ? "var(--accent)" : "var(--text)" }}
+              return (
+                <button
+                  key={d.date}
+                  className="flex flex-col items-center py-2 rounded-2xl transition-all"
+                  style={{
+                    background: isSelected ? "var(--accent)" : "transparent",
+                    boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none",
+                  }}
+                  onClick={() => setSelectedDay(i)}
                 >
-                  {dayNum}
-                </span>
-                {count > 0 && (
+                  <span className="text-[10px] font-bold uppercase" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>
+                    {dayLetter}
+                  </span>
                   <span
-                    className="w-1.5 h-1.5 rounded-full mt-1"
-                    style={{ background: isSelected ? "#fff" : "var(--accent)" }}
-                  />
-                )}
-              </button>
-            );
-          })}
-        </div>
+                    className="text-base font-bold mt-0.5"
+                    style={{ color: isSelected ? "#fff" : d.isToday ? "var(--accent)" : "var(--text)" }}
+                  >
+                    {dayNum}
+                  </span>
+                  {count > 0 && (
+                    <span
+                      className="w-1.5 h-1.5 rounded-full mt-1"
+                      style={{ background: isSelected ? "#fff" : dotColor }}
+                    />
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {/* Month view */}
+        {calendarView === "month" && (
+          <div>
+            {/* Day headers */}
+            <div className="grid grid-cols-7 gap-0.5 mb-1">
+              {["Lun", "Mar", "Mer", "Jeu", "Ven", "Sam", "Dim"].map((d) => (
+                <div key={d} className="text-center text-[10px] font-bold py-1" style={{ color: "var(--faint)" }}>
+                  {d}
+                </div>
+              ))}
+            </div>
+            {/* Day cells */}
+            <div className="grid grid-cols-7 gap-0.5">
+              {monthDays.map((d, i) => {
+                const dayEvs = monthEventsByDay[d.date] || [];
+                const isSelected = d.date === currentDate && calendarView === "month";
+                // Get unique category colors for this day (max 3 dots)
+                const catColors: string[] = [];
+                const seenCats = new Set<string>();
+                for (const e of dayEvs) {
+                  const cat = e.category || "general";
+                  if (!seenCats.has(cat)) {
+                    seenCats.add(cat);
+                    catColors.push(getCategoryColor(cat));
+                  }
+                  if (catColors.length >= 3) break;
+                }
+
+                return (
+                  <button
+                    key={i}
+                    className="flex flex-col items-center py-1.5 rounded-xl transition-all"
+                    style={{
+                      background: d.isToday ? "var(--accent)" : isSelected ? "var(--accent-soft)" : "transparent",
+                      opacity: d.isCurrentMonth ? 1 : 0.3,
+                    }}
+                    onClick={() => selectMonthDay(d.date)}
+                  >
+                    <span
+                      className="text-xs font-bold"
+                      style={{ color: d.isToday ? "#fff" : "var(--text)" }}
+                    >
+                      {d.dayNum}
+                    </span>
+                    {catColors.length > 0 && (
+                      <div className="flex gap-0.5 mt-0.5">
+                        {catColors.map((c, ci) => (
+                          <span
+                            key={ci}
+                            className="w-1 h-1 rounded-full"
+                            style={{ background: d.isToday ? "#fff" : c }}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Member filters (hidden in perso mode) */}
@@ -519,10 +814,28 @@ export default function HomePage() {
       )}
 
       {/* Timeline */}
-      <p className="label">
-        {days[selectedDay].isToday ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
-      </p>
-      <Timeline events={filteredEvents} onDelete={deleteEvent} />
+      <div className="flex items-center justify-between">
+        <p className="label">
+          {days[selectedDay].isToday ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
+        </p>
+        <button
+          className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
+          style={{ background: "var(--accent)", color: "#fff" }}
+          onClick={openQuickEvent}
+          title="Ajouter un evenement"
+        >
+          +
+        </button>
+      </div>
+      <Timeline
+        events={filteredEvents}
+        onDelete={deleteEvent}
+        onDeleteSeries={deleteEventSeries}
+        onReorder={async (eventId, newTime) => {
+          await supabase.from("events").update({ time: newTime }).eq("id", eventId);
+          loadData();
+        }}
+      />
 
       {filteredEvents.length === 0 && (
         <div className="text-center py-8">
@@ -531,9 +844,9 @@ export default function HomePage() {
           <button
             className="text-xs font-bold mt-2"
             style={{ color: "var(--accent)" }}
-            onClick={() => setChatOpen(true)}
+            onClick={openQuickEvent}
           >
-            + Ajouter via Flow
+            + Ajouter un evenement
           </button>
         </div>
       )}
@@ -577,6 +890,91 @@ export default function HomePage() {
           })}
         </div>
       </div>
+
+      {/* Quick Event Modal */}
+      <Modal open={quickEventModal} onClose={() => setQuickEventModal(false)} title="Nouvel evenement">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Titre</label>
+            <input
+              className="w-full px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+              value={qeTitle}
+              onChange={(e) => {
+                setQeTitle(e.target.value);
+                // Auto-detect category
+                if (qeCategory === "general") {
+                  const detected = detectCategory(e.target.value);
+                  if (detected !== "general") setQeCategory(detected);
+                }
+              }}
+              placeholder="Ex: Foot, Dentiste, Ecole..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Heure</label>
+            <input
+              type="time"
+              className="w-full px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+              value={qeTime}
+              onChange={(e) => setQeTime(e.target.value)}
+            />
+          </div>
+          {members.length > 0 && (
+            <div>
+              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Membre</label>
+              <select
+                className="w-full px-3 py-2.5 rounded-xl text-sm"
+                style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+                value={qeMember}
+                onChange={(e) => setQeMember(e.target.value)}
+              >
+                <option value="">Aucun</option>
+                {members.map((m) => (
+                  <option key={m.id} value={m.id}>{m.emoji} {m.name}</option>
+                ))}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Categorie</label>
+            <div className="flex flex-wrap gap-1.5">
+              {EVENT_CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold transition-all"
+                  style={{
+                    background: qeCategory === c.value ? `${c.color}20` : "var(--surface2)",
+                    color: qeCategory === c.value ? c.color : "var(--dim)",
+                    border: qeCategory === c.value ? `1px solid ${c.color}` : "1px solid transparent",
+                  }}
+                  onClick={() => setQeCategory(c.value)}
+                >
+                  {c.emoji} {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Description (optionnel)</label>
+            <input
+              className="w-full px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+              value={qeDescription}
+              onChange={(e) => setQeDescription(e.target.value)}
+              placeholder="Details..."
+            />
+          </div>
+          <button
+            className="w-full py-3 rounded-xl font-bold text-sm"
+            style={{ background: "var(--accent)", color: "#fff" }}
+            onClick={saveQuickEvent}
+          >
+            Ajouter
+          </button>
+        </div>
+      </Modal>
 
       {/* Meal Modal */}
       <Modal open={mealModal} onClose={() => setMealModal(false)} title={editingMeal ? "Modifier le repas" : "Ajouter un repas"}>
@@ -656,7 +1054,7 @@ export default function HomePage() {
       </button>
 
       {/* Notifications */}
-      <NotificationManager events={events} enabled={true} />
+      <NotificationManager events={events} birthdays={birthdays} enabled={true} />
 
       {/* Chat */}
       <FlowChat

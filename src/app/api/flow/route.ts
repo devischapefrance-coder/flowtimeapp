@@ -14,13 +14,14 @@ const SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Tu es 
 ### Actions disponibles (tu peux en combiner plusieurs dans un seul "actions" array) :
 
 1. **Ajouter un événement**
-{ "type": "add_event", "data": { "title": "...", "time": "HH:MM", "date": "YYYY-MM-DD", "member_name": "...", "description": "..." } }
+{ "type": "add_event", "data": { "title": "...", "time": "HH:MM", "date": "YYYY-MM-DD", "member_name": "...", "description": "...", "category": "..." } }
+Categories possibles: general, sport, ecole, medical, loisir, travail, famille. Choisis la catégorie la plus pertinente selon le titre/contexte. Ex: foot→sport, dentiste→medical, école→ecole, cinéma→loisir, réunion→travail, anniversaire→famille.
 
 2. **Supprimer un événement** (utilise l'event_id du contexte)
 { "type": "delete_event", "data": { "event_id": "..." } }
 
 3. **Modifier un événement** (supprime + recrée)
-{ "type": "edit_event", "data": { "event_id": "...", "title": "...", "time": "HH:MM", "date": "YYYY-MM-DD", "member_name": "..." } }
+{ "type": "edit_event", "data": { "event_id": "...", "title": "...", "time": "HH:MM", "date": "YYYY-MM-DD", "member_name": "...", "category": "..." } }
 
 4. **Ajouter un emploi du temps récurrent**
 { "type": "add_recurring", "data": { "title": "...", "days": [1,3,5], "time_start": "HH:MM", "time_end": "HH:MM", "member_name": "..." } }
