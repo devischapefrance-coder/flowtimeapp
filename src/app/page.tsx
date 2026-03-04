@@ -80,7 +80,7 @@ export default function LoginPage() {
     const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
-      options: { redirectTo: `${siteUrl}/home` },
+      options: { redirectTo: `${siteUrl}/auth/callback` },
     });
     if (oauthError) {
       setError(oauthError.message);
