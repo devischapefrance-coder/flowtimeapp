@@ -12,6 +12,10 @@ export async function POST(req: Request) {
     return Response.json({ error: "Code invalide" }, { status: 400 });
   }
 
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    return Response.json({ error: "Configuration serveur manquante (SERVICE_ROLE_KEY)" }, { status: 500 });
+  }
+
   const adminClient = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.SUPABASE_SERVICE_ROLE_KEY!
@@ -27,8 +31,12 @@ export async function POST(req: Request) {
     .neq("id", user.id)
     .limit(1);
 
-  if (searchError || !matches || matches.length === 0) {
-    return Response.json({ error: "Code famille introuvable. Vérifie le code et réessaie." }, { status: 404 });
+  if (searchError) {
+    return Response.json({ error: `Erreur recherche: ${searchError.message}` }, { status: 500 });
+  }
+
+  if (!matches || matches.length === 0) {
+    return Response.json({ error: `Code famille introuvable pour "${search}". Vérifie le code et réessaie.` }, { status: 404 });
   }
 
   const targetFamilyId = matches[0].family_id;
