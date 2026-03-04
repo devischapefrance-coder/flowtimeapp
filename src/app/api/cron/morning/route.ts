@@ -1,11 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
 import webpush from "web-push";
-
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-);
+import { supabaseAdmin } from "@/lib/supabase-admin";
 
 function getWebPush() {
   const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
