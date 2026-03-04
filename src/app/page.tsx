@@ -37,15 +37,15 @@ export default function Splash() {
       </h1>
 
       <p className="mt-2 text-[13px] text-center" style={{ color: "var(--dim)" }}>
-        Votre famille, parfaitement synchronisee
+        Votre famille, parfaitement synchronisée
       </p>
 
       <div className="flex flex-col gap-3 w-full max-w-[300px] mt-[50px]">
         <Link href="/signup" className="btn btn-primary">
-          Creer un compte
+          Créer un compte
         </Link>
         <Link href="/login" className="btn btn-secondary">
-          J&apos;ai deja un compte
+          J&apos;ai déjà un compte
         </Link>
         <Link
           href="/demo"
@@ -54,7 +54,7 @@ export default function Splash() {
           onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
           onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
         >
-          Essayer la demo →
+          Essayer la démo →
         </Link>
       </div>
 
@@ -62,7 +62,7 @@ export default function Splash() {
         className="mt-auto pb-6 text-[9px]"
         style={{ color: "var(--faint)" }}
       >
-        v3.0 · Donnees securisees via Supabase
+        v3.0 · Données sécurisées via Supabase
       </p>
     </div>
   );
