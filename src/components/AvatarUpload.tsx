@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useRef, useCallback, useEffect } from "react";
+import { createPortal } from "react-dom";
 import { uploadAvatar } from "@/lib/storage";
 
 interface AvatarUploadProps {
@@ -196,8 +197,8 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
       />
       <canvas ref={canvasRef} className="hidden" />
 
-      {/* Crop screen — blocks all interaction behind */}
-      {cropSrc && (
+      {/* Crop screen — rendered via portal at body level, above everything */}
+      {cropSrc && createPortal(
         <div
           className="fixed inset-0 flex flex-col items-center justify-center"
           style={{ zIndex: 700, background: "rgba(0,0,0,0.9)", touchAction: "none" }}
@@ -306,7 +307,8 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
               {uploading ? "Envoi..." : "Valider"}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </>
   );
