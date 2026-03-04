@@ -767,19 +767,26 @@ export default function FamillePage() {
               </optgroup>
             ))}
           </select>
-          <p className="label mt-2">Visible par</p>
-          <p className="text-[10px]" style={{ color: "var(--faint)" }}>Laisse vide = visible par tous</p>
-          <div className="flex flex-wrap gap-2">
-            {members.map((m) => {
-              const sel = ((form.visible_to as string[]) || []).includes(m.id);
+          <p className="label mt-2">Visibilité</p>
+          <div className="flex gap-2">
+            {[
+              { key: "famille", label: "👨‍👩‍👧‍👦 Famille", desc: "Tout le monde voit" },
+              { key: "perso", label: "🔒 Personnel", desc: "Moi uniquement" },
+            ].map((opt) => {
+              const isPerso = ((form.visible_to as string[]) || []).length > 0;
+              const sel = opt.key === "perso" ? isPerso : !isPerso;
               return (
-                <button key={m.id} className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                <button key={opt.key} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center transition-colors"
                   style={{ background: sel ? "var(--accent)" : "var(--surface2)", color: sel ? "#fff" : "var(--dim)" }}
                   onClick={() => {
-                    const cur = (form.visible_to as string[]) || [];
-                    setForm({ ...form, visible_to: sel ? cur.filter((id) => id !== m.id) : [...cur, m.id] });
+                    if (opt.key === "perso") {
+                      const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+                      setForm({ ...form, visible_to: myMember ? [myMember.id] : ["__me__"] });
+                    } else {
+                      setForm({ ...form, visible_to: [] });
+                    }
                   }}>
-                  {m.emoji} {m.name}
+                  {opt.label}
                 </button>
               );
             })}
