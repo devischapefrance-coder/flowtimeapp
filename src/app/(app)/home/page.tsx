@@ -143,10 +143,10 @@ function getMonthDays(year: number, month: number) {
   return days;
 }
 
-function getGreeting(): string {
-  const h = new Date().getHours();
+function getGreeting(date: Date): string {
+  const h = date.getHours();
   if (h < 12) return "Bonjour";
-  if (h < 18) return "Bon apres-midi";
+  if (h < 18) return "Bon après-midi";
   return "Bonsoir";
 }
 
@@ -179,6 +179,26 @@ export default function HomePage() {
   const [isOffline, setIsOffline] = useState(false);
   const scrollStripRef = useRef<HTMLDivElement>(null);
   const scrollInitRef = useRef(false);
+
+  // Live clock: updates every minute
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const n = new Date();
+      setNow(n);
+      // If date changed (midnight), update selectedDate to today
+      const newDateStr = n.toISOString().split("T")[0];
+      setSelectedDate((prev) => {
+        const prevDate = new Date(prev + "T00:00:00");
+        const oldToday = new Date();
+        oldToday.setHours(0, 0, 0, 0);
+        // Only auto-update if user was on "today"
+        const wasOnToday = prev === new Date(Date.now() - 60000).toISOString().split("T")[0];
+        return wasOnToday ? newDateStr : prev;
+      });
+    }, 30000); // every 30s
+    return () => clearInterval(interval);
+  }, []);
 
   // Month view state
   const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
@@ -228,7 +248,7 @@ export default function HomePage() {
   const diffToMondaySel = dayOfWeekSel === 0 ? -6 : 1 - dayOfWeekSel;
   const mondaySel = new Date(selectedDateObj);
   mondaySel.setDate(selectedDateObj.getDate() + diffToMondaySel);
-  const todayStr = new Date().toISOString().split("T")[0];
+  const todayStr = now.toISOString().split("T")[0];
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(mondaySel);
     d.setDate(mondaySel.getDate() + i);
@@ -243,6 +263,7 @@ export default function HomePage() {
   const selectedDay = days.findIndex((d) => d.date === selectedDate);
   const currentDate = selectedDate;
   const dateDisplay = selectedDateObj.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const liveTime = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const dayStrip = getDayStrip();
 
   const weekMonthLabel = (() => {
@@ -466,7 +487,6 @@ export default function HomePage() {
 
   const todayEvents = viewEvents.filter((e) => e.date === todayStr);
 
-  const now = new Date();
   const nextEvent = dayEvents
     .filter((e) => {
       if (!e.time) return false;
@@ -1317,8 +1337,8 @@ export default function HomePage() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-xl font-bold">{getGreeting()}, {profile?.first_name}</h1>
-          <p className="text-sm capitalize mt-0.5" style={{ color: "var(--dim)" }}>{dateDisplay}</p>
+          <h1 className="text-xl font-bold">{getGreeting(now)}, {profile?.first_name}</h1>
+          <p className="text-sm capitalize mt-0.5" style={{ color: "var(--dim)" }}>{dateDisplay} · {liveTime}</p>
         </div>
         <div className="flex items-center gap-2">
           <button className="w-9 h-9 rounded-full flex items-center justify-center text-sm relative"
