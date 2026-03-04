@@ -84,11 +84,32 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/");
       return;
     }
-    const { data } = await supabase
+
+    let { data } = await supabase
       .from("profiles")
       .select("*")
       .eq("id", user.id)
       .single();
+
+    // Auto-create profile for OAuth users (Google, etc.)
+    if (!data && user) {
+      const meta = user.user_metadata || {};
+      const newProfile = {
+        id: user.id,
+        email: user.email || "",
+        first_name: meta.full_name?.split(" ")[0] || meta.name?.split(" ")[0] || "",
+        last_name: meta.full_name?.split(" ").slice(1).join(" ") || meta.name?.split(" ").slice(1).join(" ") || "",
+        emoji: "🌟",
+      };
+      await supabase.from("profiles").insert(newProfile);
+      const { data: created } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+      data = created;
+    }
+
     if (data) setProfile(data as Profile);
     setReady(true);
 
@@ -117,6 +138,14 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     }
     sessionStorage.setItem("flowtime_session_active", "true");
     loadProfile();
+
+    // Listen for OAuth sign-in (Google redirect)
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN") {
+        loadProfile();
+      }
+    });
+    return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
