@@ -13,14 +13,25 @@ import { useRealtimeEvents } from "@/lib/realtime";
 import { checkReminders } from "@/lib/reminders";
 import { downloadICS, shareICS } from "@/lib/ical";
 
-function getDays(count: number) {
+function getWeekDays(offset: number) {
+  const today = new Date();
+  // Find Monday of current week
+  const dayOfWeek = today.getDay(); // 0=Sun, 1=Mon...
+  const diffToMonday = dayOfWeek === 0 ? -6 : 1 - dayOfWeek;
+  const monday = new Date(today);
+  monday.setDate(today.getDate() + diffToMonday + offset * 7);
+
   const days = [];
-  for (let i = 0; i < count; i++) {
-    const d = new Date();
-    d.setDate(d.getDate() + i);
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(monday);
+    d.setDate(monday.getDate() + i);
+    const dateStr = d.toISOString().split("T")[0];
+    const todayStr = today.toISOString().split("T")[0];
+    const isToday = dateStr === todayStr;
     days.push({
-      date: d.toISOString().split("T")[0],
-      label: i === 0 ? "Aujourd'hui" : i === 1 ? "Demain" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
+      date: dateStr,
+      isToday,
+      label: isToday ? "Aujourd'hui" : d.toLocaleDateString("fr-FR", { weekday: "short", day: "numeric" }),
       dayName: d.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" }),
     });
   }
@@ -44,6 +55,8 @@ export default function HomePage() {
   const [meals, setMeals] = useState<Meal[]>([]);
   const [chatOpen, setChatOpen] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
+  const [weekOffset, setWeekOffset] = useState(0);
+  const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
 
   // Meal state
   const [mealModal, setMealModal] = useState(false);
@@ -52,27 +65,43 @@ export default function HomePage() {
   const [mealType, setMealType] = useState<string>("dejeuner");
   const [mealEmoji, setMealEmoji] = useState("🍽️");
 
-  const days = getDays(7);
-  const [selectedDay, setSelectedDay] = useState(0);
+  const days = getWeekDays(weekOffset);
+  const [selectedDay, setSelectedDay] = useState(() => {
+    // Default to today's index in the week
+    const idx = getWeekDays(0).findIndex((d) => d.isToday);
+    return idx >= 0 ? idx : 0;
+  });
   const currentDate = days[selectedDay].date;
 
   const dateDisplay = days[selectedDay].dayName;
 
+  // Month/year label for the week header
+  const weekMonthLabel = (() => {
+    const first = new Date(days[0].date);
+    const last = new Date(days[6].date);
+    const fmt = (d: Date) => d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+    if (first.getMonth() === last.getMonth()) return fmt(first);
+    return `${first.toLocaleDateString("fr-FR", { month: "short" })} — ${last.toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}`;
+  })();
+
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
+    const weekDays = getWeekDays(weekOffset);
+    const startDate = weekDays[0].date;
+    const endDate = weekDays[6].date;
     const [evRes, memRes, addrRes, contRes, mealRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
         .eq("family_id", profile.family_id)
-        .gte("date", days[0].date)
-        .lte("date", days[days.length - 1].date),
+        .gte("date", startDate)
+        .lte("date", endDate),
       supabase.from("members").select("*").eq("family_id", profile.family_id),
       supabase.from("addresses").select("*").eq("family_id", profile.family_id),
       supabase.from("contacts").select("*").eq("family_id", profile.family_id),
       supabase.from("meals").select("*").eq("family_id", profile.family_id)
-        .gte("date", days[0].date)
-        .lte("date", days[days.length - 1].date),
+        .gte("date", startDate)
+        .lte("date", endDate),
     ]);
     if (evRes.data) setEvents(evRes.data as Event[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
@@ -80,7 +109,7 @@ export default function HomePage() {
     if (contRes.data) setContacts(contRes.data as Contact[]);
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [profile?.family_id]);
+  }, [profile?.family_id, weekOffset]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -112,15 +141,27 @@ export default function HomePage() {
     }
   }
 
-  const dayEvents = events.filter((e) => e.date === currentDate);
+  // Find user's own member for perso mode
+  const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+
+  // Apply perso/famille filter first
+  const viewEvents = viewMode === "perso" && myMember
+    ? events.filter((e) => e.member_id === myMember.id)
+    : events;
+
+  const dayEvents = viewEvents.filter((e) => e.date === currentDate);
   const filteredEvents = filter
     ? dayEvents.filter((e) => e.member_id === filter)
     : dayEvents;
 
   const eventCounts: Record<string, number> = {};
-  for (const ev of events) {
+  for (const ev of viewEvents) {
     eventCounts[ev.date] = (eventCounts[ev.date] || 0) + 1;
   }
+
+  // Today's events (always real today, not selected day)
+  const todayStr = new Date().toISOString().split("T")[0];
+  const todayEvents = viewEvents.filter((e) => e.date === todayStr);
 
   // Next upcoming event
   const now = new Date();
@@ -253,7 +294,7 @@ export default function HomePage() {
     today: days[0].date,
   };
 
-  const totalWeekEvents = events.length;
+  const totalWeekEvents = viewEvents.length;
 
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
@@ -285,10 +326,34 @@ export default function HomePage() {
         </div>
       </div>
 
+      {/* Toggle perso / famille */}
+      <div className="flex gap-1 mt-5 p-1 rounded-2xl" style={{ background: "var(--surface2)" }}>
+        <button
+          className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+          style={{
+            background: viewMode === "famille" ? "var(--accent)" : "transparent",
+            color: viewMode === "famille" ? "#fff" : "var(--dim)",
+          }}
+          onClick={() => { setViewMode("famille"); setFilter(null); }}
+        >
+          👨‍👩‍👧‍👦 Famille
+        </button>
+        <button
+          className="flex-1 py-2 rounded-xl text-xs font-bold transition-all"
+          style={{
+            background: viewMode === "perso" ? "var(--accent)" : "transparent",
+            color: viewMode === "perso" ? "#fff" : "var(--dim)",
+          }}
+          onClick={() => { setViewMode("perso"); setFilter(null); }}
+        >
+          👤 Mon planning
+        </button>
+      </div>
+
       {/* Quick stats */}
-      <div className="grid grid-cols-2 gap-2 mt-5">
+      <div className="grid grid-cols-2 gap-2 mt-3">
         <div className="card !mb-0 text-center !py-3">
-          <p className="text-lg font-bold" style={{ color: "var(--accent)" }}>{dayEvents.length}</p>
+          <p className="text-lg font-bold" style={{ color: "var(--accent)" }}>{todayEvents.length}</p>
           <p className="text-[10px]" style={{ color: "var(--dim)" }}>Aujourd&apos;hui</p>
         </div>
         <div className="card !mb-0 text-center !py-3">
@@ -329,47 +394,85 @@ export default function HomePage() {
       </div>
 
       {/* Week calendar */}
-      <div className="grid grid-cols-7 gap-1 mt-6 mb-2">
-        {days.map((d, i) => {
-          const date = new Date(d.date);
-          const dayNum = date.getDate();
-          const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3);
-          const isSelected = selectedDay === i;
-          const isToday = i === 0;
-          const count = eventCounts[d.date] || 0;
-
-          return (
-            <button
-              key={d.date}
-              className="flex flex-col items-center py-2 rounded-2xl transition-all"
-              style={{
-                background: isSelected ? "var(--accent)" : "transparent",
-                boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none",
-              }}
-              onClick={() => setSelectedDay(i)}
-            >
-              <span className="text-[10px] font-bold uppercase" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>
-                {dayLetter}
-              </span>
-              <span
-                className="text-base font-bold mt-0.5"
-                style={{ color: isSelected ? "#fff" : isToday ? "var(--accent)" : "var(--text)" }}
+      <div className="mt-6 mb-2">
+        {/* Month label + navigation */}
+        <div className="flex items-center justify-between mb-2 px-1">
+          <button
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+            style={{ background: "var(--surface2)", color: "var(--text)" }}
+            onClick={() => { setWeekOffset((o) => o - 1); setSelectedDay(0); }}
+          >
+            ‹
+          </button>
+          <div className="flex items-center gap-2">
+            <span className="text-xs font-bold capitalize" style={{ color: "var(--dim)" }}>
+              {weekMonthLabel}
+            </span>
+            {weekOffset !== 0 && (
+              <button
+                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                onClick={() => {
+                  setWeekOffset(0);
+                  const idx = getWeekDays(0).findIndex((d) => d.isToday);
+                  setSelectedDay(idx >= 0 ? idx : 0);
+                }}
               >
-                {dayNum}
-              </span>
-              {count > 0 && (
+                Aujourd&apos;hui
+              </button>
+            )}
+          </div>
+          <button
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm"
+            style={{ background: "var(--surface2)", color: "var(--text)" }}
+            onClick={() => { setWeekOffset((o) => o + 1); setSelectedDay(0); }}
+          >
+            ›
+          </button>
+        </div>
+
+        {/* Day buttons */}
+        <div className="grid grid-cols-7 gap-1">
+          {days.map((d, i) => {
+            const date = new Date(d.date);
+            const dayNum = date.getDate();
+            const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 3);
+            const isSelected = selectedDay === i;
+            const count = eventCounts[d.date] || 0;
+
+            return (
+              <button
+                key={d.date}
+                className="flex flex-col items-center py-2 rounded-2xl transition-all"
+                style={{
+                  background: isSelected ? "var(--accent)" : "transparent",
+                  boxShadow: isSelected ? "0 4px 16px var(--accent-glow)" : "none",
+                }}
+                onClick={() => setSelectedDay(i)}
+              >
+                <span className="text-[10px] font-bold uppercase" style={{ color: isSelected ? "#fff" : "var(--faint)" }}>
+                  {dayLetter}
+                </span>
                 <span
-                  className="w-1.5 h-1.5 rounded-full mt-1"
-                  style={{ background: isSelected ? "#fff" : "var(--accent)" }}
-                />
-              )}
-            </button>
-          );
-        })}
+                  className="text-base font-bold mt-0.5"
+                  style={{ color: isSelected ? "#fff" : d.isToday ? "var(--accent)" : "var(--text)" }}
+                >
+                  {dayNum}
+                </span>
+                {count > 0 && (
+                  <span
+                    className="w-1.5 h-1.5 rounded-full mt-1"
+                    style={{ background: isSelected ? "#fff" : "var(--accent)" }}
+                  />
+                )}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
-      {/* Member filters */}
-      {members.length > 0 && (
+      {/* Member filters (hidden in perso mode) */}
+      {viewMode === "famille" && members.length > 0 && (
         <div className="flex justify-center gap-3 mb-3">
           <button
             className="flex flex-col items-center gap-1 transition-opacity"
@@ -416,14 +519,14 @@ export default function HomePage() {
 
       {/* Timeline */}
       <p className="label">
-        {selectedDay === 0 ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
+        {days[selectedDay].isToday ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
       </p>
       <Timeline events={filteredEvents} onDelete={deleteEvent} />
 
       {filteredEvents.length === 0 && (
         <div className="text-center py-8">
           <p className="text-3xl mb-2">📭</p>
-          <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun evenement {selectedDay === 0 ? "aujourd'hui" : "ce jour"}</p>
+          <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun evenement {days[selectedDay].isToday ? "aujourd'hui" : "ce jour"}</p>
           <button
             className="text-xs font-bold mt-2"
             style={{ color: "var(--accent)" }}
@@ -437,7 +540,7 @@ export default function HomePage() {
       {/* Repas section */}
       <div className="mt-6">
         <p className="label">
-          🍽️ Repas {selectedDay === 0 ? "du jour" : `— ${days[selectedDay].label}`}
+          🍽️ Repas {days[selectedDay].isToday ? "du jour" : `— ${days[selectedDay].label}`}
         </p>
         <div className="flex flex-col gap-2">
           {MEAL_TYPES.map((type) => {
