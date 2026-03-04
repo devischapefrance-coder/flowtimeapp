@@ -449,6 +449,18 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "1.6.0", date: "4 mars 2026", tag: "Nouveau",
+            changes: [
+              "Recherche amelioree (repas, taches, contenu des notes)",
+              "Recherches recentes sauvegardees",
+              "Actions rapides (creer evenement, contact, note, tache)",
+              "Evenements a venir dans la recherche",
+              "Anniversaires proches dans la recherche",
+              "Widget meteo dans la recherche",
+              "Navigation directe vers la date d'un evenement",
+            ],
+          },
+          {
             version: "1.5.0", date: "4 mars 2025", tag: "Nouveau",
             changes: [
               "Recadrage photo de profil (repositionner, zoomer avant upload)",
@@ -553,7 +565,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.5.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.6.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>

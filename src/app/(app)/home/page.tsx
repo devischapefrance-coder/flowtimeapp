@@ -207,6 +207,15 @@ export default function HomePage() {
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
+  // Navigate to a specific date from search overlay
+  useEffect(() => {
+    const gotoDate = localStorage.getItem("flowtime-goto-date");
+    if (gotoDate) {
+      setSelectedDate(gotoDate);
+      localStorage.removeItem("flowtime-goto-date");
+    }
+  }, []);
+
   // Compute week days around selected date for data fetching
   const selectedDateObj = new Date(selectedDate + "T00:00:00");
   const dayOfWeekSel = selectedDateObj.getDay();
