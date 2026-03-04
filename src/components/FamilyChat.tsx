@@ -65,9 +65,21 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
           return updated;
         });
 
-        // Count unread if chat is closed and message is from someone else
+        // Notify if chat is closed and message is from someone else
         if (!openRef.current && msg.sender_id !== userId) {
           setUnread((prev) => prev + 1);
+
+          // Web notification
+          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
+            new Notification(`${msg.sender_emoji} ${msg.sender_name}`, {
+              body: msg.text,
+              icon: "/icons/icon-192.png",
+              tag: "family-chat",
+            });
+          }
+
+          // Vibrate if supported
+          if (navigator.vibrate) navigator.vibrate(200);
         }
       })
       .subscribe();
