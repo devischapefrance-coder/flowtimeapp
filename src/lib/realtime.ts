@@ -78,6 +78,61 @@ export function useRealtimeChores(familyId: string | undefined, onUpdate: () => 
   }, [familyId, onUpdate]);
 }
 
+export function useRealtimeMembers(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`members:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "members", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
+export function useRealtimeContacts(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`contacts:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "contacts", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
+export function useRealtimeAddresses(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`addresses:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "addresses", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
+export function useRealtimeMeals(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`meals:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "meals", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
+export function useRealtimeBirthdays(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`birthdays:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "birthdays", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
 export function useRealtimeNotes(
   familyId: string | undefined,
   currentAuthor: string,

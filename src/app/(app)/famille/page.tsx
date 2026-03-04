@@ -7,6 +7,7 @@ import { useProfile } from "../layout";
 import Modal from "@/components/Modal";
 import type { Member, Contact, Address, DeviceLocation, Event } from "@/lib/types";
 import { getCategoryColor, EVENT_CATEGORIES } from "@/lib/categories";
+import { useRealtimeMembers, useRealtimeContacts, useRealtimeAddresses } from "@/lib/realtime";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
@@ -128,6 +129,11 @@ export default function FamillePage() {
 
   useEffect(() => { load(); }, [load]);
 
+  // Realtime: auto-refresh when another member changes data
+  useRealtimeMembers(familyId, load);
+  useRealtimeContacts(familyId, load);
+  useRealtimeAddresses(familyId, load);
+
   // Suggest default addresses if none exist
   useEffect(() => {
     if (familyId && addresses.length === 0 && members.length >= 0) {
@@ -235,7 +241,7 @@ export default function FamillePage() {
   // ADDRESS CRUD
   function openAddressModal(a: Address | "new") {
     if (a === "new") {
-      setForm({ name: "", emoji: "📍", address: "", lat: "", lng: "", members: [] });
+      setForm({ name: "", emoji: "📍", address: "", lat: "", lng: "", members: [], visible_to: [] });
     } else {
       setForm({
         name: a.name,
@@ -244,6 +250,7 @@ export default function FamillePage() {
         lat: a.lat?.toString() || "",
         lng: a.lng?.toString() || "",
         members: (a.members || []) as string[],
+        visible_to: a.visible_to || [],
       });
     }
     setSearchQuery("");
@@ -253,6 +260,7 @@ export default function FamillePage() {
 
   async function saveAddress() {
     if (!familyId) return;
+    const visTo = (form.visible_to as string[]);
     const data = {
       family_id: familyId,
       name: form.name as string,
@@ -261,6 +269,7 @@ export default function FamillePage() {
       lat: form.lat ? parseFloat(form.lat as string) : null,
       lng: form.lng ? parseFloat(form.lng as string) : null,
       members: form.members || [],
+      visible_to: visTo && visTo.length > 0 ? visTo : null,
     };
     if (addressModal === "new") {
       await supabase.from("addresses").insert(data);
@@ -615,7 +624,11 @@ export default function FamillePage() {
           Ajouter les adresses suggérées
         </button>
       )}
-      {addresses.map((a) => (
+      {addresses.filter((a) => {
+        if (!a.visible_to || a.visible_to.length === 0) return true;
+        const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+        return myMember ? a.visible_to.includes(myMember.id) : false;
+      }).map((a) => (
         <div
           key={a.id}
           className="card flex items-center gap-3 cursor-pointer"
@@ -624,7 +637,10 @@ export default function FamillePage() {
         >
           <div className="text-xl">{a.emoji}</div>
           <div className="flex-1">
-            <p className="font-bold text-sm">{a.name}</p>
+            <p className="font-bold text-sm">
+              {a.name}
+              {a.visible_to && a.visible_to.length > 0 && <span className="text-[10px] ml-1.5" style={{ color: "var(--faint)" }}>🔒</span>}
+            </p>
             <p className="text-xs" style={{ color: a.address ? "var(--dim)" : "var(--red)" }}>
               {a.address || "⚠️ Adresse manquante"}
             </p>
@@ -851,6 +867,30 @@ export default function FamillePage() {
                   />
                   {m.emoji} {m.name}
                 </label>
+              );
+            })}
+          </div>
+          <p className="label mt-2">Visibilité</p>
+          <div className="flex gap-2">
+            {[
+              { key: "famille", label: "👨‍👩‍👧‍👦 Famille" },
+              { key: "perso", label: "🔒 Personnel" },
+            ].map((opt) => {
+              const isPerso = ((form.visible_to as string[]) || []).length > 0;
+              const sel = opt.key === "perso" ? isPerso : !isPerso;
+              return (
+                <button key={opt.key} className="flex-1 py-2.5 rounded-xl text-xs font-bold text-center transition-colors"
+                  style={{ background: sel ? "var(--accent)" : "var(--surface2)", color: sel ? "#fff" : "var(--dim)" }}
+                  onClick={() => {
+                    if (opt.key === "perso") {
+                      const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+                      setForm({ ...form, visible_to: myMember ? [myMember.id] : ["__me__"] });
+                    } else {
+                      setForm({ ...form, visible_to: [] });
+                    }
+                  }}>
+                  {opt.label}
+                </button>
               );
             })}
           </div>

@@ -46,6 +46,7 @@ export interface Address {
   lat: number | null;
   lng: number | null;
   members: string[];
+  visible_to: string[] | null;
   created_at: string;
 }
 

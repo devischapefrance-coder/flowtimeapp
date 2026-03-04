@@ -12,7 +12,7 @@ import NotificationManager from "@/components/NotificationManager";
 import type { Event, Member, Address, Contact, Meal, Birthday, Expense, Chore, DeviceLocation } from "@/lib/types";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
-import { useRealtimeEvents, useRealtimeChores } from "@/lib/realtime";
+import { useRealtimeEvents, useRealtimeChores, useRealtimeMeals, useRealtimeBirthdays, useRealtimeMembers, useRealtimeExpenses } from "@/lib/realtime";
 import dynamic from "next/dynamic";
 import type { MapMarker } from "@/components/MapView";
 
@@ -365,6 +365,10 @@ export default function HomePage() {
 
   useRealtimeEvents(profile?.family_id, loadData);
   useRealtimeChores(profile?.family_id, loadData);
+  useRealtimeMeals(profile?.family_id, loadData);
+  useRealtimeBirthdays(profile?.family_id, loadData);
+  useRealtimeMembers(profile?.family_id, loadData);
+  useRealtimeExpenses(profile?.family_id, loadData);
 
   // Scroll day strip to selected date
   useEffect(() => {
