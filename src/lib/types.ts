@@ -58,6 +58,7 @@ export interface Event {
   recurring: RecurringConfig | null;
   category: string;
   shared: boolean;
+  reminder_minutes: number | null;
   created_at: string;
   members?: Member;
 }
@@ -154,6 +155,40 @@ export interface ShoppingItem {
   checked: boolean;
   category: string;
   added_by: string;
+  created_at: string;
+}
+
+export interface Expense {
+  id: string;
+  family_id: string;
+  amount: number;
+  description: string;
+  category: string;
+  member_id: string | null;
+  date: string;
+  created_at: string;
+}
+
+export interface Chore {
+  id: string;
+  family_id: string;
+  name: string;
+  emoji: string;
+  frequency: "daily" | "weekly";
+  assigned_members: string[];
+  current_index: number;
+  last_rotated: string | null;
+  created_at: string;
+}
+
+export interface FamilyPhoto {
+  id: string;
+  family_id: string;
+  url: string;
+  caption: string;
+  uploaded_by: string;
+  event_id: string | null;
+  week_label: string | null;
   created_at: string;
 }
 

@@ -8,6 +8,7 @@ const SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Tu es 
 - Tu fais des remarques utiles ("Attention, Lucas a déjà foot à cette heure-là").
 - Si on te demande quelque chose d'impossible, tu proposes une alternative.
 - Tu connais les jours de la semaine : 0=dimanche, 1=lundi, 2=mardi, 3=mercredi, 4=jeudi, 5=vendredi, 6=samedi.
+- Tu peux lire des photos/images envoyees par l'utilisateur (OCR, reconnaissance visuelle). Si on t'envoie une photo, analyse-la et reponds en contexte.
 
 ## Tes capacités
 
@@ -71,9 +72,21 @@ Réponds TOUJOURS en JSON valide avec cette structure :
 
 IMPORTANT : Réponds UNIQUEMENT en JSON valide. Aucun texte avant ou après le JSON.`;
 
+type ContentBlock = {
+  type: "text";
+  text: string;
+} | {
+  type: "image";
+  source: {
+    type: "base64";
+    media_type: string;
+    data: string;
+  };
+};
+
 interface ChatMessage {
   role: "user" | "assistant";
-  content: string;
+  content: string | ContentBlock[];
 }
 
 function buildPrompt(message: string, context: Record<string, unknown>): string {
@@ -135,7 +148,7 @@ ${message}`;
 
 export async function POST(req: Request) {
   try {
-    const { message, context, history } = await req.json();
+    const { message, context, history, image } = await req.json();
 
     // Build conversation history for multi-turn
     const messages: ChatMessage[] = [];
@@ -149,11 +162,22 @@ export async function POST(req: Request) {
       }
     }
 
-    // Add current message with full context
-    messages.push({
-      role: "user",
-      content: buildPrompt(message, context),
-    });
+    // Add current message with full context, optionally with image
+    const promptText = buildPrompt(message, context);
+    if (image) {
+      messages.push({
+        role: "user",
+        content: [
+          { type: "image", source: { type: "base64", media_type: "image/jpeg", data: image } },
+          { type: "text", text: promptText },
+        ],
+      });
+    } else {
+      messages.push({
+        role: "user",
+        content: promptText,
+      });
+    }
 
     const response = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",

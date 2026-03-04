@@ -56,6 +56,28 @@ export function useRealtimeEvents(familyId: string | undefined, onUpdate: () => 
   }, [familyId, onUpdate]);
 }
 
+export function useRealtimeExpenses(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`expenses:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "expenses", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
+export function useRealtimeChores(familyId: string | undefined, onUpdate: () => void) {
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel(`chores:${familyId}`)
+      .on("postgres_changes", { event: "*", schema: "public", table: "chores", filter: `family_id=eq.${familyId}` }, () => onUpdate())
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId, onUpdate]);
+}
+
 export function useRealtimeNotes(
   familyId: string | undefined,
   currentAuthor: string,

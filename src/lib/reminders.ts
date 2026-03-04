@@ -82,3 +82,51 @@ export function checkReminders(
 
   return null;
 }
+
+const EVENT_REMINDER_KEY = "flowtime_event_reminders_sent";
+
+function getSentReminders(): Record<string, boolean> {
+  try {
+    return JSON.parse(localStorage.getItem(EVENT_REMINDER_KEY) || "{}");
+  } catch { return {}; }
+}
+
+function markReminderSent(key: string) {
+  const sent = getSentReminders();
+  sent[key] = true;
+  // Clean up old entries (keep only last 200)
+  const keys = Object.keys(sent);
+  if (keys.length > 200) {
+    for (const k of keys.slice(0, keys.length - 200)) delete sent[k];
+  }
+  localStorage.setItem(EVENT_REMINDER_KEY, JSON.stringify(sent));
+}
+
+export function checkEventReminders(
+  events: { id: string; title: string; time: string; date: string; reminder_minutes: number | null }[]
+): { title: string; body: string } | null {
+  const now = new Date();
+  const today = now.toISOString().split("T")[0];
+  const nowMinutes = now.getHours() * 60 + now.getMinutes();
+  const sent = getSentReminders();
+
+  for (const ev of events) {
+    if (!ev.reminder_minutes || ev.date !== today || !ev.time) continue;
+    const [h, m] = ev.time.split(":").map(Number);
+    const eventMinutes = h * 60 + m;
+    const reminderAt = eventMinutes - ev.reminder_minutes;
+    const diff = nowMinutes - reminderAt;
+
+    // Fire if we're within 2 minutes of the reminder time
+    if (diff >= 0 && diff < 2) {
+      const dedupKey = `${ev.id}_${today}`;
+      if (sent[dedupKey]) continue;
+      markReminderSent(dedupKey);
+      return {
+        title: `Rappel : ${ev.title}`,
+        body: `Dans ${ev.reminder_minutes} min (${ev.time})`,
+      };
+    }
+  }
+  return null;
+}

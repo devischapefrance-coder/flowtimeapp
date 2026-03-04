@@ -20,16 +20,35 @@ import { CSS } from "@dnd-kit/utilities";
 
 interface TimelineProps {
   events: Event[];
+  allEvents?: Event[];
   onDelete: (id: string) => void;
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
   onReorder?: (eventId: string, newTime: string) => void;
 }
 
+function findConflicts(events: Event[]): Set<string> {
+  const conflictIds = new Set<string>();
+  const byTime: Record<string, Event[]> = {};
+  for (const ev of events) {
+    if (!ev.time) continue;
+    const key = ev.time;
+    if (!byTime[key]) byTime[key] = [];
+    byTime[key].push(ev);
+  }
+  for (const group of Object.values(byTime)) {
+    if (group.length > 1) {
+      for (const ev of group) conflictIds.add(ev.id);
+    }
+  }
+  return conflictIds;
+}
+
 function SortableEvent({
   ev,
   isPast,
   isNext,
+  isConflict,
   catColor,
   onDelete,
   onDeleteSeries,
@@ -41,6 +60,7 @@ function SortableEvent({
   ev: Event;
   isPast: boolean;
   isNext: boolean;
+  isConflict: boolean;
   catColor: string;
   onDelete: (id: string) => void;
   onDeleteSeries?: (ev: Event) => void;
@@ -140,6 +160,11 @@ function SortableEvent({
                 Prochain
               </span>
             )}
+            {isConflict && (
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(240,107,126,0.15)", color: "var(--red)" }}>
+                Conflit
+              </span>
+            )}
             {ev.recurring && (
               <span className="text-[9px]" style={{ color: "var(--dim)" }}>🔁</span>
             )}
@@ -219,13 +244,14 @@ function SortableEvent({
   );
 }
 
-export default function Timeline({ events, onDelete, onDeleteSeries, onEditSeries, onReorder }: TimelineProps) {
+export default function Timeline({ events, allEvents, onDelete, onDeleteSeries, onEditSeries, onReorder }: TimelineProps) {
   const now = new Date();
   const currentHour = now.getHours();
   const currentMin = now.getMinutes();
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
   const sorted = [...events].sort((a, b) => a.time.localeCompare(b.time));
+  const conflictIds = findConflicts(allEvents || events);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -272,6 +298,7 @@ export default function Timeline({ events, onDelete, onDeleteSeries, onEditSerie
                 ev={ev}
                 isPast={isPast}
                 isNext={isNext}
+                isConflict={conflictIds.has(ev.id)}
                 catColor={catColor}
                 onDelete={onDelete}
                 onDeleteSeries={onDeleteSeries}

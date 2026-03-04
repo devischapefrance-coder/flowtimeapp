@@ -1,9 +1,10 @@
-const CACHE_NAME = "flowtime-v2";
+const CACHE_NAME = "flowtime-v3";
 const OFFLINE_URL = "/";
+const STATIC_ASSETS = ["/", "/home", "/vie", "/famille", "/bienetre", "/reglages"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then((cache) => cache.add(OFFLINE_URL))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(STATIC_ASSETS).catch(() => cache.add(OFFLINE_URL)))
   );
   self.skipWaiting();
 });
@@ -18,10 +19,39 @@ self.addEventListener("activate", (event) => {
 });
 
 self.addEventListener("fetch", (event) => {
-  if (event.request.mode === "navigate") {
+  const { request } = event;
+
+  // Skip non-GET and API/Supabase requests
+  if (request.method !== "GET") return;
+  if (request.url.includes("/api/") || request.url.includes("supabase")) return;
+
+  // Navigation: network-first with cache fallback
+  if (request.mode === "navigate") {
     event.respondWith(
-      fetch(event.request).catch(() => caches.match(OFFLINE_URL))
+      fetch(request)
+        .then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        })
+        .catch(() => caches.match(request).then((r) => r || caches.match(OFFLINE_URL)))
     );
+    return;
+  }
+
+  // Static assets: cache-first
+  if (request.url.match(/\.(js|css|woff2?|png|jpg|svg|ico)$/)) {
+    event.respondWith(
+      caches.match(request).then((cached) => {
+        if (cached) return cached;
+        return fetch(request).then((response) => {
+          const clone = response.clone();
+          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+          return response;
+        }).catch(() => new Response("", { status: 404 }));
+      })
+    );
+    return;
   }
 });
 

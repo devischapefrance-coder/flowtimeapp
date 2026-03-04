@@ -5,14 +5,18 @@ import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import FlowChat from "@/components/FlowChat";
 import Timeline from "@/components/Timeline";
+import DayAgenda from "@/components/DayAgenda";
+import QuickVoice from "@/components/QuickVoice";
 import NotificationManager from "@/components/NotificationManager";
 import type { Event, Member, Address, Contact, Meal, Birthday } from "@/lib/types";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
 import { useRealtimeEvents } from "@/lib/realtime";
-import { checkReminders } from "@/lib/reminders";
+import { checkReminders, checkEventReminders } from "@/lib/reminders";
 import { downloadICS, shareICS } from "@/lib/ical";
+import { exportPDF } from "@/lib/pdf-export";
 import { EVENT_CATEGORIES, getCategoryColor, detectCategory } from "@/lib/categories";
+import { cacheData, getCachedData } from "@/lib/offline";
 
 function getWeekDays(offset: number) {
   const today = new Date();
@@ -106,6 +110,7 @@ export default function HomePage() {
   const [weekOffset, setWeekOffset] = useState(0);
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
+  const [isOffline, setIsOffline] = useState(false);
 
   // Month view state
   const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
@@ -127,6 +132,8 @@ export default function HomePage() {
   const [qeCategory, setQeCategory] = useState("general");
   const [qeDescription, setQeDescription] = useState("");
   const [qeShared, setQeShared] = useState(true);
+  const [qeReminder, setQeReminder] = useState<number | null>(null);
+  const [viewType, setViewType] = useState<"timeline" | "agenda">("timeline");
 
   const days = getWeekDays(weekOffset);
   const [selectedDay, setSelectedDay] = useState(() => {
@@ -149,8 +156,32 @@ export default function HomePage() {
     return `${first.toLocaleDateString("fr-FR", { month: "short" })} — ${last.toLocaleDateString("fr-FR", { month: "short", year: "numeric" })}`;
   })();
 
+  // Offline detection
+  useEffect(() => {
+    const goOffline = () => setIsOffline(true);
+    const goOnline = () => { setIsOffline(false); loadData(); };
+    window.addEventListener("offline", goOffline);
+    window.addEventListener("online", goOnline);
+    setIsOffline(!navigator.onLine);
+    return () => {
+      window.removeEventListener("offline", goOffline);
+      window.removeEventListener("online", goOnline);
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
+
+    // If offline, load from cache
+    if (!navigator.onLine) {
+      const cachedEvents = await getCachedData<Event>("events");
+      const cachedMembers = await getCachedData<Member>("members");
+      if (cachedEvents.length > 0) setEvents(cachedEvents);
+      if (cachedMembers.length > 0) setMembers(cachedMembers);
+      return;
+    }
+
     const weekDays = getWeekDays(weekOffset);
     const startDate = weekDays[0].date;
     const endDate = weekDays[6].date;
@@ -169,8 +200,14 @@ export default function HomePage() {
         .lte("date", endDate),
       supabase.from("birthdays").select("*").eq("family_id", profile.family_id),
     ]);
-    if (evRes.data) setEvents(evRes.data as Event[]);
-    if (memRes.data) setMembers(memRes.data as Member[]);
+    if (evRes.data) {
+      setEvents(evRes.data as Event[]);
+      cacheData("events", evRes.data as Array<{ id: string } & Record<string, unknown>>);
+    }
+    if (memRes.data) {
+      setMembers(memRes.data as Member[]);
+      cacheData("members", memRes.data as Array<{ id: string } & Record<string, unknown>>);
+    }
     if (addrRes.data) setAddresses(addrRes.data as Address[]);
     if (contRes.data) setContacts(contRes.data as Contact[]);
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
@@ -200,19 +237,26 @@ export default function HomePage() {
 
   useRealtimeEvents(profile?.family_id, loadData);
 
-  // Proactive reminders check every 5 minutes
+  // Proactive reminders check every minute
   useEffect(() => {
     function check() {
+      if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
       const reminder = checkReminders(
         events.map((e) => ({ title: e.title, time: e.time, date: e.date })),
         profile?.first_name || ""
       );
-      if (reminder && Notification.permission === "granted") {
+      if (reminder) {
         new Notification(reminder.title, { body: reminder.body, icon: "/icons/icon-192.png" });
+      }
+      const eventReminder = checkEventReminders(
+        events.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, reminder_minutes: e.reminder_minutes }))
+      );
+      if (eventReminder) {
+        new Notification(eventReminder.title, { body: eventReminder.body, icon: "/icons/icon-192.png" });
       }
     }
     check();
-    const interval = setInterval(check, 5 * 60 * 1000);
+    const interval = setInterval(check, 60 * 1000);
     return () => clearInterval(interval);
   }, [events, profile?.first_name]);
 
@@ -384,6 +428,7 @@ export default function HomePage() {
     setQeCategory("general");
     setQeDescription("");
     setQeShared(true);
+    setQeReminder(null);
     setQuickEventModal(true);
   }
 
@@ -399,6 +444,7 @@ export default function HomePage() {
       description: qeDescription.trim(),
       category,
       shared: qeShared,
+      reminder_minutes: qeReminder,
     });
     setQuickEventModal(false);
     loadData();
@@ -514,6 +560,13 @@ export default function HomePage() {
 
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
+      {/* Offline banner */}
+      {isOffline && (
+        <div className="mb-3 px-3 py-2 rounded-xl text-xs font-bold text-center" style={{ background: "rgba(240,124,74,0.15)", color: "var(--warm)", border: "1px solid rgba(240,124,74,0.2)" }}>
+          📡 Hors ligne — donnees en cache
+        </div>
+      )}
+
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
@@ -833,29 +886,67 @@ export default function HomePage() {
         </div>
       )}
 
-      {/* Timeline */}
+      {/* Timeline / Agenda toggle */}
       <div className="flex items-center justify-between">
-        <p className="label">
-          {days[selectedDay].isToday ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
-        </p>
-        <button
-          className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
-          style={{ background: "var(--accent)", color: "#fff" }}
-          onClick={openQuickEvent}
-          title="Ajouter un evenement"
-        >
-          +
-        </button>
+        <div className="flex items-center gap-2">
+          <p className="label !mb-0">
+            {days[selectedDay].isToday ? "Planning du jour" : `Planning — ${days[selectedDay].label}`}
+          </p>
+          <div className="flex gap-0.5 p-0.5 rounded-lg mb-2" style={{ background: "var(--surface2)" }}>
+            <button
+              className="px-2 py-1 rounded-md text-[10px] font-bold"
+              style={{ background: viewType === "timeline" ? "var(--accent)" : "transparent", color: viewType === "timeline" ? "#fff" : "var(--dim)" }}
+              onClick={() => setViewType("timeline")}
+            >
+              Liste
+            </button>
+            <button
+              className="px-2 py-1 rounded-md text-[10px] font-bold"
+              style={{ background: viewType === "agenda" ? "var(--accent)" : "transparent", color: viewType === "agenda" ? "#fff" : "var(--dim)" }}
+              onClick={() => setViewType("agenda")}
+            >
+              Agenda
+            </button>
+          </div>
+        </div>
+        <div className="flex items-center gap-1.5">
+          <button
+            className="w-8 h-8 rounded-full flex items-center justify-center text-sm mb-2"
+            style={{ background: "var(--surface2)", color: "var(--dim)" }}
+            onClick={() => {
+              const weekDays = getWeekDays(weekOffset);
+              const startDate = weekDays[0].date;
+              const endDate = weekDays[6].date;
+              exportPDF(viewEvents, startDate, endDate);
+            }}
+            title="Exporter PDF"
+          >
+            📄
+          </button>
+          <button
+            className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
+            style={{ background: "var(--accent)", color: "#fff" }}
+            onClick={openQuickEvent}
+            title="Ajouter un evenement"
+          >
+            +
+          </button>
+        </div>
       </div>
-      <Timeline
-        events={filteredEvents}
-        onDelete={deleteEvent}
-        onDeleteSeries={deleteEventSeries}
-        onReorder={async (eventId, newTime) => {
-          await supabase.from("events").update({ time: newTime }).eq("id", eventId);
-          loadData();
-        }}
-      />
+      {viewType === "timeline" ? (
+        <Timeline
+          events={filteredEvents}
+          allEvents={dayEvents}
+          onDelete={deleteEvent}
+          onDeleteSeries={deleteEventSeries}
+          onReorder={async (eventId, newTime) => {
+            await supabase.from("events").update({ time: newTime }).eq("id", eventId);
+            loadData();
+          }}
+        />
+      ) : (
+        <DayAgenda events={filteredEvents} onDelete={deleteEvent} />
+      )}
 
       {filteredEvents.length === 0 && (
         <div className="text-center py-8">
@@ -986,6 +1077,21 @@ export default function HomePage() {
               placeholder="Details..."
             />
           </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Rappel</label>
+            <select
+              className="w-full px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+              value={qeReminder ?? ""}
+              onChange={(e) => setQeReminder(e.target.value ? Number(e.target.value) : null)}
+            >
+              <option value="">Aucun rappel</option>
+              <option value="5">5 min avant</option>
+              <option value="15">15 min avant</option>
+              <option value="30">30 min avant</option>
+              <option value="60">1 heure avant</option>
+            </select>
+          </div>
           {qeMember && (
             <label className="flex items-center gap-3 cursor-pointer py-1">
               <div
@@ -1072,6 +1178,9 @@ export default function HomePage() {
           </button>
         </div>
       </Modal>
+
+      {/* Quick Voice */}
+      <QuickVoice context={flowContext} onAction={handleFlowAction} />
 
       {/* FAB */}
       <button

@@ -43,9 +43,9 @@ export default function ReglagesPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  const [theme, setTheme] = useState<"dark" | "light" | "system">(() => {
+  const [theme, setTheme] = useState<"dark" | "light" | "system" | "ocean" | "forest" | "sunset">(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("flowtime_theme") as "dark" | "light" | "system") || "dark";
+      return (localStorage.getItem("flowtime_theme") as "dark" | "light" | "system" | "ocean" | "forest" | "sunset") || "dark";
     }
     return "dark";
   });
@@ -56,17 +56,16 @@ export default function ReglagesPage() {
     return "fr";
   });
 
-  function changeTheme(t: "dark" | "light" | "system") {
+  function changeTheme(t: "dark" | "light" | "system" | "ocean" | "forest" | "sunset") {
     setTheme(t);
     localStorage.setItem("flowtime_theme", t);
-    let resolved = t;
+    const themeClasses = ["light", "ocean", "forest", "sunset"];
+    document.documentElement.classList.remove(...themeClasses);
     if (t === "system") {
-      resolved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
-    }
-    if (resolved === "light") {
-      document.documentElement.classList.add("light");
-    } else {
-      document.documentElement.classList.remove("light");
+      const resolved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+      if (resolved === "light") document.documentElement.classList.add("light");
+    } else if (t !== "dark") {
+      document.documentElement.classList.add(t);
     }
   }
 
@@ -237,11 +236,15 @@ export default function ReglagesPage() {
       <p className="label mt-4">Apparence</p>
       <div className="card">
         <p className="text-sm font-bold mb-3">Theme</p>
-        <div className="flex gap-2">
-          {([["dark", "🌙", "Sombre"], ["light", "☀️", "Clair"], ["system", "💻", "Systeme"]] as const).map(([key, icon, label]) => (
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            ["dark", "🌙", "Sombre"],
+            ["light", "☀️", "Clair"],
+            ["system", "💻", "Systeme"],
+          ] as const).map(([key, icon, label]) => (
             <button
               key={key}
-              className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
+              className="py-2.5 rounded-xl text-xs font-bold transition-colors text-center"
               style={{
                 background: theme === key ? "var(--accent)" : "var(--surface2)",
                 color: theme === key ? "#fff" : "var(--text)",
@@ -249,6 +252,28 @@ export default function ReglagesPage() {
               onClick={() => changeTheme(key)}
             >
               {icon} {label}
+            </button>
+          ))}
+        </div>
+        <p className="text-sm font-bold mb-3 mt-4">Palettes</p>
+        <div className="grid grid-cols-3 gap-2">
+          {([
+            ["ocean", "#4A9EF0", "Ocean"],
+            ["forest", "#4CAF50", "Foret"],
+            ["sunset", "#F07C4A", "Sunset"],
+          ] as const).map(([key, color, label]) => (
+            <button
+              key={key}
+              className="py-2.5 rounded-xl text-xs font-bold transition-colors text-center flex items-center justify-center gap-1.5"
+              style={{
+                background: theme === key ? color : "var(--surface2)",
+                color: theme === key ? "#fff" : "var(--text)",
+                border: theme === key ? "none" : `1.5px solid ${color}30`,
+              }}
+              onClick={() => changeTheme(key)}
+            >
+              <span className="w-3 h-3 rounded-full" style={{ background: color }} />
+              {label}
             </button>
           ))}
         </div>

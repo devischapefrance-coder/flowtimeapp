@@ -27,6 +27,84 @@
     --overlay: rgba(0, 0, 0, 0.5);
   }
 
+  :root.ocean {
+    --bg: #0A1628;
+    --surface: rgba(74, 158, 240, 0.06);
+    --surface2: rgba(74, 158, 240, 0.1);
+    --surface-solid: #0F1E35;
+    --nav-bg: rgba(10, 22, 40, 0.85);
+    --accent: #4A9EF0;
+    --accent-soft: rgba(74, 158, 240, 0.12);
+    --accent-glow: rgba(74, 158, 240, 0.2);
+    --teal: #5ED4C8;
+    --warm: #F5C563;
+    --red: #F06B7E;
+    --green: #5EC89E;
+    --lavender: #B39DDB;
+    --blue: #6BA3F0;
+    --text: #E0EAF6;
+    --dim: rgba(224, 234, 246, 0.5);
+    --faint: rgba(224, 234, 246, 0.2);
+    --glass: rgba(74, 158, 240, 0.03);
+    --glass-border: rgba(74, 158, 240, 0.08);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --card-hover: rgba(74, 158, 240, 0.1);
+    --overlay: rgba(0, 0, 0, 0.5);
+  }
+
+  :root.forest {
+    --bg: #0C1A0F;
+    --surface: rgba(76, 175, 80, 0.06);
+    --surface2: rgba(76, 175, 80, 0.1);
+    --surface-solid: #122016;
+    --nav-bg: rgba(12, 26, 15, 0.85);
+    --accent: #4CAF50;
+    --accent-soft: rgba(76, 175, 80, 0.12);
+    --accent-glow: rgba(76, 175, 80, 0.2);
+    --teal: #66BB6A;
+    --warm: #F5C563;
+    --red: #F06B7E;
+    --green: #5EC89E;
+    --lavender: #B39DDB;
+    --blue: #6BA3F0;
+    --text: #E0F0E2;
+    --dim: rgba(224, 240, 226, 0.5);
+    --faint: rgba(224, 240, 226, 0.2);
+    --glass: rgba(76, 175, 80, 0.03);
+    --glass-border: rgba(76, 175, 80, 0.08);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --card-hover: rgba(76, 175, 80, 0.1);
+    --overlay: rgba(0, 0, 0, 0.5);
+  }
+
+  :root.sunset {
+    --bg: #1A0F0F;
+    --surface: rgba(240, 124, 74, 0.06);
+    --surface2: rgba(240, 124, 74, 0.1);
+    --surface-solid: #241414;
+    --nav-bg: rgba(26, 15, 15, 0.85);
+    --accent: #F07C4A;
+    --accent-soft: rgba(240, 124, 74, 0.12);
+    --accent-glow: rgba(240, 124, 74, 0.2);
+    --teal: #5ED4C8;
+    --warm: #F5C563;
+    --red: #F06B7E;
+    --green: #5EC89E;
+    --lavender: #B39DDB;
+    --blue: #6BA3F0;
+    --text: #F6E6E0;
+    --dim: rgba(246, 230, 224, 0.5);
+    --faint: rgba(246, 230, 224, 0.2);
+    --glass: rgba(240, 124, 74, 0.03);
+    --glass-border: rgba(240, 124, 74, 0.08);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --card-hover: rgba(240, 124, 74, 0.1);
+    --overlay: rgba(0, 0, 0, 0.5);
+  }
+
   :root.light {
     --bg: #F4F5F9;
     --surface: rgba(0, 0, 0, 0.03);

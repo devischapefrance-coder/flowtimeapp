@@ -51,8 +51,11 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   ]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
+  const [imageBase64, setImageBase64] = useState<string | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Voice UI states
   const [voiceMode, setVoiceMode] = useState(false);
@@ -94,8 +97,48 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
     );
   }, []);
 
+  function handleImageSelect(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // Resize to max 1024px and convert to base64
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        const maxSize = 1024;
+        let { width, height } = img;
+        if (width > maxSize || height > maxSize) {
+          if (width > height) {
+            height = (height / width) * maxSize;
+            width = maxSize;
+          } else {
+            width = (width / height) * maxSize;
+            height = maxSize;
+          }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext("2d");
+        ctx?.drawImage(img, 0, 0, width, height);
+        const base64 = canvas.toDataURL("image/jpeg", 0.8);
+        setImageBase64(base64.split(",")[1]);
+        setImagePreview(base64);
+      };
+      img.src = ev.target?.result as string;
+    };
+    reader.readAsDataURL(file);
+    // Reset input
+    if (fileInputRef.current) fileInputRef.current.value = "";
+  }
+
+  function clearImage() {
+    setImageBase64(null);
+    setImagePreview(null);
+  }
+
   // ─── Core send logic ───
-  const sendAndGetResponse = useCallback(async (userMsg: string): Promise<string | null> => {
+  const sendAndGetResponse = useCallback(async (userMsg: string, imgBase64?: string | null): Promise<string | null> => {
     const currentMessages = messagesRef.current;
     const newMessages: Message[] = [...currentMessages, { role: "user", text: userMsg }];
     setMessages(newMessages);
@@ -110,7 +153,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
       const res = await fetch("/api/flow", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMsg, context, history }),
+        body: JSON.stringify({ message: userMsg, context, history, image: imgBase64 || undefined }),
       });
       const data = await res.json();
 
@@ -342,8 +385,10 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   async function send(text?: string) {
     const userMsg = (text || input).trim();
     if (!userMsg || loading) return;
+    const img = imageBase64;
     setInput("");
-    await sendAndGetResponse(userMsg);
+    clearImage();
+    await sendAndGetResponse(userMsg, img);
   }
 
   if (!open) return null;
@@ -518,7 +563,24 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
         </div>
       ) : (
         /* Text mode UI */
-        <div className="p-4 flex gap-2" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--glass-border)", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
+        <div className="p-4" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderTop: "1px solid var(--glass-border)", paddingBottom: "calc(16px + env(safe-area-inset-bottom))" }}>
+          {imagePreview && (
+            <div className="flex items-center gap-2 mb-2">
+              <img src={imagePreview} alt="preview" className="w-12 h-12 rounded-lg object-cover" />
+              <span className="text-[10px]" style={{ color: "var(--dim)" }}>Image jointe</span>
+              <button onClick={clearImage} className="text-xs ml-auto" style={{ color: "var(--red)" }}>✕</button>
+            </div>
+          )}
+          <div className="flex gap-2">
+          <input type="file" ref={fileInputRef} accept="image/*" className="hidden" onChange={handleImageSelect} />
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            className="w-11 h-11 flex items-center justify-center rounded-xl transition-opacity shrink-0"
+            style={{ background: "var(--surface2)", border: "1px solid var(--glass-border)", fontSize: 16 }}
+            title="Envoyer une photo"
+          >
+            📷
+          </button>
           <input
             ref={inputRef}
             className="flex-1"
@@ -554,6 +616,7 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
           >
             ↑
           </button>
+          </div>
         </div>
       )}
     </div>

@@ -3,9 +3,11 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
-import { useRealtimeNotes, useRealtimeShopping } from "@/lib/realtime";
+import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores } from "@/lib/realtime";
+import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
-import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem } from "@/lib/types";
+import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
+import { detectShoppingCategory, SHOPPING_CATEGORIES } from "@/lib/shopping-categories";
 
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
@@ -41,7 +43,7 @@ function genId() {
 
 export default function ViePage() {
   const { profile } = useProfile();
-  const [tab, setTab] = useState<"notes" | "anniversaires" | "courses">("notes");
+  const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">("notes");
 
   // Notes state
   const [notes, setNotes] = useState<Note[]>([]);
@@ -81,6 +83,26 @@ export default function ViePage() {
   const [newShoppingText, setNewShoppingText] = useState("");
   const [shoppingCat, setShoppingCat] = useState("general");
 
+  // Budget state
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [expenseModal, setExpenseModal] = useState(false);
+  const [expAmount, setExpAmount] = useState("");
+  const [expDesc, setExpDesc] = useState("");
+  const [expCategory, setExpCategory] = useState("autre");
+  const [expMember, setExpMember] = useState("");
+  const [expDate, setExpDate] = useState(() => new Date().toISOString().split("T")[0]);
+
+  // Chores state
+  const [chores, setChores] = useState<Chore[]>([]);
+  const [choreModal, setChoreModal] = useState(false);
+  const [choreName, setChoreName] = useState("");
+  const [choreEmoji, setChoreEmoji] = useState("🧹");
+  const [choreFreq, setChoreFreq] = useState<"daily" | "weekly">("weekly");
+  const [choreMembers, setChoreMembers] = useState<string[]>([]);
+
+  // Photos state
+  const [photos, setPhotos] = useState<FamilyPhoto[]>([]);
+
   // Comment counts per note
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
@@ -88,11 +110,14 @@ export default function ViePage() {
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
-    const [notesRes, bdayRes, memRes, shopRes] = await Promise.all([
+    const [notesRes, bdayRes, memRes, shopRes, expRes, choreRes, photoRes] = await Promise.all([
       supabase.from("notes").select("*").eq("family_id", profile.family_id).order("pinned", { ascending: false }).order("updated_at", { ascending: false }),
       supabase.from("birthdays").select("*").eq("family_id", profile.family_id),
       supabase.from("members").select("*").eq("family_id", profile.family_id),
       supabase.from("shopping_items").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
+      supabase.from("expenses").select("*").eq("family_id", profile.family_id).order("date", { ascending: false }),
+      supabase.from("chores").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
+      supabase.from("family_photos").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
     ]);
     if (notesRes.data) {
       const parsed = (notesRes.data as Record<string, unknown>[]).map((n) => ({
@@ -122,6 +147,9 @@ export default function ViePage() {
     if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
     if (memRes.data) setMembers(memRes.data as Member[]);
     if (shopRes.data) setShoppingItems(shopRes.data as ShoppingItem[]);
+    if (expRes.data) setExpenses(expRes.data as Expense[]);
+    if (choreRes.data) setChores(choreRes.data as Chore[]);
+    if (photoRes.data) setPhotos(photoRes.data as FamilyPhoto[]);
   }, [profile?.family_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -133,9 +161,11 @@ export default function ViePage() {
     }
   }, []);
 
-  // Realtime notes & shopping
+  // Realtime subscriptions
   useRealtimeNotes(profile?.family_id, profile?.first_name || "", loadData);
   useRealtimeShopping(profile?.family_id, loadData);
+  useRealtimeExpenses(profile?.family_id, loadData);
+  useRealtimeChores(profile?.family_id, loadData);
 
   // --- Filtered notes ---
   const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
@@ -370,19 +400,26 @@ export default function ViePage() {
       <h1 className="text-xl font-bold mb-4">Vie de famille</h1>
 
       {/* Tab switcher */}
-      <div className="flex gap-1.5 mb-5">
-        {(["notes", "anniversaires", "courses"] as const).map((t) => (
+      <div className="flex gap-1 mb-5 overflow-x-auto pb-1">
+        {([
+          ["notes", "📝", "Notes"],
+          ["anniversaires", "🎂", "Anniv."],
+          ["courses", "🛒", "Courses"],
+          ["budget", "💰", "Budget"],
+          ["taches", "🧹", "Taches"],
+          ["photos", "📸", "Photos"],
+        ] as const).map(([key, emoji, label]) => (
           <button
-            key={t}
-            className="flex-1 py-2.5 rounded-xl text-xs font-bold transition-all"
+            key={key}
+            className="px-3 py-2.5 rounded-xl text-[11px] font-bold transition-all shrink-0"
             style={{
-              background: tab === t ? "var(--accent)" : "var(--surface2)",
-              color: tab === t ? "#fff" : "var(--dim)",
-              boxShadow: tab === t ? "0 4px 16px var(--accent-glow)" : "none",
+              background: tab === key ? "var(--accent)" : "var(--surface2)",
+              color: tab === key ? "#fff" : "var(--dim)",
+              boxShadow: tab === key ? "0 4px 16px var(--accent-glow)" : "none",
             }}
-            onClick={() => setTab(t)}
+            onClick={() => setTab(key)}
           >
-            {t === "notes" ? "📝 Notes" : t === "anniversaires" ? "🎂 Anniv." : "🛒 Courses"}
+            {emoji} {label}
           </button>
         ))}
       </div>
@@ -605,10 +642,11 @@ export default function ViePage() {
 
         async function addShoppingItem() {
           if (!newShoppingText.trim() || !profile?.family_id) return;
+          const autoCategory = shoppingCat === "general" ? detectShoppingCategory(newShoppingText.trim()) : shoppingCat;
           await supabase.from("shopping_items").insert({
             family_id: profile.family_id,
             text: newShoppingText.trim(),
-            category: shoppingCat === "general" ? "general" : shoppingCat,
+            category: autoCategory,
             added_by: profile.first_name || "",
           });
           setNewShoppingText("");
@@ -744,6 +782,320 @@ export default function ViePage() {
           </div>
         );
       })()}
+
+      {/* Budget tab */}
+      {tab === "budget" && (() => {
+        const EXPENSE_CATS = [
+          { value: "courses", label: "Courses", emoji: "🛒" },
+          { value: "sante", label: "Sante", emoji: "🏥" },
+          { value: "loisir", label: "Loisir", emoji: "🎬" },
+          { value: "transport", label: "Transport", emoji: "🚗" },
+          { value: "education", label: "Education", emoji: "📚" },
+          { value: "maison", label: "Maison", emoji: "🏠" },
+          { value: "autre", label: "Autre", emoji: "📦" },
+        ];
+
+        const now = new Date();
+        const monthExpenses = expenses.filter((e) => {
+          const d = new Date(e.date);
+          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
+        });
+        const monthTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
+
+        // Totals by category
+        const byCat: Record<string, number> = {};
+        for (const e of monthExpenses) {
+          byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount);
+        }
+
+        async function addExpense() {
+          if (!profile?.family_id || !expAmount || !expDesc.trim()) return;
+          await supabase.from("expenses").insert({
+            family_id: profile.family_id,
+            amount: parseFloat(expAmount),
+            description: expDesc.trim(),
+            category: expCategory,
+            member_id: expMember || null,
+            date: expDate,
+          });
+          setExpenseModal(false);
+          setExpAmount("");
+          setExpDesc("");
+          setExpCategory("autre");
+          setExpMember("");
+          loadData();
+        }
+
+        async function deleteExpense(id: string) {
+          await supabase.from("expenses").delete().eq("id", id);
+          loadData();
+        }
+
+        return (
+          <div>
+            {/* Month total */}
+            <div className="card text-center !mb-3">
+              <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Total du mois</p>
+              <p className="text-2xl font-bold" style={{ color: "var(--accent)" }}>{monthTotal.toFixed(2)} €</p>
+            </div>
+
+            {/* Category breakdown */}
+            {Object.keys(byCat).length > 0 && (
+              <div className="flex flex-wrap gap-1.5 mb-3">
+                {Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([cat, total]) => {
+                  const catInfo = EXPENSE_CATS.find((c) => c.value === cat);
+                  return (
+                    <span key={cat} className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: "var(--surface2)" }}>
+                      {catInfo?.emoji} {catInfo?.label}: {total.toFixed(0)}€
+                    </span>
+                  );
+                })}
+              </div>
+            )}
+
+            <button
+              className="btn btn-primary mb-4 text-sm"
+              onClick={() => setExpenseModal(true)}
+            >
+              + Ajouter une depense
+            </button>
+
+            {/* Expenses list */}
+            {monthExpenses.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-3xl mb-2">💰</p>
+                <p className="text-sm" style={{ color: "var(--dim)" }}>Aucune depense ce mois</p>
+              </div>
+            )}
+            <div className="flex flex-col gap-1.5">
+              {monthExpenses.map((exp) => {
+                const catInfo = EXPENSE_CATS.find((c) => c.value === exp.category);
+                const mem = members.find((m) => m.id === exp.member_id);
+                return (
+                  <div key={exp.id} className="card !mb-0 flex items-center gap-3">
+                    <span className="text-lg">{catInfo?.emoji || "📦"}</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-bold truncate">{exp.description}</p>
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px]" style={{ color: "var(--dim)" }}>{new Date(exp.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                        {mem && <span className="text-[10px]" style={{ color: "var(--dim)" }}>{mem.emoji} {mem.name}</span>}
+                      </div>
+                    </div>
+                    <span className="text-sm font-bold" style={{ color: "var(--red)" }}>-{Number(exp.amount).toFixed(2)}€</span>
+                    <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteExpense(exp.id)}>✕</button>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Expense Modal */}
+      <Modal open={expenseModal} onClose={() => setExpenseModal(false)} title="Nouvelle depense">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Montant (€)</label>
+            <input type="number" step="0.01" className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" />
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Description</label>
+            <input className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Courses, restaurant..." />
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Categorie</label>
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                { value: "courses", emoji: "🛒" }, { value: "sante", emoji: "🏥" },
+                { value: "loisir", emoji: "🎬" }, { value: "transport", emoji: "🚗" },
+                { value: "education", emoji: "📚" }, { value: "maison", emoji: "🏠" },
+                { value: "autre", emoji: "📦" },
+              ].map((c) => (
+                <button key={c.value} className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold" style={{ background: expCategory === c.value ? "var(--accent-soft)" : "var(--surface2)", color: expCategory === c.value ? "var(--accent)" : "var(--dim)", border: expCategory === c.value ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setExpCategory(c.value)}>
+                  {c.emoji} {c.value}
+                </button>
+              ))}
+            </div>
+          </div>
+          {members.length > 0 && (
+            <div>
+              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Membre</label>
+              <select className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expMember} onChange={(e) => setExpMember(e.target.value)}>
+                <option value="">Aucun</option>
+                {members.map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name}</option>)}
+              </select>
+            </div>
+          )}
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Date</label>
+            <input type="date" className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expDate} onChange={(e) => setExpDate(e.target.value)} />
+          </div>
+          <button className="btn btn-primary" onClick={() => { const addExpense = async () => { if (!profile?.family_id || !expAmount || !expDesc.trim()) return; await supabase.from("expenses").insert({ family_id: profile.family_id, amount: parseFloat(expAmount), description: expDesc.trim(), category: expCategory, member_id: expMember || null, date: expDate }); setExpenseModal(false); setExpAmount(""); setExpDesc(""); setExpCategory("autre"); setExpMember(""); loadData(); }; addExpense(); }}>
+            Ajouter
+          </button>
+        </div>
+      </Modal>
+
+      {/* Chores tab */}
+      {tab === "taches" && (() => {
+        const CHORE_EMOJIS = ["🧹", "🧺", "🍽️", "🗑️", "🛒", "🐕", "🌱", "🚗", "📚"];
+
+        async function addChore() {
+          if (!profile?.family_id || !choreName.trim()) return;
+          await supabase.from("chores").insert({
+            family_id: profile.family_id,
+            name: choreName.trim(),
+            emoji: choreEmoji,
+            frequency: choreFreq,
+            assigned_members: choreMembers,
+            current_index: 0,
+            last_rotated: new Date().toISOString().split("T")[0],
+          });
+          setChoreModal(false);
+          setChoreName("");
+          setChoreEmoji("🧹");
+          setChoreMembers([]);
+          loadData();
+        }
+
+        async function deleteChore(id: string) {
+          await supabase.from("chores").delete().eq("id", id);
+          loadData();
+        }
+
+        async function rotateChore(chore: Chore) {
+          const nextIndex = (chore.current_index + 1) % (chore.assigned_members.length || 1);
+          await supabase.from("chores").update({
+            current_index: nextIndex,
+            last_rotated: new Date().toISOString().split("T")[0],
+          }).eq("id", chore.id);
+          loadData();
+        }
+
+        // Auto-rotate check
+        for (const chore of chores) {
+          if (chore.assigned_members.length < 2) continue;
+          const lastRotated = chore.last_rotated ? new Date(chore.last_rotated) : new Date(0);
+          const now = new Date();
+          const daysSince = Math.floor((now.getTime() - lastRotated.getTime()) / 86400000);
+          const shouldRotate = chore.frequency === "daily" ? daysSince >= 1 : daysSince >= 7;
+          if (shouldRotate && chore.last_rotated) {
+            rotateChore(chore);
+          }
+        }
+
+        return (
+          <div>
+            <button className="btn btn-primary mb-4 text-sm" onClick={() => setChoreModal(true)}>
+              + Ajouter une tache
+            </button>
+
+            {chores.length === 0 && (
+              <div className="text-center py-8">
+                <p className="text-3xl mb-2">🧹</p>
+                <p className="text-sm" style={{ color: "var(--dim)" }}>Aucune tache menagere</p>
+              </div>
+            )}
+
+            <div className="flex flex-col gap-2">
+              {chores.map((chore) => {
+                const currentMemberId = chore.assigned_members[chore.current_index];
+                const currentMember = members.find((m) => m.id === currentMemberId);
+                return (
+                  <div key={chore.id} className="card !mb-0">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{chore.emoji}</span>
+                      <div className="flex-1">
+                        <p className="text-sm font-bold">{chore.name}</p>
+                        <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+                          {chore.frequency === "daily" ? "Quotidien" : "Hebdomadaire"}
+                        </p>
+                      </div>
+                      {currentMember && (
+                        <div className="text-center">
+                          <span className="text-lg">{currentMember.emoji}</span>
+                          <p className="text-[10px] font-bold" style={{ color: "var(--accent)" }}>{currentMember.name}</p>
+                        </div>
+                      )}
+                      <div className="flex flex-col gap-1">
+                        <button className="text-xs p-1 rounded" style={{ background: "var(--surface2)" }} onClick={() => rotateChore(chore)} title="Rotation">🔄</button>
+                        <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteChore(chore.id)}>✕</button>
+                      </div>
+                    </div>
+                    {/* Rotation preview */}
+                    {chore.assigned_members.length > 1 && (
+                      <div className="flex items-center gap-1 mt-2 pl-10">
+                        {chore.assigned_members.map((mId, i) => {
+                          const m = members.find((mem) => mem.id === mId);
+                          return (
+                            <span key={mId} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: i === chore.current_index ? "var(--accent-soft)" : "var(--surface2)", color: i === chore.current_index ? "var(--accent)" : "var(--dim)", fontWeight: i === chore.current_index ? 700 : 400 }}>
+                              {m?.emoji} {m?.name?.split(" ")[0]}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })()}
+
+      {/* Chore Modal */}
+      <Modal open={choreModal} onClose={() => setChoreModal(false)} title="Nouvelle tache">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Nom</label>
+            <input className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={choreName} onChange={(e) => setChoreName(e.target.value)} placeholder="Vaisselle, aspirateur..." />
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Emoji</label>
+            <div className="flex gap-2 flex-wrap">
+              {["🧹", "🧺", "🍽️", "🗑️", "🛒", "🐕", "🌱", "🚗", "📚"].map((e) => (
+                <button key={e} className="w-10 h-10 rounded-xl flex items-center justify-center text-lg" style={{ background: choreEmoji === e ? "var(--accent-soft)" : "var(--surface2)", border: choreEmoji === e ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setChoreEmoji(e)}>{e}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Frequence</label>
+            <div className="flex gap-2">
+              {([["daily", "Quotidien"], ["weekly", "Hebdomadaire"]] as const).map(([key, label]) => (
+                <button key={key} className="flex-1 py-2 rounded-xl text-xs font-bold" style={{ background: choreFreq === key ? "var(--accent)" : "var(--surface2)", color: choreFreq === key ? "#fff" : "var(--dim)" }} onClick={() => setChoreFreq(key)}>{label}</button>
+              ))}
+            </div>
+          </div>
+          {members.length > 0 && (
+            <div>
+              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Participants (rotation)</label>
+              <div className="flex flex-wrap gap-1.5">
+                {members.map((m) => {
+                  const sel = choreMembers.includes(m.id);
+                  return (
+                    <button key={m.id} className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: sel ? "var(--accent-soft)" : "var(--surface2)", color: sel ? "var(--accent)" : "var(--dim)", border: sel ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setChoreMembers(sel ? choreMembers.filter((id) => id !== m.id) : [...choreMembers, m.id])}>
+                      {m.emoji} {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          <button className="btn btn-primary" onClick={() => { const addChore = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: new Date().toISOString().split("T")[0] }); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; addChore(); }}>
+            Ajouter
+          </button>
+        </div>
+      </Modal>
+
+      {/* Photos tab */}
+      {tab === "photos" && (
+        <PhotoAlbum
+          photos={photos}
+          familyId={profile?.family_id || ""}
+          userName={profile?.first_name || ""}
+          onUpdate={loadData}
+        />
+      )}
 
       {/* Note Detail Modal */}
       <Modal open={!!detailNote} onClose={() => setDetailNote(null)} title={detailNote?.title || ""}>
