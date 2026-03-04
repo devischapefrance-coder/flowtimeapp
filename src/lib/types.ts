@@ -152,6 +152,7 @@ export interface ShoppingItem {
   id: string;
   family_id: string;
   name: string;
+  category: string;
   checked: boolean;
   added_by: string;
   created_at: string;

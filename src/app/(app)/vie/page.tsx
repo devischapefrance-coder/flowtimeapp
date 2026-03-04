@@ -6,6 +6,7 @@ import { useProfile } from "../layout";
 import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores } from "@/lib/realtime";
 import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
+import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
 import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
 
 const NOTE_CATEGORIES = [
@@ -80,6 +81,7 @@ export default function ViePage() {
   // Shopping state
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
   const [newShoppingText, setNewShoppingText] = useState("");
+  const [shoppingCat, setShoppingCat] = useState("all");
 
   // Budget state
   const [expenses, setExpenses] = useState<Expense[]>([]);
@@ -630,14 +632,19 @@ export default function ViePage() {
 
         async function addShoppingItem() {
           if (!newShoppingText.trim() || !profile?.family_id) return;
+          const detectedCat = detectShoppingCategory(newShoppingText.trim());
           await supabase.from("shopping_items").insert({
             family_id: profile.family_id,
             name: newShoppingText.trim(),
+            category: detectedCat,
             added_by: profile.first_name || "",
           });
           setNewShoppingText("");
           loadData();
         }
+
+        const filteredUnchecked = shoppingCat === "all" ? unchecked : unchecked.filter((i) => i.category === shoppingCat);
+        const filteredChecked = shoppingCat === "all" ? checked : checked.filter((i) => i.category === shoppingCat);
 
         async function toggleShoppingItem(item: ShoppingItem) {
           await supabase.from("shopping_items").update({ checked: !item.checked }).eq("id", item.id);
@@ -680,6 +687,37 @@ export default function ViePage() {
               </button>
             </div>
 
+            {/* Category filter chips */}
+            <div className="flex gap-1.5 mb-3 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
+              <button
+                className="px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0"
+                style={{
+                  background: shoppingCat === "all" ? "var(--accent)" : "var(--surface2)",
+                  color: shoppingCat === "all" ? "#fff" : "var(--dim)",
+                }}
+                onClick={() => setShoppingCat("all")}
+              >
+                Tout
+              </button>
+              {SHOPPING_CATEGORIES.map((cat) => {
+                const count = unchecked.filter((i) => i.category === cat.value).length;
+                if (count === 0 && shoppingCat !== cat.value) return null;
+                return (
+                  <button
+                    key={cat.value}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-bold whitespace-nowrap shrink-0"
+                    style={{
+                      background: shoppingCat === cat.value ? "var(--accent)" : "var(--surface2)",
+                      color: shoppingCat === cat.value ? "#fff" : "var(--dim)",
+                    }}
+                    onClick={() => setShoppingCat(cat.value)}
+                  >
+                    {cat.emoji} {cat.label} ({count})
+                  </button>
+                );
+              })}
+            </div>
+
             {/* Unchecked items */}
             {unchecked.length === 0 && checked.length === 0 && (
               <div className="text-center py-8">
@@ -689,7 +727,9 @@ export default function ViePage() {
             )}
 
             <div className="flex flex-col gap-1.5">
-              {unchecked.map((item) => (
+              {filteredUnchecked.map((item) => {
+                const cat = SHOPPING_CATEGORIES.find((c) => c.value === item.category);
+                return (
                   <div key={item.id} className="card !mb-0 flex items-center gap-3">
                     <input
                       type="checkbox"
@@ -697,6 +737,7 @@ export default function ViePage() {
                       onChange={() => toggleShoppingItem(item)}
                       className="rounded w-5 h-5 shrink-0"
                     />
+                    {cat && <span className="text-sm shrink-0">{cat.emoji}</span>}
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold">{item.name}</p>
                     </div>
@@ -711,14 +752,15 @@ export default function ViePage() {
                       ✕
                     </button>
                   </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Checked items */}
-            {checked.length > 0 && (
+            {filteredChecked.length > 0 && (
               <div className="mt-4">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-bold" style={{ color: "var(--dim)" }}>Coches ({checked.length})</p>
+                  <p className="text-xs font-bold" style={{ color: "var(--dim)" }}>Coches ({filteredChecked.length})</p>
                   <button
                     className="text-[10px] font-bold px-2 py-1 rounded-full"
                     style={{ background: "var(--surface2)", color: "var(--red, #ef4444)" }}
@@ -728,7 +770,7 @@ export default function ViePage() {
                   </button>
                 </div>
                 <div className="flex flex-col gap-1">
-                  {checked.map((item) => (
+                  {filteredChecked.map((item) => (
                     <div key={item.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: "var(--surface2)", opacity: 0.5 }}>
                       <input
                         type="checkbox"
