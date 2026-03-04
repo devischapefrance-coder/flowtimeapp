@@ -197,16 +197,24 @@ export default function FamillePage() {
   // CONTACT CRUD
   function openContactModal(c: Contact | "new") {
     if (c === "new") {
-      setForm({ name: "", phone: "", relation: "Ami(e)", emoji: "🫂" });
+      setForm({ name: "", phone: "", relation: "Ami(e)", emoji: "🫂", visible_to: [] });
     } else {
-      setForm({ name: c.name, phone: c.phone, relation: c.relation, emoji: c.emoji });
+      setForm({ name: c.name, phone: c.phone, relation: c.relation, emoji: c.emoji, visible_to: c.visible_to || [] });
     }
     setContactModal(c);
   }
 
   async function saveContact() {
     if (!familyId) return;
-    const data = { family_id: familyId, name: form.name as string, phone: form.phone as string, relation: form.relation as string, emoji: form.emoji as string };
+    const visTo = (form.visible_to as string[]);
+    const data = {
+      family_id: familyId,
+      name: form.name as string,
+      phone: form.phone as string,
+      relation: form.relation as string,
+      emoji: form.emoji as string,
+      visible_to: visTo && visTo.length > 0 ? visTo : null,
+    };
     if (contactModal === "new") {
       await supabase.from("contacts").insert(data);
     } else if (contactModal) {
@@ -384,7 +392,7 @@ export default function FamillePage() {
 
       {/* MEMBRES */}
       <p className="label">Membres de la famille</p>
-      {members.map((m) => {
+      {members.filter((m) => m.name.toLowerCase() !== (profile?.first_name || "").toLowerCase()).map((m) => {
         const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
         return (
           <div key={m.id} className="card flex items-center gap-3 active:scale-[0.98] transition-transform">
@@ -512,9 +520,14 @@ export default function FamillePage() {
       {/* CONTACTS */}
       <p className="label">Contacts de confiance</p>
       {Object.entries(CONTACT_CATEGORIES).map(([cat]) => {
+        const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
         const catContacts = contacts.filter((c) => {
           const allRelations = CONTACT_CATEGORIES[cat];
-          return allRelations.includes(c.relation) || c.relation === cat.toLowerCase();
+          const matchesCat = allRelations.includes(c.relation) || c.relation === cat.toLowerCase();
+          if (!matchesCat) return false;
+          if (!c.visible_to || c.visible_to.length === 0) return true;
+          if (myMember && c.visible_to.includes(myMember.id)) return true;
+          return false;
         });
         if (catContacts.length === 0) return null;
         return (
@@ -529,7 +542,10 @@ export default function FamillePage() {
                 </div>
                 <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
                   <p className="font-bold text-sm">{c.name}</p>
-                  <p className="text-xs" style={{ color: "var(--dim)" }}>{c.relation}</p>
+                  <p className="text-xs" style={{ color: "var(--dim)" }}>
+                    {c.relation}
+                    {c.visible_to && c.visible_to.length > 0 && <span style={{ color: "var(--faint)" }}> · 🔒 {c.visible_to.length}</span>}
+                  </p>
                 </div>
                 {c.phone && (
                   <a
@@ -547,10 +563,20 @@ export default function FamillePage() {
         );
       })}
       {/* Contacts without matching category */}
-      {contacts.filter((c) => !Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) && !Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation)).length > 0 && (
+      {(() => {
+        const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+        const otherContacts = contacts.filter((c) => {
+          const inCat = Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) || Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation);
+          if (inCat) return false;
+          if (!c.visible_to || c.visible_to.length === 0) return true;
+          if (myMember && c.visible_to.includes(myMember.id)) return true;
+          return false;
+        });
+        if (otherContacts.length === 0) return null;
+        return (
         <div className="mb-3">
           <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "var(--dim)" }}>📌 Autres</p>
-          {contacts.filter((c) => !Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) && !Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation)).map((c) => (
+          {otherContacts.map((c) => (
             <div key={c.id} className="card !mb-1.5 flex items-center gap-3 active:scale-[0.98] transition-transform">
               <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openContactModal(c)}>{c.emoji}</div>
               <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
@@ -564,7 +590,8 @@ export default function FamillePage() {
             </div>
           ))}
         </div>
-      )}
+        );
+      })()}
       <button className="btn btn-secondary mt-1 mb-6" onClick={() => openContactModal("new")}>＋ Ajouter un contact</button>
 
       {/* ADRESSES */}
@@ -740,6 +767,23 @@ export default function FamillePage() {
               </optgroup>
             ))}
           </select>
+          <p className="label mt-2">Visible par</p>
+          <p className="text-[10px]" style={{ color: "var(--faint)" }}>Laisse vide = visible par tous</p>
+          <div className="flex flex-wrap gap-2">
+            {members.map((m) => {
+              const sel = ((form.visible_to as string[]) || []).includes(m.id);
+              return (
+                <button key={m.id} className="px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-colors"
+                  style={{ background: sel ? "var(--accent)" : "var(--surface2)", color: sel ? "#fff" : "var(--dim)" }}
+                  onClick={() => {
+                    const cur = (form.visible_to as string[]) || [];
+                    setForm({ ...form, visible_to: sel ? cur.filter((id) => id !== m.id) : [...cur, m.id] });
+                  }}>
+                  {m.emoji} {m.name}
+                </button>
+              );
+            })}
+          </div>
           <button className="btn btn-primary mt-3" onClick={saveContact}>Sauvegarder</button>
           {contactModal !== "new" && <button className="btn btn-danger" onClick={deleteContact}>Supprimer</button>}
         </div>

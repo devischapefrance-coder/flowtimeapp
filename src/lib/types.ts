@@ -33,6 +33,7 @@ export interface Contact {
   phone: string;
   relation: string;
   emoji: string;
+  visible_to: string[] | null;
   created_at: string;
 }
 
