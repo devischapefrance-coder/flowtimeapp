@@ -22,8 +22,8 @@ const POI_CATEGORIES = [
 ];
 
 const MAP_STYLES: { key: MapStyle; label: string; icon: string }[] = [
+  { key: "apple", label: "Standard", icon: "🗺️" },
   { key: "dark", label: "Sombre", icon: "🌙" },
-  { key: "standard", label: "Standard", icon: "🗺️" },
   { key: "satellite", label: "Satellite", icon: "🛰️" },
 ];
 
@@ -54,7 +54,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [tab, setTab] = useState<"lieux" | "recherche" | "itineraire">("lieux");
-  const [mapStyle, setMapStyle] = useState<MapStyle>("dark");
+  const [mapStyle, setMapStyle] = useState<MapStyle>("apple");
   const [showStylePicker, setShowStylePicker] = useState(false);
 
   // My location
