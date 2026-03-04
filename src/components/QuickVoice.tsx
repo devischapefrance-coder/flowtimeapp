@@ -87,13 +87,21 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
       <button
         className="fixed flex items-center justify-center rounded-full text-lg z-40"
         style={{
-          bottom: 170,
+          bottom: "calc(160px + env(safe-area-inset-bottom, 0px))",
           right: "max(20px, calc(50% - 195px))",
-          width: 40,
-          height: 40,
-          background: listening ? "var(--red)" : processing ? "var(--warm)" : "var(--surface-solid)",
-          border: "1.5px solid var(--glass-border)",
-          boxShadow: listening ? "0 0 16px rgba(240,107,126,0.4)" : "0 2px 8px rgba(0,0,0,0.2)",
+          width: 46,
+          height: 46,
+          background: listening
+            ? "linear-gradient(135deg, #F06B7E, #FF8A9E)"
+            : processing
+              ? "linear-gradient(135deg, #F0A04B, #FFB86C)"
+              : "linear-gradient(135deg, var(--surface-solid), var(--surface2))",
+          border: listening || processing ? "2px solid rgba(255,255,255,0.2)" : "2px solid var(--glass-border)",
+          boxShadow: listening
+            ? "0 4px 20px rgba(240,107,126,0.5), 0 0 12px rgba(240,107,126,0.3)"
+            : processing
+              ? "0 4px 20px rgba(240,160,75,0.4)"
+              : "0 4px 16px rgba(0,0,0,0.25)",
           color: listening || processing ? "#fff" : "var(--text)",
         }}
         onClick={startListening}
@@ -116,7 +124,7 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
         <div
           className="fixed left-4 right-4 z-50 animate-in"
           style={{
-            bottom: 220,
+            bottom: "calc(220px + env(safe-area-inset-bottom, 0px))",
             maxWidth: 398,
             margin: "0 auto",
           }}
