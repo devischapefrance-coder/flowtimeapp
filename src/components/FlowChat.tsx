@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import Logo from "@/components/Logo";
+import { supabase } from "@/lib/supabase";
 
 interface Message {
   role: "user" | "flow";
@@ -153,9 +154,13 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
         text: m.text,
       }));
 
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/flow", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ message: userMsg, context, history, image: imgBase64 || undefined }),
       });
       const data = await res.json();

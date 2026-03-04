@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
+import { supabase } from "@/lib/supabase";
 
 interface QuickVoiceProps {
   context: Record<string, unknown>;
@@ -25,9 +26,13 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
     setListening(false);
     setProcessing(true);
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const res = await fetch("/api/flow", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
         body: JSON.stringify({ message: transcript, context, history: [] }),
       });
       const data = await res.json();

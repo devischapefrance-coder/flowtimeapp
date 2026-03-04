@@ -1,5 +1,15 @@
 "use client";
 
+import { supabase } from "@/lib/supabase";
+
+async function getAuthHeaders(): Promise<Record<string, string>> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (session?.access_token) {
+    return { Authorization: `Bearer ${session.access_token}` };
+  }
+  return {};
+}
+
 export async function subscribeToPush(): Promise<PushSubscription | null> {
   try {
     const permission = await Notification.requestPermission();
@@ -24,9 +34,10 @@ export async function subscribeToPush(): Promise<PushSubscription | null> {
     });
 
     // Send subscription to server
+    const authHeaders = await getAuthHeaders();
     await fetch("/api/push/subscribe", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders },
       body: JSON.stringify({ subscription: subscription.toJSON() }),
     });
 
@@ -42,9 +53,10 @@ export async function unsubscribeFromPush(): Promise<void> {
     const subscription = await reg.pushManager.getSubscription();
     if (subscription) {
       await subscription.unsubscribe();
+      const authHeaders = await getAuthHeaders();
       await fetch("/api/push/subscribe", {
         method: "DELETE",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders },
         body: JSON.stringify({ endpoint: subscription.endpoint }),
       });
     }
