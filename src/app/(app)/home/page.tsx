@@ -178,7 +178,7 @@ export default function HomePage() {
   const [mapFullOpen, setMapFullOpen] = useState(false);
   const [dataLoaded, setDataLoaded] = useState(false);
   const [filter, setFilter] = useState<string | null>(null);
-  const [selectedDate, setSelectedDate] = useState("");
+  const [selectedDate, setSelectedDate] = useState(() => localDateStr(new Date()));
   const [viewMode, setViewMode] = useState<"famille" | "perso">("famille");
   const [calendarView, setCalendarView] = useState<"week" | "month">("week");
   const [isOffline, setIsOffline] = useState(false);
@@ -234,10 +234,8 @@ export default function HomePage() {
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
 
-  // On mount: ensure selectedDate is today, then check goto-date override
+  // On mount: check goto-date override from search
   useEffect(() => {
-    const todayLocal = localDateStr(new Date());
-    setSelectedDate(todayLocal);
     const gotoDate = localStorage.getItem("flowtime-goto-date");
     if (gotoDate) {
       setSelectedDate(gotoDate);
@@ -401,24 +399,30 @@ export default function HomePage() {
 
   // Scroll day strip to selected date
   useEffect(() => {
-    if (!selectedDate || !scrollStripRef.current) return;
-    // Small delay to ensure DOM is painted with the day strip
-    const raf = requestAnimationFrame(() => {
+    if (!selectedDate) return;
+
+    function scrollToDate(instant: boolean) {
       if (!scrollStripRef.current) return;
       const el = scrollStripRef.current.querySelector(`[data-date="${selectedDate}"]`) as HTMLElement | null;
-      if (el) {
-        const container = scrollStripRef.current;
-        const scrollLeft = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
-        if (!scrollInitRef.current) {
-          // First render: jump instantly
-          container.scrollLeft = scrollLeft;
-          scrollInitRef.current = true;
-        } else {
-          container.scrollTo({ left: scrollLeft, behavior: "smooth" });
-        }
+      if (!el) return;
+      const container = scrollStripRef.current;
+      const scrollLeft = el.offsetLeft - container.clientWidth / 2 + el.clientWidth / 2;
+      if (instant) {
+        container.scrollLeft = scrollLeft;
+      } else {
+        container.scrollTo({ left: scrollLeft, behavior: "smooth" });
       }
-    });
-    return () => cancelAnimationFrame(raf);
+    }
+
+    if (!scrollInitRef.current) {
+      // First load: try multiple times to ensure layout is ready
+      scrollToDate(true);
+      const t1 = setTimeout(() => scrollToDate(true), 50);
+      const t2 = setTimeout(() => { scrollToDate(true); scrollInitRef.current = true; }, 200);
+      return () => { clearTimeout(t1); clearTimeout(t2); };
+    } else {
+      scrollToDate(false);
+    }
   }, [selectedDate]);
 
   // Proactive reminders check every minute
