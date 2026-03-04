@@ -6,19 +6,24 @@ import type { MapMarker, MapStyle, RouteInfo } from "./MapView";
 
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
+// Each category can search multiple OSM tags (amenity, shop, leisure, tourism, office)
 const POI_CATEGORIES = [
-  { key: "pharmacy", emoji: "💊", label: "Pharmacie", query: "pharmacy" },
-  { key: "restaurant", emoji: "🍽️", label: "Restaurant", query: "restaurant" },
-  { key: "supermarket", emoji: "🛒", label: "Supermarché", query: "supermarket" },
-  { key: "school", emoji: "🏫", label: "École", query: "school" },
-  { key: "hospital", emoji: "🏥", label: "Hôpital", query: "hospital" },
-  { key: "park", emoji: "🌳", label: "Parc", query: "park" },
-  { key: "bakery", emoji: "🥖", label: "Boulangerie", query: "bakery" },
-  { key: "fuel", emoji: "⛽", label: "Station", query: "fuel" },
-  { key: "cafe", emoji: "☕", label: "Café", query: "cafe" },
-  { key: "bank", emoji: "🏦", label: "Banque", query: "bank" },
-  { key: "post_office", emoji: "📮", label: "Poste", query: "post_office" },
-  { key: "cinema", emoji: "🎬", label: "Cinéma", query: "cinema" },
+  { key: "restaurant", emoji: "🍽️", label: "Restaurant", tags: [["amenity","restaurant"],["amenity","fast_food"]] },
+  { key: "cafe", emoji: "☕", label: "Cafe", tags: [["amenity","cafe"],["amenity","ice_cream"]] },
+  { key: "supermarket", emoji: "🛒", label: "Courses", tags: [["shop","supermarket"],["shop","convenience"],["shop","greengrocer"],["shop","butcher"],["shop","deli"]] },
+  { key: "bakery", emoji: "🥖", label: "Boulangerie", tags: [["shop","bakery"],["shop","pastry"]] },
+  { key: "pharmacy", emoji: "💊", label: "Pharmacie", tags: [["amenity","pharmacy"]] },
+  { key: "hospital", emoji: "🏥", label: "Sante", tags: [["amenity","hospital"],["amenity","clinic"],["amenity","doctors"],["amenity","dentist"],["healthcare","doctor"],["healthcare","centre"]] },
+  { key: "school", emoji: "🏫", label: "Ecole", tags: [["amenity","school"],["amenity","kindergarten"],["amenity","college"],["amenity","university"]] },
+  { key: "fuel", emoji: "⛽", label: "Station", tags: [["amenity","fuel"],["amenity","charging_station"]] },
+  { key: "bank", emoji: "🏦", label: "Banque", tags: [["amenity","bank"],["amenity","atm"]] },
+  { key: "park", emoji: "🌳", label: "Parc", tags: [["leisure","park"],["leisure","garden"],["leisure","playground"]] },
+  { key: "sport", emoji: "⚽", label: "Sport", tags: [["leisure","sports_centre"],["leisure","fitness_centre"],["leisure","swimming_pool"],["leisure","stadium"]] },
+  { key: "shopping", emoji: "🛍️", label: "Shopping", tags: [["shop","clothes"],["shop","shoes"],["shop","mall"],["shop","department_store"],["shop","hairdresser"],["shop","beauty"]] },
+  { key: "post_office", emoji: "📮", label: "Poste", tags: [["amenity","post_office"]] },
+  { key: "cinema", emoji: "🎬", label: "Loisirs", tags: [["amenity","cinema"],["amenity","theatre"],["amenity","library"],["tourism","museum"]] },
+  { key: "hotel", emoji: "🏨", label: "Hotel", tags: [["tourism","hotel"],["tourism","guest_house"],["tourism","hostel"]] },
+  { key: "garage", emoji: "🔧", label: "Garage", tags: [["shop","car_repair"],["shop","car"],["amenity","car_wash"]] },
 ];
 
 const MAP_STYLES: { key: MapStyle; label: string; icon: string }[] = [
@@ -157,31 +162,34 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     };
   }, []);
 
-  // Search places via Nominatim
+  // Search places via Nominatim — with viewbox for local results + broader search
   const searchPlaces = useCallback(async (query: string) => {
     if (query.length < 3) return;
     setSearching(true);
     try {
+      // Build viewbox around current map center (±0.15 degrees ~ 15km)
+      const [lat, lng] = mapCenter;
+      const vb = `${lng - 0.15},${lat + 0.15},${lng + 0.15},${lat - 0.15}`;
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=fr&limit=8&addressdetails=1`,
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&countrycodes=fr&limit=15&addressdetails=1&viewbox=${vb}&bounded=0`,
         { headers: { "User-Agent": "FlowTime/1.0" } }
       );
       const data = await res.json();
       setSearchResults(
-        data.map((r: { display_name: string; lat: string; lon: string }) => ({
+        data.map((r: { display_name: string; lat: string; lon: string; type?: string; class?: string }) => ({
           lat: parseFloat(r.lat),
           lng: parseFloat(r.lon),
-          emoji: "📍",
+          emoji: r.class === "shop" ? "🏪" : r.class === "amenity" ? "📌" : r.class === "tourism" ? "🏛️" : "📍",
           name: r.display_name.split(",")[0],
-          detail: r.display_name,
+          detail: r.display_name.split(",").slice(0, 3).join(","),
           type: "poi" as const,
         }))
       );
     } catch { setSearchResults([]); }
     setSearching(false);
-  }, []);
+  }, [mapCenter]);
 
-  // Search POI by category via Overpass API
+  // Search POI by category via Overpass API (multi-tag)
   async function searchPOI(category: typeof POI_CATEGORIES[0]) {
     if (activeCategory === category.key) {
       setActiveCategory(null);
@@ -192,24 +200,42 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     setSearching(true);
     try {
       const [lat, lng] = mapCenter;
-      const radius = 3000;
-      const query = `[out:json][timeout:10];node["amenity"="${category.query}"](around:${radius},${lat},${lng});out body 20;`;
+      const radius = 5000;
+      // Build union query for all tags in this category
+      const tagQueries = category.tags
+        .map(([k, v]) => `node["${k}"="${v}"](around:${radius},${lat},${lng});`)
+        .join("");
+      const query = `[out:json][timeout:15];(${tagQueries});out body 40;`;
       const res = await fetch("https://overpass-api.de/api/interpreter", {
         method: "POST",
         body: `data=${encodeURIComponent(query)}`,
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
       });
       const data = await res.json();
-      setPoiMarkers(
-        (data.elements || []).map((el: { lat: number; lon: number; tags?: { name?: string; [k: string]: string | undefined } }) => ({
-          lat: el.lat,
-          lng: el.lon,
-          emoji: category.emoji,
-          name: el.tags?.name || category.label,
-          detail: el.tags?.["addr:street"] ? `${el.tags["addr:housenumber"] || ""} ${el.tags["addr:street"]}`.trim() : undefined,
-          type: "poi" as const,
-        }))
-      );
+      // Deduplicate by name+lat and sort by distance
+      const seen = new Set<string>();
+      const results = (data.elements || [])
+        .map((el: { lat: number; lon: number; tags?: { name?: string; [k: string]: string | undefined } }) => {
+          const name = el.tags?.name || category.label;
+          const dedup = `${name}-${el.lat.toFixed(4)}`;
+          if (seen.has(dedup)) return null;
+          seen.add(dedup);
+          const addr = el.tags?.["addr:street"]
+            ? `${el.tags["addr:housenumber"] || ""} ${el.tags["addr:street"]}`.trim()
+            : undefined;
+          const opening = el.tags?.opening_hours;
+          return {
+            lat: el.lat,
+            lng: el.lon,
+            emoji: category.emoji,
+            name,
+            detail: [addr, opening].filter(Boolean).join(" · "),
+            type: "poi" as const,
+          };
+        })
+        .filter(Boolean)
+        .slice(0, 30);
+      setPoiMarkers(results);
     } catch { setPoiMarkers([]); }
     setSearching(false);
   }
