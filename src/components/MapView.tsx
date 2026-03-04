@@ -180,6 +180,15 @@ function createIcon(marker: MapMarker) {
   });
 }
 
+function InvalidateSize() {
+  const map = useMap();
+  useEffect(() => {
+    const timer = setTimeout(() => map.invalidateSize(), 200);
+    return () => clearTimeout(timer);
+  }, [map]);
+  return null;
+}
+
 function FitBounds({ markers }: { markers: MapMarker[] }) {
   const map = useMap();
   useEffect(() => {
@@ -232,6 +241,7 @@ export default function MapView({
         attributionControl={false}
       >
         <TileLayer url={tile.url} />
+        <InvalidateSize />
         {interactive && markers.length > 1 && !route && <FitBounds markers={markers} />}
         {route && route.coordinates.length > 1 && <FitRoute route={route} />}
         {/* Route border (wider, darker) */}

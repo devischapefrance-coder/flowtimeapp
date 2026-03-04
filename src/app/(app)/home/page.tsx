@@ -1319,17 +1319,18 @@ export default function HomePage() {
       <button
         className="fixed flex items-center justify-center rounded-full text-white text-xl"
         style={{
-          bottom: "calc(70px + env(safe-area-inset-bottom, 0px))",
+          bottom: "calc(90px + env(safe-area-inset-bottom, 0px))",
           right: "max(20px, calc(50% - 195px))",
-          width: 54,
-          height: 54,
-          background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
-          boxShadow: "0 4px 24px var(--accent-glow)",
+          width: 58,
+          height: 58,
+          background: "linear-gradient(135deg, #7C6BF0, #5ED4C8)",
+          boxShadow: "0 6px 28px rgba(124,107,240,0.45), 0 0 16px rgba(94,212,200,0.3)",
           zIndex: 50,
+          border: "2px solid rgba(255,255,255,0.15)",
         }}
         onClick={() => setChatOpen(true)}
       >
-        <Logo size={24} />
+        <Logo size={28} />
       </button>
 
       {/* Notifications */}
