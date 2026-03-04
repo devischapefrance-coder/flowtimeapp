@@ -336,6 +336,38 @@ export default function ReglagesPage() {
           />
         </button>
       </div>
+      {pushEnabled && (
+        <button
+          className="btn btn-secondary mt-2"
+          onClick={async () => {
+            try {
+              const { data: { session } } = await supabase.auth.getSession();
+              const res = await fetch("/api/push/send", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                  ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+                },
+                body: JSON.stringify({
+                  title: "FlowTime - Test",
+                  body: "Les notifications fonctionnent ! Meme ecran verrouille.",
+                  userId: profile?.id,
+                }),
+              });
+              const data = await res.json();
+              if (data.sent > 0) {
+                alert("Notification envoyee ! Verrouille ton ecran pour verifier.");
+              } else {
+                alert("Aucune notification envoyee. Verifie ton abonnement.");
+              }
+            } catch {
+              alert("Erreur lors du test.");
+            }
+          }}
+        >
+          Tester les notifications
+        </button>
+      )}
 
       {/* Famille */}
       <p className="label mt-4">Famille</p>
