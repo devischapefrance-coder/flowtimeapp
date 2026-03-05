@@ -582,6 +582,16 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.2.0", date: "5 mars 2026", tag: "Widgets",
+            changes: [
+              "Widgets interactifs : tap pour ouvrir une vue détaillée",
+              "Météo étendue : prévisions 7 jours (min/max, précipitations, vent, lever/coucher soleil)",
+              "Activité : historique complet scrollable (événements, tâches, dépenses)",
+              "Dépenses : toutes les catégories avec barres de progression + dernières transactions",
+              "Anniversaires : liste complète regroupée par mois avec âge et compte à rebours",
+            ],
+          },
+          {
             version: "2.1.0", date: "5 mars 2026", tag: "Contacts",
             changes: [
               "Attribution des contacts partagés à des membres (« De 👦 Erwan, 👨 Thibault »)",
@@ -766,7 +776,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.1.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.2.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>
