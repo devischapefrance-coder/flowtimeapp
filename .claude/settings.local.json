@@ -20,7 +20,8 @@
       "Bash(vercel:*)",
       "Bash(grep:*)",
       "Bash(sed:*)",
-      "Bash(pkill:*)"
+      "Bash(pkill:*)",
+      "Bash(mv:*)"
     ]
   }
 }

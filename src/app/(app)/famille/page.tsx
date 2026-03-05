@@ -8,6 +8,8 @@ import Modal from "@/components/Modal";
 import type { Member, Contact, Address, DeviceLocation, Event } from "@/lib/types";
 import { getCategoryColor, EVENT_CATEGORIES } from "@/lib/categories";
 import { useRealtimeMembers, useRealtimeContacts, useRealtimeAddresses } from "@/lib/realtime";
+import { useToast } from "@/components/Toast";
+import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
@@ -116,6 +118,8 @@ const DEFAULT_ADDRESSES = [
 
 export default function FamillePage() {
   const { profile } = useProfile();
+  const { toast } = useToast();
+  const { pullDistance, refreshing } = usePullToRefresh(() => load());
   const familyId = profile?.family_id;
 
   const [members, setMembers] = useState<Member[]>([]);
@@ -132,6 +136,8 @@ export default function FamillePage() {
   const [memberModal, setMemberModal] = useState<Member | null | "new">(null);
   const [contactModal, setContactModal] = useState<Contact | null | "new">(null);
   const [addressModal, setAddressModal] = useState<Address | null | "new">(null);
+
+  const [confirmDelete, setConfirmDelete] = useState<{ type: "member" | "contact" | "address"; id: string; label: string } | null>(null);
 
   // Form states
   const [form, setForm] = useState<Record<string, string | string[]>>({});
@@ -258,13 +264,12 @@ export default function FamillePage() {
     }
     setMemberModal(null);
     load();
+    toast("Membre sauvegardé", "success");
   }
 
   async function deleteMember() {
-    if (memberModal && memberModal !== "new" && confirm("Supprimer ce membre ?")) {
-      await supabase.from("members").delete().eq("id", memberModal.id);
-      setMemberModal(null);
-      load();
+    if (memberModal && memberModal !== "new") {
+      setConfirmDelete({ type: "member", id: memberModal.id, label: memberModal.name });
     }
   }
 
@@ -305,13 +310,12 @@ export default function FamillePage() {
     }
     setContactModal(null);
     load();
+    toast("Contact sauvegardé", "success");
   }
 
   async function deleteContact() {
-    if (contactModal && contactModal !== "new" && confirm("Supprimer ce contact ?")) {
-      await supabase.from("contacts").delete().eq("id", contactModal.id);
-      setContactModal(null);
-      load();
+    if (contactModal && contactModal !== "new") {
+      setConfirmDelete({ type: "contact", id: contactModal.id, label: contactModal.name });
     }
   }
 
@@ -355,14 +359,25 @@ export default function FamillePage() {
     }
     setAddressModal(null);
     load();
+    toast("Adresse sauvegardée", "success");
   }
 
   async function deleteAddress() {
-    if (addressModal && addressModal !== "new" && confirm("Supprimer cette adresse ?")) {
-      await supabase.from("addresses").delete().eq("id", (addressModal as Address).id);
-      setAddressModal(null);
-      load();
+    if (addressModal && addressModal !== "new") {
+      setConfirmDelete({ type: "address", id: (addressModal as Address).id, label: (addressModal as Address).name });
     }
+  }
+
+  async function executeDelete() {
+    if (!confirmDelete) return;
+    const { type, id, label } = confirmDelete;
+    await supabase.from(type === "member" ? "members" : type === "contact" ? "contacts" : "addresses").delete().eq("id", id);
+    setConfirmDelete(null);
+    if (type === "member") setMemberModal(null);
+    else if (type === "contact") setContactModal(null);
+    else setAddressModal(null);
+    load();
+    toast(`${label} supprimé`, "success");
   }
 
   // Update address after marker drag on map
@@ -474,10 +489,11 @@ export default function FamillePage() {
 
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 80 }}>
+      <PullIndicator pullDistance={pullDistance} refreshing={refreshing} />
       <h1 className="text-xl font-bold mb-6">Famille</h1>
 
       {/* MEMBRES */}
-      <div data-tutorial="famille-membres">
+      <div data-tutorial="famille-membres" className="stagger-in">
       <p className="label">Membres de la famille</p>
       {(() => {
         const myMember = members.find((m) => m.user_id === profile?.id);
@@ -1002,6 +1018,19 @@ export default function FamillePage() {
           </div>
           <button className="btn btn-primary mt-3" onClick={saveAddress}>Sauvegarder</button>
           {addressModal !== "new" && <button className="btn btn-danger" onClick={deleteAddress}>Supprimer</button>}
+        </div>
+      </Modal>
+
+      {/* MODAL CONFIRMATION SUPPRESSION */}
+      <Modal open={confirmDelete !== null} onClose={() => setConfirmDelete(null)} title="Confirmer la suppression">
+        <div className="flex flex-col gap-3">
+          <p className="text-sm" style={{ color: "var(--dim)" }}>
+            Supprimer <strong style={{ color: "var(--text)" }}>{confirmDelete?.label}</strong> ? Cette action est irréversible.
+          </p>
+          <div className="flex gap-2">
+            <button className="btn flex-1" style={{ background: "var(--surface2)" }} onClick={() => setConfirmDelete(null)}>Annuler</button>
+            <button className="btn btn-danger flex-1" onClick={executeDelete}>Supprimer</button>
+          </div>
         </div>
       </Modal>
     </div>

@@ -8,6 +8,7 @@ import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
 import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
 import { useToast } from "@/components/Toast";
+import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 import EmptyState from "@/components/EmptyState";
 import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
 
@@ -46,6 +47,7 @@ function genId() {
 export default function ViePage() {
   const { profile, setVieUnread } = useProfile();
   const { toast, toastUndo } = useToast();
+  const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
   const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">(() => {
     if (typeof window !== "undefined") {
       const params = new URLSearchParams(window.location.search);
@@ -499,6 +501,7 @@ export default function ViePage() {
 
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 80 }}>
+      <PullIndicator pullDistance={pullDistance} refreshing={refreshing} />
       <h1 className="text-xl font-bold mb-4">Vie de famille</h1>
 
       {/* Tab switcher */}

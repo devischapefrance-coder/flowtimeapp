@@ -26,6 +26,7 @@ import { cacheData, getCachedData } from "@/lib/offline";
 import { getWeatherWithGeolocation } from "@/lib/weather";
 import { useToast } from "@/components/Toast";
 import EmptyState from "@/components/EmptyState";
+import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 
 // ---- Widget config types ----
 interface WidgetConfig {
@@ -226,6 +227,7 @@ export default function HomePage() {
   const [qeConflict, setQeConflict] = useState<string | null>(null);
   const [viewType, setViewType] = useState<"timeline" | "agenda">("timeline");
   const { toast, toastUndo } = useToast();
+  const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
 
   // Widget state
   const [widgetConfig, setWidgetConfig] = useState<WidgetConfig[]>(DEFAULT_WIDGETS);
@@ -1342,6 +1344,7 @@ export default function HomePage() {
       className="px-4 py-4 animate-in gradient-bg"
       style={{ paddingBottom: 180 }}
     >
+      <PullIndicator pullDistance={pullDistance} refreshing={refreshing} />
       {/* Offline banner */}
       {isOffline && (
         <div className="mb-3 px-3 py-2 rounded-xl text-xs font-bold text-center" style={{ background: "rgba(240,124,74,0.15)", color: "var(--warm)", border: "1px solid rgba(240,124,74,0.2)" }}>
@@ -1385,7 +1388,7 @@ export default function HomePage() {
       </div>
 
       {/* Widgets */}
-      <div className="flex flex-col gap-3 mt-3">
+      <div className="flex flex-col gap-3 mt-3 stagger-in">
         {!dataLoaded ? (
           <>
             {[1,2,3].map((i) => (
