@@ -7,9 +7,10 @@ interface QuickVoiceProps {
   context: Record<string, unknown>;
   userId?: string;
   onAction?: (action: { type: string; data: Record<string, unknown> }) => void;
+  onActionsDone?: (actions: Array<{ type: string; data: Record<string, unknown> }>) => void;
 }
 
-export default function QuickVoice({ context, userId, onAction }: QuickVoiceProps) {
+export default function QuickVoice({ context, userId, onAction, onActionsDone }: QuickVoiceProps) {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -63,13 +64,14 @@ export default function QuickVoice({ context, userId, onAction }: QuickVoiceProp
         for (const action of data.actions) {
           await onAction(action);
         }
+        if (onActionsDone) onActionsDone(data.actions);
       }
     } catch {
       setToast("Erreur, reessaie !");
       setTimeout(() => setToast(null), 3000);
     }
     setProcessing(false);
-  }, [context, onAction]);
+  }, [context, onAction, onActionsDone]);
 
   function stopListening() {
     if (recognitionRef.current) {

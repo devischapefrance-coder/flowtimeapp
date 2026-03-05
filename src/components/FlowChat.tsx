@@ -17,6 +17,7 @@ interface FlowChatProps {
   context: Record<string, unknown>;
   userId?: string;
   onAction?: (action: { type: string; data: Record<string, unknown> }) => void;
+  onActionsDone?: (actions: Array<{ type: string; data: Record<string, unknown> }>) => void;
 }
 
 function chatStorageKey(userId?: string) {
@@ -52,7 +53,7 @@ function cleanForSpeech(text: string): string {
     .trim();
 }
 
-export default function FlowChat({ open, onClose, context, userId, onAction }: FlowChatProps) {
+export default function FlowChat({ open, onClose, context, userId, onAction, onActionsDone }: FlowChatProps) {
   const defaultMsg: Message[] = [{ role: "flow", text: "Salut ! Je suis Flow, ton assistant familial. Dis-moi ce que tu veux organiser, je m'occupe de tout !" }];
 
   const [messages, setMessages] = useState<Message[]>(() => {
@@ -220,6 +221,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction }: F
         for (const action of data.actions) {
           await onAction(action);
         }
+        if (onActionsDone) onActionsDone(data.actions);
       }
 
       setLoading(false);
@@ -229,7 +231,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction }: F
       setLoading(false);
       return null;
     }
-  }, [context, onAction]);
+  }, [context, onAction, onActionsDone]);
 
   // ─── TTS with safety timeout + Chrome resume workaround ───
   const speakResponse = useCallback((text: string): Promise<void> => {

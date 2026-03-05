@@ -619,7 +619,6 @@ export default function HomePage() {
         category: (action.data.category as string) || detectCategory(title),
         shared: action.data.shared !== false,
       });
-      notifyFamily("FlowTime 📅", `${profile.first_name || "Quelqu'un"} a ajouté : ${title}`);
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
     } else if (action.type === "edit_event") {
@@ -641,6 +640,7 @@ export default function HomePage() {
       const title = action.data.title as string;
       const category = (action.data.category as string) || detectCategory(title);
       const startDate = new Date();
+      let count = 0;
       for (let week = 0; week < 4; week++) {
         for (const day of recurringDays) {
           const d = new Date(startDate);
@@ -654,6 +654,7 @@ export default function HomePage() {
             recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
             category,
           });
+          count++;
         }
       }
     }
@@ -1635,7 +1636,17 @@ export default function HomePage() {
       </Modal>
 
       {/* Quick Voice */}
-      <QuickVoice context={flowContext} userId={profile?.id} onAction={handleFlowAction} />
+      <QuickVoice context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={(actions) => {
+        const eventActions = actions.filter((a) => a.type === "add_event" || a.type === "add_recurring");
+        if (eventActions.length === 0) return;
+        const titles = [...new Set(eventActions.map((a) => a.data.title as string))];
+        const name = profile?.first_name || "Quelqu'un";
+        if (eventActions.length === 1 && eventActions[0].type === "add_event") {
+          notifyFamily("FlowTime 📅", `${name} a ajouté : ${titles[0]}`);
+        } else {
+          notifyFamily("FlowTime 📅", `${name} a planifié ${titles.join(", ")}`);
+        }
+      }} />
 
       {/* FAB */}
       <button
@@ -1659,7 +1670,17 @@ export default function HomePage() {
       <NotificationManager events={events} birthdays={birthdays} enabled={true} />
 
       {/* Chat */}
-      <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} />
+      <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={(actions) => {
+        const eventActions = actions.filter((a) => a.type === "add_event" || a.type === "add_recurring");
+        if (eventActions.length === 0) return;
+        const titles = [...new Set(eventActions.map((a) => a.data.title as string))];
+        const name = profile?.first_name || "Quelqu'un";
+        if (eventActions.length === 1 && eventActions[0].type === "add_event") {
+          notifyFamily("FlowTime 📅", `${name} a ajouté : ${titles[0]}`);
+        } else {
+          notifyFamily("FlowTime 📅", `${name} a planifié ${titles.join(", ")}`);
+        }
+      }} />
 
       {/* Family Chat */}
 
