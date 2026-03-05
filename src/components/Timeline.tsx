@@ -27,6 +27,7 @@ interface TimelineProps {
   onEditSeries?: (ev: Event) => void;
   onReorder?: (eventId: string, newTime: string) => void;
   onEditTitle?: (eventId: string, newTitle: string) => void;
+  onEditDescription?: (eventId: string, newDesc: string) => void;
 }
 
 function findConflicts(events: Event[]): Set<string> {
@@ -57,6 +58,7 @@ function SortableEvent({
   onEditSeries,
   onReorder,
   onEditTitle,
+  onEditDescription,
   menuOpen,
   setMenuOpen,
 }: {
@@ -70,6 +72,7 @@ function SortableEvent({
   onEditSeries?: (ev: Event) => void;
   onReorder?: (eventId: string, newTime: string) => void;
   onEditTitle?: (eventId: string, newTitle: string) => void;
+  onEditDescription?: (eventId: string, newDesc: string) => void;
   menuOpen: string | null;
   setMenuOpen: (id: string | null) => void;
 }) {
@@ -77,8 +80,11 @@ function SortableEvent({
   const [tempTime, setTempTime] = useState(ev.time);
   const [editingTitle, setEditingTitle] = useState(false);
   const [tempTitle, setTempTitle] = useState(ev.title);
+  const [editingDesc, setEditingDesc] = useState(false);
+  const [tempDesc, setTempDesc] = useState(ev.description || "");
   const timeInputRef = useRef<HTMLInputElement>(null);
   const titleInputRef = useRef<HTMLInputElement>(null);
+  const descInputRef = useRef<HTMLInputElement>(null);
 
   const {
     attributes,
@@ -107,6 +113,12 @@ function SortableEvent({
     }
   }, [editingTitle]);
 
+  useEffect(() => {
+    if (editingDesc && descInputRef.current) {
+      descInputRef.current.focus();
+    }
+  }, [editingDesc]);
+
   function commitTime() {
     setEditingTime(false);
     if (tempTime && tempTime !== ev.time && onReorder) {
@@ -119,6 +131,14 @@ function SortableEvent({
     const trimmed = tempTitle.trim();
     if (trimmed && trimmed !== ev.title && onEditTitle) {
       onEditTitle(ev.id, trimmed);
+    }
+  }
+
+  function commitDesc() {
+    setEditingDesc(false);
+    const trimmed = tempDesc.trim();
+    if (trimmed !== (ev.description || "") && onEditDescription) {
+      onEditDescription(ev.id, trimmed);
     }
   }
 
@@ -218,9 +238,35 @@ function SortableEvent({
               {ev.title}
             </p>
           )}
-          {ev.description && (
-            <p className="text-xs mt-0.5" style={{ color: "var(--dim)" }}>{ev.description}</p>
-          )}
+          {editingDesc ? (
+            <input
+              ref={descInputRef}
+              type="text"
+              value={tempDesc}
+              onChange={(e) => setTempDesc(e.target.value)}
+              onBlur={commitDesc}
+              onKeyDown={(e) => { if (e.key === "Enter") commitDesc(); if (e.key === "Escape") setEditingDesc(false); }}
+              className="text-xs mt-0.5 px-1 py-0.5 rounded-lg w-full"
+              style={{ background: "var(--surface2)", border: "1px solid var(--accent)", color: "var(--dim)" }}
+              placeholder="Ajouter une description..."
+            />
+          ) : ev.description && ev.description !== ev.title ? (
+            <p
+              className="text-xs mt-0.5 cursor-pointer"
+              style={{ color: "var(--dim)" }}
+              onClick={() => { if (onEditDescription) { setTempDesc(ev.description || ""); setEditingDesc(true); } }}
+            >
+              {ev.description}
+            </p>
+          ) : onEditDescription ? (
+            <p
+              className="text-[10px] mt-0.5 cursor-pointer"
+              style={{ color: "var(--faint)" }}
+              onClick={() => { setTempDesc(""); setEditingDesc(true); }}
+            >
+              + description
+            </p>
+          ) : null}
           {ev.members && (
             <div className="flex items-center gap-1.5 mt-1.5">
               <span className="text-sm">{ev.members.emoji}</span>
@@ -288,7 +334,7 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle }: TimelineProps) {
+export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle, onEditDescription }: TimelineProps) {
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -352,6 +398,7 @@ export default function Timeline({ events, allEvents, selectedDate, onDelete, on
                 onEditSeries={onEditSeries}
                 onReorder={onReorder}
                 onEditTitle={onEditTitle}
+                onEditDescription={onEditDescription}
                 menuOpen={menuOpen}
                 setMenuOpen={setMenuOpen}
               />

@@ -18,6 +18,7 @@ const SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Tu es 
 
 1. **Ajouter un événement**
 { "type": "add_event", "data": { "title": "...", "time": "HH:MM", "date": "YYYY-MM-DD", "member_name": "...", "description": "...", "category": "..." } }
+IMPORTANT: "description" est optionnel et doit être DIFFÉRENT du titre. Ne mets une description que si l'utilisateur donne des détails supplémentaires. Sinon, laisse description vide "".
 Categories possibles: general, sport, ecole, medical, loisir, travail, famille. Choisis la catégorie la plus pertinente selon le titre/contexte. Ex: foot→sport, dentiste→medical, école→ecole, cinéma→loisir, réunion→travail, anniversaire→famille.
 
 2. **Supprimer un événement** (utilise l'event_id du contexte)

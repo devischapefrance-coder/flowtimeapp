@@ -1076,7 +1076,8 @@ export default function HomePage() {
         {viewType === "timeline" ? (
           <Timeline events={filteredEvents} allEvents={dayEvents} selectedDate={currentDate} onDelete={deleteEvent} onDeleteSeries={deleteEventSeries}
             onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }}
-            onEditTitle={async (eventId, newTitle) => { await supabase.from("events").update({ title: newTitle }).eq("id", eventId); loadData(); }} />
+            onEditTitle={async (eventId, newTitle) => { await supabase.from("events").update({ title: newTitle }).eq("id", eventId); loadData(); }}
+            onEditDescription={async (eventId, newDesc) => { await supabase.from("events").update({ description: newDesc }).eq("id", eventId); loadData(); }} />
         ) : (
           <DayAgenda events={filteredEvents} selectedDate={currentDate} onDelete={deleteEvent}
             onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }} />
