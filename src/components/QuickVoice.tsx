@@ -40,6 +40,15 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
       setToast(text.slice(0, 120));
       setTimeout(() => setToast(null), 4000);
 
+      // Sync to FlowChat sessionStorage so voice messages appear in chat
+      try {
+        const saved = sessionStorage.getItem("flowtime_chat");
+        const msgs = saved ? JSON.parse(saved) : [];
+        msgs.push({ role: "user", text: transcript });
+        msgs.push({ role: "flow", text, actions: data.actions || undefined });
+        sessionStorage.setItem("flowtime_chat", JSON.stringify(msgs));
+      } catch { /* ignore */ }
+
       if (data.actions && Array.isArray(data.actions) && onAction) {
         for (const action of data.actions) {
           await onAction(action);

@@ -26,6 +26,7 @@ interface TimelineProps {
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
   onReorder?: (eventId: string, newTime: string) => void;
+  onEditTitle?: (eventId: string, newTitle: string) => void;
 }
 
 function findConflicts(events: Event[]): Set<string> {
@@ -55,6 +56,7 @@ function SortableEvent({
   onDeleteSeries,
   onEditSeries,
   onReorder,
+  onEditTitle,
   menuOpen,
   setMenuOpen,
 }: {
@@ -67,12 +69,16 @@ function SortableEvent({
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
   onReorder?: (eventId: string, newTime: string) => void;
+  onEditTitle?: (eventId: string, newTitle: string) => void;
   menuOpen: string | null;
   setMenuOpen: (id: string | null) => void;
 }) {
   const [editingTime, setEditingTime] = useState(false);
   const [tempTime, setTempTime] = useState(ev.time);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [tempTitle, setTempTitle] = useState(ev.title);
   const timeInputRef = useRef<HTMLInputElement>(null);
+  const titleInputRef = useRef<HTMLInputElement>(null);
 
   const {
     attributes,
@@ -95,10 +101,24 @@ function SortableEvent({
     }
   }, [editingTime]);
 
+  useEffect(() => {
+    if (editingTitle && titleInputRef.current) {
+      titleInputRef.current.focus();
+    }
+  }, [editingTitle]);
+
   function commitTime() {
     setEditingTime(false);
     if (tempTime && tempTime !== ev.time && onReorder) {
       onReorder(ev.id, tempTime);
+    }
+  }
+
+  function commitTitle() {
+    setEditingTitle(false);
+    const trimmed = tempTitle.trim();
+    if (trimmed && trimmed !== ev.title && onEditTitle) {
+      onEditTitle(ev.id, trimmed);
     }
   }
 
@@ -178,7 +198,26 @@ function SortableEvent({
               </span>
             )}
           </div>
-          <p className="text-sm font-bold mt-0.5">{ev.title}</p>
+          {editingTitle ? (
+            <input
+              ref={titleInputRef}
+              type="text"
+              value={tempTitle}
+              onChange={(e) => setTempTitle(e.target.value)}
+              onBlur={commitTitle}
+              onKeyDown={(e) => { if (e.key === "Enter") commitTitle(); if (e.key === "Escape") setEditingTitle(false); }}
+              className="text-sm font-bold mt-0.5 px-1 py-0.5 rounded-lg w-full"
+              style={{ background: "var(--surface2)", border: "1px solid var(--accent)", color: "var(--text)" }}
+            />
+          ) : (
+            <p
+              className="text-sm font-bold mt-0.5 cursor-pointer"
+              onClick={() => { if (onEditTitle) { setTempTitle(ev.title); setEditingTitle(true); } }}
+              title={onEditTitle ? "Modifier le titre" : undefined}
+            >
+              {ev.title}
+            </p>
+          )}
           {ev.description && (
             <p className="text-xs mt-0.5" style={{ color: "var(--dim)" }}>{ev.description}</p>
           )}
@@ -249,7 +288,7 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder }: TimelineProps) {
+export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle }: TimelineProps) {
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -312,6 +351,7 @@ export default function Timeline({ events, allEvents, selectedDate, onDelete, on
                 onDeleteSeries={onDeleteSeries}
                 onEditSeries={onEditSeries}
                 onReorder={onReorder}
+                onEditTitle={onEditTitle}
                 menuOpen={menuOpen}
                 setMenuOpen={setMenuOpen}
               />

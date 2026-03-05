@@ -95,6 +95,14 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
   useEffect(() => {
     if (open) {
       document.body.style.overflow = "hidden";
+      // Re-sync from sessionStorage (QuickVoice may have added messages)
+      try {
+        const saved = sessionStorage.getItem("flowtime_chat");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (parsed.length > messages.length) setMessages(parsed);
+        }
+      } catch { /* ignore */ }
       if (!voiceMode) setTimeout(() => inputRef.current?.focus(), 100);
     } else {
       document.body.style.overflow = "";
