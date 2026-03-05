@@ -217,6 +217,9 @@ export default function HomePage() {
   const [qeDescription, setQeDescription] = useState("");
   const [qeShared, setQeShared] = useState(true);
   const [qeReminder, setQeReminder] = useState<number | null>(null);
+
+  // Flow pending action confirmation (perso mode shared toggle)
+  const [flowPending, setFlowPending] = useState<{ action: { type: string; data: Record<string, unknown> }; shared: boolean } | null>(null);
   const [qeRecurrence, setQeRecurrence] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [qeConflict, setQeConflict] = useState<string | null>(null);
   const [viewType, setViewType] = useState<"timeline" | "agenda">("timeline");
@@ -607,8 +610,18 @@ export default function HomePage() {
 
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
-    // In perso mode, events are private by default; in famille mode, shared
-    const isShared = viewMode === "famille";
+
+    // In perso mode, show confirmation dialog for new events
+    if (viewMode === "perso" && (action.type === "add_event" || action.type === "edit_event" || action.type === "add_recurring")) {
+      setFlowPending({ action, shared: false });
+      return;
+    }
+
+    await executeFlowAction(action, viewMode === "famille");
+  }
+
+  async function executeFlowAction(action: { type: string; data: Record<string, unknown> }, isShared: boolean) {
+    if (!profile?.family_id) return;
 
     if (action.type === "add_event") {
       const title = action.data.title as string;
@@ -620,7 +633,7 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
-        shared: action.data.shared !== undefined ? action.data.shared !== false : isShared,
+        shared: isShared,
       });
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
@@ -635,7 +648,7 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
-        shared: action.data.shared !== undefined ? action.data.shared !== false : isShared,
+        shared: isShared,
       });
     } else if (action.type === "add_recurring") {
       const memberId = resolveFlowMemberId(action.data.member_name as string);
@@ -1726,6 +1739,43 @@ export default function HomePage() {
           notifyFamily("FlowTime 📅", `${name} a planifié ${titles.join(", ")}`);
         }
       }} />
+
+      {/* Flow action confirmation in perso mode */}
+      <Modal open={!!flowPending} onClose={() => setFlowPending(null)} title="Visibilité de l'événement">
+        {flowPending && (
+          <div className="flex flex-col gap-4">
+            <p className="text-sm">
+              <span className="font-bold">{String(flowPending.action.data.title || "")}</span>
+              {flowPending.action.data.time ? <span style={{ color: "var(--dim)" }}> à {String(flowPending.action.data.time)}</span> : null}
+            </p>
+
+            <div className="flex items-center justify-between px-3 py-3 rounded-xl" style={{ background: "var(--surface2)" }}>
+              <span className="text-xs font-medium">
+                {flowPending.shared ? "👨‍👩‍👧‍👦 Visible par la famille" : "🔒 Perso uniquement"}
+              </span>
+              <button
+                className="w-11 h-6 rounded-full relative transition-all"
+                style={{ background: flowPending.shared ? "var(--accent)" : "var(--surface2)", border: "1px solid var(--glass-border)" }}
+                onClick={() => setFlowPending({ ...flowPending, shared: !flowPending.shared })}
+              >
+                <div className="absolute top-0.5 w-5 h-5 rounded-full transition-all" style={{ background: "#fff", left: flowPending.shared ? 20 : 2 }} />
+              </button>
+            </div>
+
+            <button
+              className="w-full py-3 rounded-xl text-sm font-bold"
+              style={{ background: "var(--accent)", color: "#fff" }}
+              onClick={async () => {
+                await executeFlowAction(flowPending.action, flowPending.shared);
+                setFlowPending(null);
+                loadData();
+              }}
+            >
+              Confirmer
+            </button>
+          </div>
+        )}
+      </Modal>
 
       {/* Family Chat */}
 
