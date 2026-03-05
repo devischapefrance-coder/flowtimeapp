@@ -684,7 +684,7 @@ export default function FamillePage() {
                     {c.relation}
                     {c.visible_to && c.visible_to.length > 0 && <span style={{ color: "var(--faint)" }}> · 🔒 {c.visible_to.length}</span>}
                     {c.assigned_to && c.assigned_to.length > 0 && (
-                      <span style={{ color: "var(--faint)" }}> · {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? m.emoji : ""; }).join("")}</span>
+                      <span style={{ color: "var(--faint)" }}> · De {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean).join(", ")}</span>
                     )}
                   </p>
                 </div>
@@ -725,7 +725,7 @@ export default function FamillePage() {
                 <p className="text-xs" style={{ color: "var(--dim)" }}>
                   {c.relation}{c.phone ? ` · ${c.phone}` : ""}
                   {c.assigned_to && c.assigned_to.length > 0 && (
-                    <span style={{ color: "var(--faint)" }}> · {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? m.emoji : ""; }).join("")}</span>
+                    <span style={{ color: "var(--faint)" }}> · De {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean).join(", ")}</span>
                   )}
                 </p>
               </div>
