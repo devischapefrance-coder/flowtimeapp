@@ -32,6 +32,7 @@ CREATE TABLE members (
   color TEXT DEFAULT '#3DD6C8',
   birth_date DATE,
   phone TEXT,
+  user_id UUID REFERENCES auth.users(id) ON DELETE SET NULL,
   schedules JSONB DEFAULT '[]'::jsonb,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );

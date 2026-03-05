@@ -38,6 +38,26 @@ const ROLE_EMOJIS: Record<string, string[]> = {
   autre:       ["🧑","👤","😊","🌟","💫","🎭","🙂","✨","🦊","🐻","🐼"],
 };
 
+// Matrice des rôles relatifs : RELATIVE_ROLES[monRôle][rôleAutre] = label affiché
+const RELATIVE_ROLES: Record<string, Record<string, string>> = {
+  papa: { maman: "Conjointe", fils: "Fils", fille: "Fille", ado_garcon: "Fils", ado_fille: "Fille", bebe: "Bébé", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
+  maman: { papa: "Conjoint", fils: "Fils", fille: "Fille", ado_garcon: "Fils", ado_fille: "Fille", bebe: "Bébé", "grand-pere": "Beau-père", "grand-mere": "Belle-mère", autre: "Autre" },
+  fils: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
+  fille: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
+  ado_garcon: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
+  ado_fille: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
+  bebe: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
+  "grand-pere": { papa: "Fils", maman: "Belle-fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-mere": "Conjointe", autre: "Autre" },
+  "grand-mere": { papa: "Fils", maman: "Belle-fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-pere": "Conjoint", autre: "Autre" },
+};
+
+function getRelativeRole(myRole: string | undefined, otherRole: string): string {
+  if (myRole && RELATIVE_ROLES[myRole]?.[otherRole]) {
+    return RELATIVE_ROLES[myRole][otherRole];
+  }
+  return ROLES.find((r) => r.key === otherRole)?.label || otherRole;
+}
+
 const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
 const ADDRESS_EMOJIS = ["🏠","🏫","💼","⚽","🏥","👶","👴","🏪","🎭","🏖️"];
 const CONTACT_CATEGORIES: Record<string, string[]> = {
@@ -205,6 +225,15 @@ export default function FamillePage() {
       setMemberModal(null);
       load();
     }
+  }
+
+  async function linkMemberToMe(memberId: string) {
+    if (!profile) return;
+    // Retirer user_id d'un éventuel autre membre
+    await supabase.from("members").update({ user_id: null }).eq("user_id", profile.id);
+    // Lier ce membre au compte connecté
+    await supabase.from("members").update({ user_id: profile.id }).eq("id", memberId);
+    load();
   }
 
   // CONTACT CRUD
@@ -409,15 +438,21 @@ export default function FamillePage() {
       {/* MEMBRES */}
       <div data-tutorial="famille-membres">
       <p className="label">Membres de la famille</p>
-      {members.filter((m) => m.name.toLowerCase() !== (profile?.first_name || "").toLowerCase()).map((m) => {
+      {(() => {
+        const myMember = members.find((m) => m.user_id === profile?.id);
+        return members.map((m) => {
+        const isMe = m.user_id === profile?.id;
         const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
         return (
           <div key={m.id} className="card flex items-center gap-3 active:scale-[0.98] transition-transform">
             <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openMemberModal(m)}>{m.emoji}</div>
             <div className="flex-1 cursor-pointer" onClick={() => openMemberModal(m)}>
-              <p className="font-bold text-sm">{m.name}</p>
+              <p className="font-bold text-sm flex items-center gap-1.5">
+                {m.name}
+                {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Vous</span>}
+              </p>
               <p className="text-xs" style={{ color: "var(--dim)" }}>
-                {ROLES.find((r) => r.key === m.role)?.label || m.role}
+                {isMe ? (ROLES.find((r) => r.key === m.role)?.label || m.role) : getRelativeRole(myMember?.role, m.role)}
                 {age !== null && ` · ${age} ans`}
                 {m.phone && ` · ${m.phone}`}
               </p>
@@ -436,7 +471,8 @@ export default function FamillePage() {
             <span className="w-2 h-2 rounded-full shrink-0" style={{ background: m.color }} />
           </div>
         );
-      })}
+      });
+      })()}
       <button className="btn btn-secondary mt-1 mb-4" onClick={() => openMemberModal("new")}>＋ Ajouter un membre</button>
       </div>
 
@@ -774,6 +810,23 @@ export default function FamillePage() {
               <button key={c} className="w-8 h-8 rounded-full" style={{ background: c, outline: form.color === c ? "2px solid var(--text)" : "none", outlineOffset: 2 }} onClick={() => setForm({ ...form, color: c })} />
             ))}
           </div>
+          {memberModal !== "new" && (() => {
+            const isMe = (memberModal as Member).user_id === profile?.id;
+            return (
+              <button
+                className="btn mt-3 text-sm font-bold"
+                style={{
+                  background: isMe ? "rgba(61,214,200,0.15)" : "var(--surface2)",
+                  color: isMe ? "var(--teal)" : "var(--text)",
+                }}
+                onClick={() => {
+                  if (!isMe && memberModal) linkMemberToMe((memberModal as Member).id);
+                }}
+              >
+                {isMe ? "✓ C'est vous" : "🙋 C'est moi"}
+              </button>
+            );
+          })()}
           <button className="btn btn-primary mt-3" onClick={saveMember}>Sauvegarder</button>
           {memberModal !== "new" && <button className="btn btn-danger" onClick={deleteMember}>Supprimer</button>}
         </div>

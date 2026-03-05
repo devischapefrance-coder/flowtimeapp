@@ -22,6 +22,7 @@ export interface Member {
   color: string;
   phone: string | null;
   birth_date: string | null;
+  user_id: string | null;
   schedules: unknown[];
   created_at: string;
 }
