@@ -460,6 +460,79 @@ export default function ReglagesPage() {
         </button>
       </div>
 
+      {/* FAQ */}
+      <div className="card">
+        <p className="text-sm font-bold mb-3">Questions fréquentes</p>
+        {[
+          { q: "Comment inviter un proche dans ma famille ?", a: "Va dans Famille > copie le code famille (en bas de page) et envoie-le. L'autre personne choisit « Rejoindre une famille » à l'inscription avec ce code." },
+          { q: "Comment lier mon compte à un membre ?", a: "Va dans Famille > clique sur un membre > bouton « C'est moi ». Les rôles des autres membres s'adapteront à ton point de vue." },
+          { q: "Comment ajouter un évènement récurrent ?", a: "Crée un évènement, puis active l'option « Récurrence » pour choisir les jours et horaires de répétition." },
+          { q: "À quoi sert l'assistant Flow ?", a: "Flow est un assistant intelligent qui peut créer, modifier et supprimer des évènements par simple conversation. Tape par exemple « Ajoute un cours de piano mercredi à 14h »." },
+          { q: "Mes données sont-elles sécurisées ?", a: "Oui. Chaque famille a un espace isolé. Seuls les membres de ta famille peuvent voir les données partagées. Les contacts et adresses peuvent être rendus « personnels »." },
+          { q: "Comment partager ma position ?", a: "Va dans Famille > active « Partager ma position ». Ta localisation sera visible en temps réel par les membres de ta famille sur la carte." },
+          { q: "Comment fonctionne le bien-être ?", a: "Va dans Bien-être pour accéder à 6 activités : méditation, respiration, yoga, étirements, marche et gratitude. Chaque session est enregistrée dans ton historique." },
+        ].map((item, i) => (
+          <details key={i} className="mb-2 group">
+            <summary className="text-xs font-bold cursor-pointer py-2 flex items-center gap-2" style={{ color: "var(--text)" }}>
+              <span className="text-[10px] transition-transform group-open:rotate-90" style={{ color: "var(--accent)" }}>▶</span>
+              {item.q}
+            </summary>
+            <p className="text-[11px] pl-5 pb-2" style={{ color: "var(--dim)" }}>{item.a}</p>
+          </details>
+        ))}
+      </div>
+
+      {/* Astuces */}
+      <div className="card">
+        <p className="text-sm font-bold mb-3">Astuces</p>
+        <div className="flex flex-col gap-2.5">
+          {[
+            { emoji: "💬", tip: "Demande à Flow de gérer ton planning : « Déplace mon rdv de lundi à mardi » ou « Supprime le cours de sport »." },
+            { emoji: "🔔", tip: "Active les notifications push dans Réglages pour ne jamais manquer un évènement ou un message." },
+            { emoji: "🗺️", tip: "Sur la carte, appuie longtemps pour déplacer une adresse. Utilise le bouton GPS pour te localiser." },
+            { emoji: "🔍", tip: "La recherche (loupe) trouve tout : évènements, contacts, notes, repas, et même la météo." },
+            { emoji: "📋", tip: "Dans les notes, utilise les checklists pour créer des to-do lists partagées avec ta famille." },
+            { emoji: "🎂", tip: "Les anniversaires sont automatiquement créés depuis les dates de naissance des membres." },
+            { emoji: "🔒", tip: "Tu peux rendre un contact ou une adresse « personnel » pour que seul toi puisse le voir." },
+          ].map((item, i) => (
+            <div key={i} className="flex gap-2.5 items-start">
+              <span className="text-base shrink-0">{item.emoji}</span>
+              <p className="text-[11px]" style={{ color: "var(--dim)" }}>{item.tip}</p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Raccourcis clavier / gestes */}
+      <div className="card">
+        <p className="text-sm font-bold mb-3">Gestes & navigation</p>
+        <div className="flex flex-col gap-2">
+          {[
+            { gesture: "Glisser le carrousel", desc: "Changer de jour sur le planning" },
+            { gesture: "Appuyer sur la carte", desc: "Ouvrir la carte en plein écran" },
+            { gesture: "Appui long sur un membre", desc: "Modifier ses informations" },
+            { gesture: "Tirer vers le bas", desc: "Rafraîchir les données" },
+            { gesture: "Barre de recherche", desc: "Accès rapide à tout le contenu" },
+          ].map((item, i) => (
+            <div key={i} className="flex items-center gap-2">
+              <span className="text-[11px] font-bold px-2 py-1 rounded-lg shrink-0" style={{ background: "var(--surface2)" }}>{item.gesture}</span>
+              <span className="text-[11px]" style={{ color: "var(--dim)" }}>{item.desc}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Contact */}
+      <div className="card">
+        <p className="text-sm font-bold mb-1">Un problème ? Une suggestion ?</p>
+        <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
+          N&apos;hésite pas à nous contacter, on répond vite !
+        </p>
+        <a href="mailto:support@flowtime.app" className="btn btn-secondary text-xs inline-block text-center">
+          Envoyer un email
+        </a>
+      </div>
+
       {/* Nouveautés */}
       <p className="label mt-4">Nouveautés</p>
       <div className="flex flex-col gap-2">
