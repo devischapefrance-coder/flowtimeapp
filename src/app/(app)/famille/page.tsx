@@ -370,6 +370,7 @@ export default function FamillePage() {
   async function saveAddress() {
     if (!familyId) return;
     const visTo = (form.visible_to as string[]);
+    const isSharedAddr = !visTo || visTo.length === 0;
     const data = {
       family_id: familyId,
       name: form.name as string,
@@ -377,7 +378,7 @@ export default function FamillePage() {
       address: form.address as string,
       lat: form.lat ? parseFloat(form.lat as string) : null,
       lng: form.lng ? parseFloat(form.lng as string) : null,
-      members: form.members || [],
+      members: isSharedAddr ? (form.members || []) : [],
       visible_to: visTo && visTo.length > 0 ? visTo : null,
     };
     if (addressModal === "new") {
@@ -782,12 +783,9 @@ export default function FamillePage() {
               {a.address || "⚠️ Adresse manquante"}
             </p>
             {a.members && (a.members as string[]).length > 0 && (
-              <div className="flex gap-1 mt-1">
-                {(a.members as string[]).map((mid) => {
-                  const mem = members.find((m) => m.id === mid);
-                  return mem ? <span key={mid} className="text-xs px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface2)" }}>{mem.emoji}</span> : null;
-                })}
-              </div>
+              <p className="text-[10px] mt-0.5" style={{ color: "var(--faint)" }}>
+                De {(a.members as string[]).map((mid) => { const mem = members.find((m) => m.id === mid); return mem ? `${mem.emoji} ${mem.name}` : ""; }).filter(Boolean).join(", ")}
+              </p>
             )}
           </div>
         </div>
@@ -1026,29 +1024,6 @@ export default function FamillePage() {
               📍 {form.address as string}
             </p>
           )}
-          <p className="label mt-2">Membres associés</p>
-          <div className="flex flex-col gap-2">
-            {members.map((m) => {
-              const selected = ((form.members || []) as string[]).includes(m.id);
-              return (
-                <label key={m.id} className="flex items-center gap-2 text-sm cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={selected}
-                    onChange={() => {
-                      const current = (form.members || []) as string[];
-                      setForm({
-                        ...form,
-                        members: selected ? current.filter((id) => id !== m.id) : [...current, m.id],
-                      });
-                    }}
-                    className="!w-4 !h-4 !p-0 rounded"
-                  />
-                  {m.emoji} {m.name}
-                </label>
-              );
-            })}
-          </div>
           <p className="label mt-2">Visibilité</p>
           <div className="flex gap-2">
             {[
@@ -1063,7 +1038,7 @@ export default function FamillePage() {
                   onClick={() => {
                     if (opt.key === "perso") {
                       const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
-                      setForm({ ...form, visible_to: myMember ? [myMember.id] : ["__me__"] });
+                      setForm({ ...form, visible_to: myMember ? [myMember.id] : ["__me__"], members: [] });
                     } else {
                       setForm({ ...form, visible_to: [] });
                     }
@@ -1073,6 +1048,28 @@ export default function FamillePage() {
               );
             })}
           </div>
+          {/* Membres associés — only for shared addresses */}
+          {((form.visible_to as string[]) || []).length === 0 && members.length > 0 && (
+            <>
+              <p className="label mt-2">Pour qui ?</p>
+              <div className="flex flex-wrap gap-2">
+                {members.map((m) => {
+                  const sel = ((form.members || []) as string[]).includes(m.id);
+                  return (
+                    <button key={m.id} className="px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1"
+                      style={{ background: sel ? "var(--accent)" : "var(--surface2)", color: sel ? "#fff" : "var(--dim)" }}
+                      onClick={() => {
+                        const cur = (form.members || []) as string[];
+                        setForm({ ...form, members: sel ? cur.filter((id) => id !== m.id) : [...cur, m.id] });
+                      }}>
+                      {m.emoji} {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px]" style={{ color: "var(--faint)" }}>Laissez vide = pour toute la famille</p>
+            </>
+          )}
           <button className="btn btn-primary mt-3" onClick={saveAddress}>Sauvegarder</button>
           {addressModal !== "new" && <button className="btn btn-danger" onClick={deleteAddress}>Supprimer</button>}
         </div>
