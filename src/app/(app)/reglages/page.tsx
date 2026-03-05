@@ -582,9 +582,23 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.1.0", date: "5 mars 2026", tag: "Contacts",
+            changes: [
+              "Attribution des contacts partagés à des membres (« De 👦 Erwan, 👨 Thibault »)",
+              "Landing page marketing avec présentation des fonctionnalités",
+              "Page de connexion séparée",
+              "QR code d'invitation famille + bouton partager",
+              "Page /join pour rejoindre une famille par lien",
+              "Tous les rôles familiaux ajoutés (frère, sœur, conjoint, belle-famille, etc.)",
+              "Rôles manuels (plus d'adaptation automatique)",
+              "Correction événements grisés sur jours futurs",
+              "Correction événements personnels visibles dans Famille",
+              "Vocal rapide : arrêt du micro au re-tap",
+            ],
+          },
+          {
             version: "2.0.0", date: "5 mars 2026", tag: "Famille",
             changes: [
-              "Rôles relatifs : les liens familiaux s'adaptent au point de vue du membre connecté",
               "Bouton « C'est moi » pour lier son compte à un membre",
               "Nouveaux rôles : beau-père, belle-mère, oncle, tante, cousin(e), neveu, nièce",
               "Synchronisation automatique des anniversaires depuis les dates de naissance des membres",
@@ -752,7 +766,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 1.9.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.1.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>
