@@ -284,16 +284,17 @@ export default function FamillePage() {
 
   async function saveMember() {
     if (!familyId) return;
-    const data = { family_id: familyId, name: form.name as string, role: (form.role as string) || "autre", emoji: form.emoji as string, color: form.color as string, birth_date: (form.birth_date as string) || null, phone: (form.phone as string) || null };
+    const localRole = (form.role as string) || "autre";
+    const data = { family_id: familyId, name: form.name as string, emoji: form.emoji as string, color: form.color as string, birth_date: (form.birth_date as string) || null, phone: (form.phone as string) || null };
     if (memberModal === "new") {
-      const { data: inserted } = await supabase.from("members").insert(data).select("id").single();
-      if (inserted) setLocalRole(inserted.id, data.role);
+      const { data: inserted } = await supabase.from("members").insert({ ...data, role: localRole }).select("id").single();
+      if (inserted) setLocalRole(inserted.id, localRole);
       // Auto-create birthday if birth_date set
       if (inserted && data.birth_date) {
         await supabase.from("birthdays").insert({ family_id: familyId, name: data.name, date: data.birth_date, emoji: data.emoji, member_id: inserted.id });
       }
     } else if (memberModal) {
-      setLocalRole(memberModal.id, data.role);
+      setLocalRole(memberModal.id, localRole);
       await supabase.from("members").update(data).eq("id", memberModal.id);
       // Sync linked birthday
       if (data.birth_date) {
