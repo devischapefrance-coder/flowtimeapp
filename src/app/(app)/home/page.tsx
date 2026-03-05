@@ -468,7 +468,7 @@ export default function HomePage() {
 
   const dayEvents = viewEvents.filter((e) => e.date === currentDate);
   const filteredEvents = filter
-    ? dayEvents.filter((e) => e.member_id === filter)
+    ? dayEvents.filter((e) => e.member_id === filter && (e.shared === true || (myMember && filter === myMember.id)))
     : dayEvents;
 
   const eventCounts: Record<string, number> = {};
@@ -1029,8 +1029,8 @@ export default function HomePage() {
 
         {/* Member filters */}
         {viewMode === "famille" && members.length > 0 && (
-          <div className="flex justify-center gap-3 mb-3">
-            <button className="flex flex-col items-center gap-1 transition-opacity" style={{ opacity: !filter ? 1 : 0.35 }} onClick={() => setFilter(null)}>
+          <div className="flex gap-3 mb-3 overflow-x-auto px-1 py-1 -mx-1 scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
+            <button className="flex flex-col items-center gap-1 shrink-0" style={{ opacity: !filter ? 1 : 0.4 }} onClick={() => setFilter(null)}>
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
                 style={{ background: !filter ? "var(--accent-soft)" : "var(--surface2)", outline: !filter ? "2px solid var(--accent)" : "none", outlineOffset: 2 }}>👥</div>
               <span className="text-[9px] font-bold" style={{ color: !filter ? "var(--accent)" : "var(--dim)" }}>Tous</span>
@@ -1038,10 +1038,10 @@ export default function HomePage() {
             {members.map((m) => {
               const active = filter === m.id;
               return (
-                <button key={m.id} className="flex flex-col items-center gap-1 transition-opacity" style={{ opacity: active ? 1 : 0.35 }} onClick={() => setFilter(active ? null : m.id)}>
+                <button key={m.id} className="flex flex-col items-center gap-1 shrink-0" style={{ opacity: active ? 1 : 0.4 }} onClick={() => setFilter(active ? null : m.id)}>
                   <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
                     style={{ background: "var(--surface2)", outline: active ? `2px solid ${m.color}` : "none", outlineOffset: 2 }}>{m.emoji}</div>
-                  <span className="text-[9px] font-bold" style={{ color: active ? m.color : "var(--dim)" }}>{m.name.split(" ")[0]}</span>
+                  <span className="text-[9px] font-bold truncate max-w-[48px]" style={{ color: active ? m.color : "var(--dim)" }}>{m.name.split(" ")[0]}</span>
                 </button>
               );
             })}
