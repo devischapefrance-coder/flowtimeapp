@@ -331,10 +331,16 @@ export default function FamillePage() {
       visible_to: visTo && visTo.length > 0 ? visTo : null,
       assigned_to: isShared && assignTo.length > 0 ? assignTo : null,
     };
+    let cResult;
     if (contactModal === "new") {
-      await supabase.from("contacts").insert(data);
+      cResult = await supabase.from("contacts").insert(data);
     } else if (contactModal) {
-      await supabase.from("contacts").update(data).eq("id", contactModal.id);
+      cResult = await supabase.from("contacts").update(data).eq("id", contactModal.id);
+    }
+    if (cResult?.error) {
+      console.error("saveContact error:", cResult.error);
+      toast(`Erreur: ${cResult.error.message}`, "error");
+      return;
     }
     setContactModal(null);
     load();
@@ -381,10 +387,16 @@ export default function FamillePage() {
       members: isSharedAddr ? (Array.isArray(form.members) ? form.members : []) : [],
       visible_to: visTo && visTo.length > 0 ? visTo : null,
     };
+    let result;
     if (addressModal === "new") {
-      await supabase.from("addresses").insert(data);
+      result = await supabase.from("addresses").insert(data);
     } else if (addressModal) {
-      await supabase.from("addresses").update(data).eq("id", (addressModal as Address).id);
+      result = await supabase.from("addresses").update(data).eq("id", (addressModal as Address).id);
+    }
+    if (result?.error) {
+      console.error("saveAddress error:", result.error);
+      toast(`Erreur: ${result.error.message}`, "error");
+      return;
     }
     setAddressModal(null);
     load();
