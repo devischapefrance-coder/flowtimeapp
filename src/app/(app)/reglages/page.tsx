@@ -582,6 +582,14 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.4.0", date: "5 mars 2026", tag: "UX",
+            changes: [
+              "Tâches ménagères : checklist cochable avec compteur, tâches faites barrées",
+              "Activité récente : sections groupées (événements, tâches, dépenses) avec compteurs",
+              "Chat famille : photos de profil affichées à côté des messages",
+            ],
+          },
+          {
             version: "2.3.0", date: "5 mars 2026", tag: "Carte",
             changes: [
               "Carte : tap sur une adresse ou un appareil pour zoomer dessus",
@@ -786,7 +794,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.3.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.4.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>
