@@ -810,7 +810,7 @@ export default function FamillePage() {
               <button key={c} className="w-8 h-8 rounded-full" style={{ background: c, outline: form.color === c ? "2px solid var(--text)" : "none", outlineOffset: 2 }} onClick={() => setForm({ ...form, color: c })} />
             ))}
           </div>
-          {memberModal !== "new" && (() => {
+          {memberModal && memberModal !== "new" && (() => {
             const isMe = (memberModal as Member).user_id === profile?.id;
             return (
               <button
