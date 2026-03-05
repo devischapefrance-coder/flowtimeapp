@@ -320,7 +320,7 @@ export default function FamillePage() {
   async function saveContact() {
     if (!familyId) return;
     const visTo = (form.visible_to as string[]);
-    const assignTo = (form.assigned_to as string[]);
+    const assignTo = Array.isArray(form.assigned_to) ? form.assigned_to : [];
     const isShared = !visTo || visTo.length === 0;
     const data = {
       family_id: familyId,
@@ -329,7 +329,7 @@ export default function FamillePage() {
       relation: form.relation as string,
       emoji: form.emoji as string,
       visible_to: visTo && visTo.length > 0 ? visTo : null,
-      assigned_to: isShared && assignTo && assignTo.length > 0 ? assignTo : null,
+      assigned_to: isShared && assignTo.length > 0 ? assignTo : null,
     };
     if (contactModal === "new") {
       await supabase.from("contacts").insert(data);
@@ -378,7 +378,7 @@ export default function FamillePage() {
       address: form.address as string,
       lat: form.lat ? parseFloat(form.lat as string) : null,
       lng: form.lng ? parseFloat(form.lng as string) : null,
-      members: isSharedAddr ? (form.members || []) : [],
+      members: isSharedAddr ? (Array.isArray(form.members) ? form.members : []) : [],
       visible_to: visTo && visTo.length > 0 ? visTo : null,
     };
     if (addressModal === "new") {
@@ -684,9 +684,11 @@ export default function FamillePage() {
                   <p className="text-xs" style={{ color: "var(--dim)" }}>
                     {c.relation}
                     {c.visible_to && c.visible_to.length > 0 && <span style={{ color: "var(--faint)" }}> · 🔒 {c.visible_to.length}</span>}
-                    {c.assigned_to && c.assigned_to.length > 0 && (
-                      <span style={{ color: "var(--faint)" }}> · De {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean).join(", ")}</span>
-                    )}
+                    {(() => {
+                      const arr = Array.isArray(c.assigned_to) ? c.assigned_to : [];
+                      const names = arr.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean);
+                      return names.length > 0 ? <span style={{ color: "var(--faint)" }}> · De {names.join(", ")}</span> : null;
+                    })()}
                   </p>
                 </div>
                 {c.phone && (
@@ -725,9 +727,11 @@ export default function FamillePage() {
                 <p className="font-bold text-sm">{c.name}</p>
                 <p className="text-xs" style={{ color: "var(--dim)" }}>
                   {c.relation}{c.phone ? ` · ${c.phone}` : ""}
-                  {c.assigned_to && c.assigned_to.length > 0 && (
-                    <span style={{ color: "var(--faint)" }}> · De {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean).join(", ")}</span>
-                  )}
+                  {(() => {
+                    const arr = Array.isArray(c.assigned_to) ? c.assigned_to : [];
+                    const names = arr.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean);
+                    return names.length > 0 ? <span style={{ color: "var(--faint)" }}> · De {names.join(", ")}</span> : null;
+                  })()}
                 </p>
               </div>
               {c.phone && (
@@ -782,11 +786,11 @@ export default function FamillePage() {
             <p className="text-xs" style={{ color: a.address ? "var(--dim)" : "var(--red)" }}>
               {a.address || "⚠️ Adresse manquante"}
             </p>
-            {a.members && (a.members as string[]).length > 0 && (
-              <p className="text-[10px] mt-0.5" style={{ color: "var(--faint)" }}>
-                De {(a.members as string[]).map((mid) => { const mem = members.find((m) => m.id === mid); return mem ? `${mem.emoji} ${mem.name}` : ""; }).filter(Boolean).join(", ")}
-              </p>
-            )}
+            {(() => {
+              const arr = Array.isArray(a.members) ? a.members : [];
+              const names = arr.map((mid) => { const mem = members.find((m) => m.id === mid); return mem ? `${mem.emoji} ${mem.name}` : ""; }).filter(Boolean);
+              return names.length > 0 ? <p className="text-[10px] mt-0.5" style={{ color: "var(--faint)" }}>De {names.join(", ")}</p> : null;
+            })()}
           </div>
         </div>
       ))}
