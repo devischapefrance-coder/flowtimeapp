@@ -264,6 +264,7 @@ export default function ReglagesPage() {
         <p className="text-sm font-bold mb-3 mt-4">Couleur d&apos;accent</p>
         <div className="flex flex-wrap gap-2.5 justify-center">
           {([
+            ["dark", "#7C6BF0"],
             ["p1", "#4A9EF0"], ["p2", "#4CAF50"], ["p3", "#F07C4A"], ["p4", "#E04069"],
             ["p5", "#A182E0"], ["p6", "#3860B0"], ["p7", "#DAA532"], ["p8", "#88A8C2"],
             ["p9", "#DB8EB0"], ["p10", "#40CEC4"], ["p11", "#F06262"], ["p12", "#9CCC3C"],

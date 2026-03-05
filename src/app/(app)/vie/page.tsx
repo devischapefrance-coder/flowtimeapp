@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
-import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores } from "@/lib/realtime";
+import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores, useRealtimeBirthdays } from "@/lib/realtime";
 import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
 import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
@@ -252,6 +252,7 @@ export default function ViePage() {
   useRealtimeShopping(profile?.family_id, loadData);
   useRealtimeExpenses(profile?.family_id, loadData);
   useRealtimeChores(profile?.family_id, loadData);
+  useRealtimeBirthdays(profile?.family_id, loadData);
 
   // Polling fallback: refresh every 10s
   useEffect(() => {

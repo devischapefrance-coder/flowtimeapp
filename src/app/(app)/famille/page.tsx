@@ -860,8 +860,11 @@ export default function FamillePage() {
                   background: isMe ? "rgba(61,214,200,0.15)" : "var(--surface2)",
                   color: isMe ? "var(--teal)" : "var(--text)",
                 }}
-                onClick={() => {
-                  if (!isMe && memberModal) linkMemberToMe((memberModal as Member).id);
+                onClick={async () => {
+                  if (!isMe && memberModal) {
+                    await linkMemberToMe((memberModal as Member).id);
+                    setMemberModal(null);
+                  }
                 }}
               >
                 {isMe ? "✓ C'est vous" : "🙋 C'est moi"}
