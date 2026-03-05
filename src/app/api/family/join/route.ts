@@ -76,6 +76,7 @@ export async function POST(req: Request) {
         name: joinerProfile.first_name,
         emoji: joinerProfile.emoji || "👤",
         role: "parent",
+        user_id: user.id,
       };
 
       const { error: insertErr } = await adminClient.from("members").insert({ ...memberData, phone: joinerProfile.phone || null });

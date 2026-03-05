@@ -269,6 +269,40 @@ export default function HomePage() {
   const liveTime = now.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
   const dayStrip = getDayStrip();
 
+  // Load event counts for the entire day strip (carousel dots)
+  const [stripCounts, setStripCounts] = useState<Record<string, number>>({});
+  const [stripColors, setStripColors] = useState<Record<string, string>>({});
+  useEffect(() => {
+    if (!profile?.family_id) return;
+    const stripStart = dayStrip[0].date;
+    const stripEnd = dayStrip[dayStrip.length - 1].date;
+    supabase
+      .from("events")
+      .select("date, category, shared, member_id")
+      .eq("family_id", profile.family_id)
+      .gte("date", stripStart)
+      .lte("date", stripEnd)
+      .then(({ data }) => {
+        if (!data) return;
+        const counts: Record<string, number> = {};
+        const cats: Record<string, Record<string, number>> = {};
+        for (const ev of data) {
+          counts[ev.date] = (counts[ev.date] || 0) + 1;
+          if (!cats[ev.date]) cats[ev.date] = {};
+          const cat = ev.category || "general";
+          cats[ev.date][cat] = (cats[ev.date][cat] || 0) + 1;
+        }
+        setStripCounts(counts);
+        const colors: Record<string, string> = {};
+        for (const [date, catMap] of Object.entries(cats)) {
+          const dominant = Object.entries(catMap).sort((a, b) => b[1] - a[1])[0];
+          colors[date] = dominant ? getCategoryColor(dominant[0]) : getCategoryColor("general");
+        }
+        setStripColors(colors);
+      });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [profile?.family_id]);
+
   const weekMonthLabel = (() => {
     if (calendarView === "month") {
       const d = new Date(monthYear, monthMonth);
@@ -967,8 +1001,8 @@ export default function HomePage() {
                 const dayNum = date.getDate();
                 const dayLetter = date.toLocaleDateString("fr-FR", { weekday: "short" }).slice(0, 1).toUpperCase();
                 const isSelected = d.date === selectedDate;
-                const count = eventCounts[d.date] || 0;
-                const dotColor = dayCategoryColors[d.date] || "var(--accent)";
+                const count = stripCounts[d.date] || 0;
+                const dotColor = stripColors[d.date] || "var(--accent)";
                 // Show month label on 1st of month
                 const showMonth = dayNum === 1;
                 return (

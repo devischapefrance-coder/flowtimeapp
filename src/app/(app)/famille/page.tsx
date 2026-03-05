@@ -188,6 +188,16 @@ export default function FamillePage() {
       supabase.from("events").select("*").eq("family_id", familyId).gte("date", monthStart).lte("date", monthEnd),
     ]);
     if (m.data) {
+      // Auto-link: if no member has our user_id, link the one matching our first_name
+      const membersData = m.data as Member[];
+      if (profile && !membersData.some((mb) => mb.user_id === profile.id)) {
+        const match = membersData.find((mb) => !mb.user_id && mb.name.toLowerCase() === (profile.first_name || "").toLowerCase());
+        if (match) {
+          await supabase.from("members").update({ user_id: profile.id }).eq("id", match.id);
+          match.user_id = profile.id;
+        }
+      }
+
       const roleOrder: Record<string, number> = {
         "arriere-grand-pere": 0, "arriere-grand-mere": 1,
         "grand-pere": 2, "grand-mere": 3,
@@ -220,7 +230,7 @@ export default function FamillePage() {
     if (ev.data) {
       setMonthEvents((ev.data as Event[]).filter((e) => e.shared === true));
     }
-  }, [familyId]);
+  }, [familyId, profile]);
 
   useEffect(() => { load(); }, [load]);
 
