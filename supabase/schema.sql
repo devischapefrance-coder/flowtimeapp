@@ -185,6 +185,17 @@ CREATE TABLE chores (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Messages du chat famille
+CREATE TABLE family_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  family_id UUID NOT NULL,
+  sender_id UUID REFERENCES auth.users(id) ON DELETE CASCADE,
+  sender_name TEXT NOT NULL DEFAULT '',
+  sender_emoji TEXT NOT NULL DEFAULT '👤',
+  text TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
 -- Abonnements push notifications
 CREATE TABLE push_subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -214,6 +225,7 @@ ALTER TABLE shopping_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
+ALTER TABLE family_messages ENABLE ROW LEVEL SECURITY;
 
 -- Profiles : lecture/modif de son propre profil uniquement
 CREATE POLICY "Own profile" ON profiles FOR SELECT USING (auth.uid() = id);
@@ -288,4 +300,9 @@ CREATE POLICY "Family chores" ON chores FOR ALL USING (
 -- Push subscriptions : accès à ses propres abonnements uniquement
 CREATE POLICY "Own push subscriptions" ON push_subscriptions FOR ALL USING (
   user_id = auth.uid()
+);
+
+-- Messages chat famille : accès par famille
+CREATE POLICY "Family messages" ON family_messages FOR ALL USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
 );

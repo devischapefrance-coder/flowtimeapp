@@ -2,15 +2,17 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { notifyFamily } from "@/lib/push";
 import Modal from "./Modal";
 
 interface ChatMessage {
   id: string;
+  family_id: string;
   text: string;
   sender_name: string;
   sender_emoji: string;
   sender_id: string;
-  timestamp: string;
+  created_at: string;
 }
 
 interface FamilyChatProps {
@@ -23,80 +25,75 @@ interface FamilyChatProps {
   onUnread?: (count: number) => void;
 }
 
-const CHAT_STORAGE_KEY = "flowtime-family-chat";
-const MAX_MESSAGES = 50;
-
-function loadMessages(familyId: string): ChatMessage[] {
-  try {
-    const raw = localStorage.getItem(`${CHAT_STORAGE_KEY}-${familyId}`);
-    return raw ? JSON.parse(raw) : [];
-  } catch {
-    return [];
-  }
-}
-
-function saveMessages(familyId: string, messages: ChatMessage[]) {
-  localStorage.setItem(`${CHAT_STORAGE_KEY}-${familyId}`, JSON.stringify(messages.slice(-MAX_MESSAGES)));
-}
+const MAX_MESSAGES = 100;
 
 export default function FamilyChat({ open, onClose, familyId, userId, userName, userEmoji, onUnread }: FamilyChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [unread, setUnread] = useState(0);
+  const [loaded, setLoaded] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
-  const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const openRef = useRef(open);
   openRef.current = open;
 
-  // Always listen for messages, even when closed
+  // Load messages from DB
+  const loadMessages = useCallback(async () => {
+    if (!familyId) return;
+    const { data } = await supabase
+      .from("family_messages")
+      .select("*")
+      .eq("family_id", familyId)
+      .order("created_at", { ascending: true })
+      .limit(MAX_MESSAGES);
+    if (data) {
+      setMessages(data as ChatMessage[]);
+      setLoaded(true);
+    }
+  }, [familyId]);
+
+  // Initial load
+  useEffect(() => {
+    loadMessages();
+  }, [loadMessages]);
+
+  // Realtime subscription for new messages
   useEffect(() => {
     if (!familyId) return;
-    setMessages(loadMessages(familyId));
 
-    const channel = supabase.channel(`family-chat-${familyId}`);
-    channelRef.current = channel;
+    const channel = supabase
+      .channel(`family-chat-${familyId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "family_messages", filter: `family_id=eq.${familyId}` },
+        (payload) => {
+          const msg = payload.new as ChatMessage;
+          setMessages((prev) => {
+            // Avoid duplicates (we already add locally on send)
+            if (prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
 
-    channel
-      .on("broadcast", { event: "message" }, ({ payload }) => {
-        const msg = payload as ChatMessage;
-        setMessages((prev) => {
-          const updated = [...prev, msg];
-          saveMessages(familyId, updated);
-          return updated;
-        });
-
-        // Notify if chat is closed and message is from someone else
-        if (!openRef.current && msg.sender_id !== userId) {
-          setUnread((prev) => prev + 1);
-
-          // Web notification
-          if (typeof Notification !== "undefined" && Notification.permission === "granted") {
-            new Notification(`${msg.sender_emoji} ${msg.sender_name}`, {
-              body: msg.text,
-              icon: "/icons/icon-192.png",
-              tag: "family-chat",
-            });
+          // Unread counter if chat is closed and from someone else
+          if (!openRef.current && msg.sender_id !== userId) {
+            setUnread((prev) => prev + 1);
+            if (navigator.vibrate) navigator.vibrate(200);
           }
-
-          // Vibrate if supported
-          if (navigator.vibrate) navigator.vibrate(200);
         }
-      })
+      )
       .subscribe();
 
     return () => {
-      channel.unsubscribe();
-      channelRef.current = null;
+      supabase.removeChannel(channel);
     };
   }, [familyId, userId]);
 
-  // Reset unread when opening
+  // Reset unread when opening + reload fresh data
   useEffect(() => {
     if (open) {
       setUnread(0);
-      setMessages(loadMessages(familyId));
+      loadMessages();
     }
-  }, [open, familyId]);
+  }, [open, loadMessages]);
 
   // Notify parent of unread count
   useEffect(() => {
@@ -110,33 +107,50 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
     }
   }, [messages, open]);
 
-  function sendMessage() {
+  async function sendMessage() {
     const trimmed = text.trim();
-    if (!trimmed || !channelRef.current) return;
+    if (!trimmed || !familyId) return;
 
     const msg: ChatMessage = {
       id: crypto.randomUUID(),
+      family_id: familyId,
       text: trimmed,
       sender_name: userName,
       sender_emoji: userEmoji,
       sender_id: userId,
-      timestamp: new Date().toISOString(),
+      created_at: new Date().toISOString(),
     };
 
-    channelRef.current.send({ type: "broadcast", event: "message", payload: msg });
-
-    // Also add locally
-    setMessages((prev) => {
-      const updated = [...prev, msg];
-      saveMessages(familyId, updated);
-      return updated;
-    });
+    // Optimistic update
+    setMessages((prev) => [...prev, msg]);
     setText("");
+
+    // Insert to DB
+    await supabase.from("family_messages").insert({
+      id: msg.id,
+      family_id: msg.family_id,
+      text: msg.text,
+      sender_name: msg.sender_name,
+      sender_emoji: msg.sender_emoji,
+      sender_id: msg.sender_id,
+    });
+
+    // Push notification for offline members
+    notifyFamily("FlowTime 💬", `${userEmoji} ${userName} : ${trimmed.length > 60 ? trimmed.slice(0, 60) + "..." : trimmed}`);
   }
 
   function formatTime(ts: string) {
     const d = new Date(ts);
-    return d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const now = new Date();
+    const isToday = d.toDateString() === now.toDateString();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+
+    const time = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    if (isToday) return time;
+    if (isYesterday) return `Hier ${time}`;
+    return `${d.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })} ${time}`;
   }
 
   return (
@@ -144,7 +158,12 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
       <div className="flex flex-col" style={{ height: "min(60vh, 400px)" }}>
         {/* Messages */}
         <div ref={scrollRef} className="flex-1 overflow-y-auto flex flex-col gap-2 mb-3 px-1">
-          {messages.length === 0 && (
+          {!loaded && (
+            <div className="flex-1 flex items-center justify-center">
+              <p className="text-xs" style={{ color: "var(--dim)" }}>Chargement...</p>
+            </div>
+          )}
+          {loaded && messages.length === 0 && (
             <div className="flex-1 flex items-center justify-center">
               <p className="text-xs text-center" style={{ color: "var(--dim)" }}>
                 Aucun message. Envoie le premier !
@@ -173,7 +192,7 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
                     {msg.text}
                   </div>
                   <p className="text-[9px] mt-0.5" style={{ color: "var(--faint)" }}>
-                    {formatTime(msg.timestamp)}
+                    {formatTime(msg.created_at)}
                   </p>
                 </div>
               </div>
