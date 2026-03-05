@@ -179,9 +179,7 @@ export default function FamillePage() {
     if (a.data) setAddresses(a.data as Address[]);
     if (d.data) setDevices(d.data as DeviceLocation[]);
     if (ev.data) {
-      const allEv = ev.data as Event[];
-      const myMemberId = (m.data as Member[])?.find((mb) => mb.user_id === profile?.id)?.id;
-      setMonthEvents(allEv.filter((e) => e.shared !== false));
+      setMonthEvents((ev.data as Event[]).filter((e) => e.shared === true));
     }
   }, [familyId]);
 

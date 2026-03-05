@@ -1529,18 +1529,16 @@ export default function HomePage() {
               <option value="60">1 heure avant</option>
             </select>
           </div>
-          {qeMember && (
-            <label className="flex items-center gap-3 cursor-pointer py-1">
-              <div className="relative w-11 h-6 rounded-full transition-colors"
-                style={{ background: qeShared ? "var(--accent)" : "var(--surface2)", border: "1px solid var(--glass-border)" }}
-                onClick={() => setQeShared(!qeShared)}>
-                <div className="absolute top-0.5 w-5 h-5 rounded-full transition-all" style={{ background: "#fff", left: qeShared ? 20 : 2 }} />
-              </div>
-              <span className="text-sm" style={{ color: "var(--text)" }}>
-                {qeShared ? "👨‍👩‍👧‍👦 Visible par la famille" : "🔒 Perso uniquement"}
-              </span>
-            </label>
-          )}
+          <label className="flex items-center gap-3 cursor-pointer py-1">
+            <div className="relative w-11 h-6 rounded-full transition-colors"
+              style={{ background: qeShared ? "var(--accent)" : "var(--surface2)", border: "1px solid var(--glass-border)" }}
+              onClick={() => setQeShared(!qeShared)}>
+              <div className="absolute top-0.5 w-5 h-5 rounded-full transition-all" style={{ background: "#fff", left: qeShared ? 20 : 2 }} />
+            </div>
+            <span className="text-sm" style={{ color: "var(--text)" }}>
+              {qeShared ? "👨‍👩‍👧‍👦 Visible par la famille" : "🔒 Perso uniquement"}
+            </span>
+          </label>
           <button className="w-full py-3 rounded-xl font-bold text-sm"
             style={{ background: "var(--accent)", color: "#fff" }} onClick={saveQuickEvent}>Ajouter</button>
         </div>
