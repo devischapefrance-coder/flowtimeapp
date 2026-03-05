@@ -1340,7 +1340,7 @@ export default function HomePage() {
   return (
     <div
       className="px-4 py-4 animate-in gradient-bg"
-      style={{ paddingBottom: 200 }}
+      style={{ paddingBottom: "calc(180px + env(safe-area-inset-bottom))" }}
     >
       {/* Offline banner */}
       {isOffline && (

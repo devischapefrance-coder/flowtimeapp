@@ -473,7 +473,7 @@ export default function FamillePage() {
   const filledAddresses = addresses.filter((a) => a.address).length;
 
   return (
-    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 100 }}>
+    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: "calc(80px + env(safe-area-inset-bottom))" }}>
       <h1 className="text-xl font-bold mb-6">Famille</h1>
 
       {/* MEMBRES */}
