@@ -181,7 +181,7 @@ export default function FamillePage() {
     if (ev.data) {
       const allEv = ev.data as Event[];
       const myMemberId = (m.data as Member[])?.find((mb) => mb.user_id === profile?.id)?.id;
-      setMonthEvents(allEv.filter((e) => e.shared !== false || e.member_id === myMemberId));
+      setMonthEvents(allEv.filter((e) => e.shared !== false));
     }
   }, [familyId]);
 
