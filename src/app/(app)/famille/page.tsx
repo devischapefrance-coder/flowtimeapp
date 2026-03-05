@@ -138,6 +138,19 @@ export default function FamillePage() {
   const familyId = profile?.family_id;
 
   const [members, setMembers] = useState<Member[]>([]);
+
+  // Local roles: each user assigns roles locally
+  function getLocalRoles(): Record<string, string> {
+    try { return JSON.parse(localStorage.getItem("flowtime_roles") || "{}"); } catch { return {}; }
+  }
+  function setLocalRole(memberId: string, role: string) {
+    const roles = getLocalRoles();
+    roles[memberId] = role;
+    localStorage.setItem("flowtime_roles", JSON.stringify(roles));
+  }
+  function getLocalRole(memberId: string, fallback: string): string {
+    return getLocalRoles()[memberId] || fallback;
+  }
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
@@ -195,8 +208,9 @@ export default function FamillePage() {
         filleul: 31, filleule: 32,
         autre: 33,
       };
+      const localRoles = getLocalRoles();
       const sorted = [...(m.data as Member[])].sort(
-        (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
+        (a, b) => (roleOrder[localRoles[a.id] || a.role] ?? 9) - (roleOrder[localRoles[b.id] || b.role] ?? 9)
       );
       setMembers(sorted);
     }
@@ -263,21 +277,23 @@ export default function FamillePage() {
     if (m === "new") {
       setForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
     } else {
-      setForm({ name: m.name, role: m.role, emoji: m.emoji, color: m.color, birth_date: m.birth_date || "", phone: m.phone || "" });
+      setForm({ name: m.name, role: getLocalRole(m.id, m.role), emoji: m.emoji, color: m.color, birth_date: m.birth_date || "", phone: m.phone || "" });
     }
     setMemberModal(m);
   }
 
   async function saveMember() {
     if (!familyId) return;
-    const data = { family_id: familyId, name: form.name as string, role: form.role as string, emoji: form.emoji as string, color: form.color as string, birth_date: (form.birth_date as string) || null, phone: (form.phone as string) || null };
+    const data = { family_id: familyId, name: form.name as string, role: (form.role as string) || "autre", emoji: form.emoji as string, color: form.color as string, birth_date: (form.birth_date as string) || null, phone: (form.phone as string) || null };
     if (memberModal === "new") {
       const { data: inserted } = await supabase.from("members").insert(data).select("id").single();
+      if (inserted) setLocalRole(inserted.id, data.role);
       // Auto-create birthday if birth_date set
       if (inserted && data.birth_date) {
         await supabase.from("birthdays").insert({ family_id: familyId, name: data.name, date: data.birth_date, emoji: data.emoji, member_id: inserted.id });
       }
     } else if (memberModal) {
+      setLocalRole(memberModal.id, data.role);
       await supabase.from("members").update(data).eq("id", memberModal.id);
       // Sync linked birthday
       if (data.birth_date) {
@@ -556,7 +572,7 @@ export default function FamillePage() {
                 {m.name}
               </p>
               <p className="text-xs" style={{ color: "var(--dim)" }}>
-                {ROLES.find((r) => r.key === m.role)?.label || m.role}
+                {ROLES.find((r) => r.key === getLocalRole(m.id, m.role))?.label || getLocalRole(m.id, m.role)}
                 {age !== null && ` · ${age} ans`}
                 {m.phone && ` · ${m.phone}`}
               </p>
