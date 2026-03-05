@@ -464,7 +464,7 @@ export default function HomePage() {
     ? events.filter((e) => e.member_id === myMember.id)
     : viewMode === "perso" && !myMember
       ? []
-      : events.filter((e) => e.shared !== false || (myMember && e.member_id === myMember.id));
+      : events.filter((e) => e.shared === true || (myMember && e.member_id === myMember.id));
 
   const dayEvents = viewEvents.filter((e) => e.date === currentDate);
   const filteredEvents = filter
