@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
@@ -468,20 +468,36 @@ export default function FamillePage() {
     );
   }
 
-  // Auto-update location every 30s when sharing
+  // Continuous high-accuracy location tracking via watchPosition
+  const locationWatchRef = useRef<number | null>(null);
+  const lastUploadRef = useRef<number>(0);
   useEffect(() => {
     if (!sharingLocation || !profile) return;
-    const interval = setInterval(() => {
-      navigator.geolocation.getCurrentPosition(async (pos) => {
+    if (locationWatchRef.current !== null) return;
+
+    locationWatchRef.current = navigator.geolocation.watchPosition(
+      async (pos) => {
+        // Throttle DB writes to every 10s minimum
+        const now = Date.now();
+        if (now - lastUploadRef.current < 10000) return;
+        lastUploadRef.current = now;
         await supabase.from("device_locations").update({
           lat: pos.coords.latitude,
           lng: pos.coords.longitude,
           accuracy: pos.coords.accuracy,
           updated_at: new Date().toISOString(),
         }).eq("user_id", profile.id);
-      }, () => {}, { enableHighAccuracy: true });
-    }, 30000);
-    return () => clearInterval(interval);
+      },
+      () => {},
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+    );
+
+    return () => {
+      if (locationWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchRef.current);
+        locationWatchRef.current = null;
+      }
+    };
   }, [sharingLocation, profile]);
 
   // Check if already sharing

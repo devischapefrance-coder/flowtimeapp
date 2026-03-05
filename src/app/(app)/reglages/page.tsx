@@ -582,6 +582,16 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.3.0", date: "5 mars 2026", tag: "Carte",
+            changes: [
+              "Carte : tap sur une adresse ou un appareil pour zoomer dessus",
+              "Tracking GPS haute précision en continu (watchPosition, maximumAge: 0)",
+              "Positions des membres mises à jour en temps réel sur la carte (Supabase Realtime)",
+              "Mini-carte interactive dans le modal d'adresse pour placer le marqueur précisément",
+              "Correction de la carte qui sautait à chaque interaction",
+            ],
+          },
+          {
             version: "2.2.0", date: "5 mars 2026", tag: "Widgets",
             changes: [
               "Widgets interactifs : tap pour ouvrir une vue détaillée",
@@ -776,7 +786,7 @@ export default function ReglagesPage() {
           </div>
           <div>
             <p className="font-bold text-sm">FlowTime</p>
-            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.2.0</p>
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>Version 2.3.0</p>
           </div>
         </div>
         <p className="text-xs" style={{ color: "var(--dim)" }}>

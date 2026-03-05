@@ -129,14 +129,15 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude];
         setMyLocation(loc);
         setMapCenter(loc);
+        setMapZoom(17);
       },
       () => alert("Impossible d'acceder a la geolocalisation"),
-      { enableHighAccuracy: true }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
     watchRef.current = navigator.geolocation.watchPosition(
       (pos) => setMyLocation([pos.coords.latitude, pos.coords.longitude]),
       () => {},
-      { enableHighAccuracy: true, maximumAge: 10000 }
+      { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
     );
   }
 
