@@ -254,7 +254,7 @@ export default function MapView({
       >
         <TileLayer url={tile.url} />
         <InvalidateSize />
-        {interactive && <SetCenter center={center} />}
+        {interactive && <SetCenter center={center} zoom={zoom} />}
         {interactive && markers.length > 1 && !route && <FitBounds markers={markers} />}
         {route && route.coordinates.length > 1 && <FitRoute route={route} />}
         {/* Route border (wider, darker) */}

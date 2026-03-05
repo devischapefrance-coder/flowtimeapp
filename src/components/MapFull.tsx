@@ -85,6 +85,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
+  const [mapZoom, setMapZoom] = useState(14);
   const watchRef = useRef<number | null>(null);
 
 
@@ -241,6 +242,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
   function flyTo(lat: number, lng: number) {
     setMapCenter([lat, lng]);
+    setMapZoom(16);
     setTab(null);
   }
 
@@ -517,7 +519,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         center={mapCenter}
         interactive
         height="100dvh"
-        zoom={14}
+        zoom={mapZoom}
         mapStyle={mapStyle}
         onMarkerDragEnd={onAddressMoved ? handleMarkerDragEnd : undefined}
       />
