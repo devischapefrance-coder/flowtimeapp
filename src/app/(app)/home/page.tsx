@@ -1029,7 +1029,7 @@ export default function HomePage() {
 
         {/* Member filters */}
         {viewMode === "famille" && members.length > 0 && (
-          <div className="flex gap-3 mb-3 overflow-x-auto px-1 py-1 -mx-1 scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
+          <div className="flex justify-center gap-3 mb-3 overflow-x-auto px-1 py-1 -mx-1 scrollbar-none" style={{ WebkitOverflowScrolling: "touch" }}>
             <button className="flex flex-col items-center gap-1 shrink-0" style={{ opacity: !filter ? 1 : 0.4 }} onClick={() => setFilter(null)}>
               <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
                 style={{ background: !filter ? "var(--accent-soft)" : "var(--surface2)", outline: !filter ? "2px solid var(--accent)" : "none", outlineOffset: 2 }}>👥</div>
