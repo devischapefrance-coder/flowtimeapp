@@ -13,6 +13,7 @@ export function getSupabase(): SupabaseClient {
           persistSession: true,
           storageKey: "flowtime-auth",
           storage: typeof window !== "undefined" ? window.localStorage : undefined,
+          flowType: "implicit",
         },
       }
     );

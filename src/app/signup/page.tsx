@@ -200,7 +200,7 @@ export default function SignupPage() {
             const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
             const { error: oauthError } = await supabase.auth.signInWithOAuth({
               provider: "google",
-              options: { redirectTo: `${siteUrl}/auth/callback` },
+              options: { redirectTo: `${siteUrl}/home` },
             });
             if (oauthError) setError(oauthError.message);
           }}
