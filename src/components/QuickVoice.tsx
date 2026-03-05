@@ -34,7 +34,14 @@ export default function QuickVoice({ context, userId, onAction }: QuickVoiceProp
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ message: transcript, context, history: [] }),
+        body: JSON.stringify({ message: transcript, context, history: (() => {
+          try {
+            const key = userId ? `flowtime_chat_${userId}` : "flowtime_chat";
+            const saved = localStorage.getItem(key) || sessionStorage.getItem("flowtime_chat");
+            if (saved) return JSON.parse(saved).slice(-12).map((m: { role: string; text: string }) => ({ role: m.role, text: m.text }));
+          } catch { /* ignore */ }
+          return [];
+        })() }),
       });
       const data = await res.json();
       const text = data.response || "C'est fait !";
