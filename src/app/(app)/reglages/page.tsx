@@ -44,9 +44,9 @@ export default function ReglagesPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  const [theme, setTheme] = useState<"dark" | "light" | "system" | "ocean" | "forest" | "sunset">(() => {
+  const [theme, setTheme] = useState<"dark" | "light" | "system" | "ocean" | "forest" | "sunset" | "cherry" | "lavender" | "midnight" | "amber" | "nord">(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("flowtime_theme") as "dark" | "light" | "system" | "ocean" | "forest" | "sunset") || "dark";
+      return (localStorage.getItem("flowtime_theme") as "dark" | "light" | "system" | "ocean" | "forest" | "sunset" | "cherry" | "lavender" | "midnight" | "amber" | "nord") || "dark";
     }
     return "dark";
   });
@@ -57,10 +57,10 @@ export default function ReglagesPage() {
     return "fr";
   });
 
-  function changeTheme(t: "dark" | "light" | "system" | "ocean" | "forest" | "sunset") {
+  function changeTheme(t: "dark" | "light" | "system" | "ocean" | "forest" | "sunset" | "cherry" | "lavender" | "midnight" | "amber" | "nord") {
     setTheme(t);
     localStorage.setItem("flowtime_theme", t);
-    const themeClasses = ["light", "ocean", "forest", "sunset"];
+    const themeClasses = ["light", "ocean", "forest", "sunset", "cherry", "lavender", "midnight", "amber", "nord"];
     document.documentElement.classList.remove(...themeClasses);
     if (t === "system") {
       const resolved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -260,15 +260,20 @@ export default function ReglagesPage() {
           ))}
         </div>
         <p className="text-sm font-bold mb-3 mt-4">Palettes</p>
-        <div className="grid grid-cols-3 gap-2">
+        <div className="grid grid-cols-4 gap-2">
           {([
             ["ocean", "#4A9EF0", "Ocean"],
-            ["forest", "#4CAF50", "Foret"],
+            ["forest", "#4CAF50", "Forêt"],
             ["sunset", "#F07C4A", "Sunset"],
+            ["cherry", "#E04069", "Cerise"],
+            ["lavender", "#A182E0", "Lavande"],
+            ["midnight", "#3860B0", "Minuit"],
+            ["amber", "#DAA532", "Ambre"],
+            ["nord", "#88A8C2", "Nord"],
           ] as const).map(([key, color, label]) => (
             <button
               key={key}
-              className="py-2.5 rounded-xl text-xs font-bold transition-colors text-center flex items-center justify-center gap-1.5"
+              className="py-2 rounded-xl text-[11px] font-bold transition-colors text-center flex flex-col items-center justify-center gap-1"
               style={{
                 background: theme === key ? color : "var(--surface2)",
                 color: theme === key ? "#fff" : "var(--text)",
@@ -276,7 +281,7 @@ export default function ReglagesPage() {
               }}
               onClick={() => changeTheme(key)}
             >
-              <span className="w-3 h-3 rounded-full" style={{ background: color }} />
+              <span className="w-4 h-4 rounded-full" style={{ background: color, boxShadow: theme === key ? "0 0 8px " + color : "none" }} />
               {label}
             </button>
           ))}
