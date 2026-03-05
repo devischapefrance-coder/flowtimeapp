@@ -45,6 +45,8 @@ CREATE TABLE contacts (
   phone TEXT DEFAULT '',
   relation TEXT DEFAULT '',
   emoji TEXT DEFAULT '👤',
+  visible_to TEXT[] DEFAULT NULL,
+  assigned_to TEXT[] DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

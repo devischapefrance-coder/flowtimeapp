@@ -310,9 +310,9 @@ export default function FamillePage() {
   // CONTACT CRUD
   function openContactModal(c: Contact | "new") {
     if (c === "new") {
-      setForm({ name: "", phone: "", relation: "Ami(e)", emoji: "🫂", visible_to: [] });
+      setForm({ name: "", phone: "", relation: "Ami(e)", emoji: "🫂", visible_to: [], assigned_to: [] });
     } else {
-      setForm({ name: c.name, phone: c.phone, relation: c.relation, emoji: c.emoji, visible_to: c.visible_to || [] });
+      setForm({ name: c.name, phone: c.phone, relation: c.relation, emoji: c.emoji, visible_to: c.visible_to || [], assigned_to: c.assigned_to || [] });
     }
     setContactModal(c);
   }
@@ -320,6 +320,8 @@ export default function FamillePage() {
   async function saveContact() {
     if (!familyId) return;
     const visTo = (form.visible_to as string[]);
+    const assignTo = (form.assigned_to as string[]);
+    const isShared = !visTo || visTo.length === 0;
     const data = {
       family_id: familyId,
       name: form.name as string,
@@ -327,6 +329,7 @@ export default function FamillePage() {
       relation: form.relation as string,
       emoji: form.emoji as string,
       visible_to: visTo && visTo.length > 0 ? visTo : null,
+      assigned_to: isShared && assignTo && assignTo.length > 0 ? assignTo : null,
     };
     if (contactModal === "new") {
       await supabase.from("contacts").insert(data);
@@ -680,6 +683,9 @@ export default function FamillePage() {
                   <p className="text-xs" style={{ color: "var(--dim)" }}>
                     {c.relation}
                     {c.visible_to && c.visible_to.length > 0 && <span style={{ color: "var(--faint)" }}> · 🔒 {c.visible_to.length}</span>}
+                    {c.assigned_to && c.assigned_to.length > 0 && (
+                      <span style={{ color: "var(--faint)" }}> · {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? m.emoji : ""; }).join("")}</span>
+                    )}
                   </p>
                 </div>
                 {c.phone && (
@@ -716,7 +722,12 @@ export default function FamillePage() {
               <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openContactModal(c)}>{c.emoji}</div>
               <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
                 <p className="font-bold text-sm">{c.name}</p>
-                <p className="text-xs" style={{ color: "var(--dim)" }}>{c.relation} · {c.phone}</p>
+                <p className="text-xs" style={{ color: "var(--dim)" }}>
+                  {c.relation}{c.phone ? ` · ${c.phone}` : ""}
+                  {c.assigned_to && c.assigned_to.length > 0 && (
+                    <span style={{ color: "var(--faint)" }}> · {c.assigned_to.map((id) => { const m = members.find((m) => m.id === id); return m ? m.emoji : ""; }).join("")}</span>
+                  )}
+                </p>
               </div>
               {c.phone && (
                 <a href={`tel:${c.phone}`} className="w-10 h-10 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
@@ -953,6 +964,28 @@ export default function FamillePage() {
               );
             })}
           </div>
+          {/* Assigned to members — only for shared contacts */}
+          {((form.visible_to as string[]) || []).length === 0 && members.length > 0 && (
+            <>
+              <p className="label mt-2">Pour qui ?</p>
+              <div className="flex flex-wrap gap-2">
+                {members.map((m) => {
+                  const sel = ((form.assigned_to as string[]) || []).includes(m.id);
+                  return (
+                    <button key={m.id} className="px-3 py-1.5 rounded-full text-xs font-bold transition-colors flex items-center gap-1"
+                      style={{ background: sel ? "var(--accent)" : "var(--surface2)", color: sel ? "#fff" : "var(--dim)" }}
+                      onClick={() => {
+                        const cur = (form.assigned_to as string[]) || [];
+                        setForm({ ...form, assigned_to: sel ? cur.filter((id) => id !== m.id) : [...cur, m.id] });
+                      }}>
+                      {m.emoji} {m.name}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[10px]" style={{ color: "var(--faint)" }}>Laissez vide = pour toute la famille</p>
+            </>
+          )}
           <button className="btn btn-primary mt-3" onClick={saveContact}>Sauvegarder</button>
           {contactModal !== "new" && <button className="btn btn-danger" onClick={deleteContact}>Supprimer</button>}
         </div>

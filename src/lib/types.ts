@@ -35,6 +35,7 @@ export interface Contact {
   relation: string;
   emoji: string;
   visible_to: string[] | null;
+  assigned_to: string[] | null;
   created_at: string;
 }
 
