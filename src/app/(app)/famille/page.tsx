@@ -239,9 +239,22 @@ export default function FamillePage() {
     if (!familyId) return;
     const data = { family_id: familyId, name: form.name as string, role: form.role as string, emoji: form.emoji as string, color: form.color as string, birth_date: (form.birth_date as string) || null, phone: (form.phone as string) || null };
     if (memberModal === "new") {
-      await supabase.from("members").insert(data);
+      const { data: inserted } = await supabase.from("members").insert(data).select("id").single();
+      // Auto-create birthday if birth_date set
+      if (inserted && data.birth_date) {
+        await supabase.from("birthdays").insert({ family_id: familyId, name: data.name, date: data.birth_date, emoji: data.emoji, member_id: inserted.id });
+      }
     } else if (memberModal) {
       await supabase.from("members").update(data).eq("id", memberModal.id);
+      // Sync linked birthday
+      if (data.birth_date) {
+        const { data: existing } = await supabase.from("birthdays").select("id").eq("member_id", memberModal.id).maybeSingle();
+        if (existing) {
+          await supabase.from("birthdays").update({ name: data.name, date: data.birth_date, emoji: data.emoji }).eq("id", existing.id);
+        } else {
+          await supabase.from("birthdays").insert({ family_id: familyId, name: data.name, date: data.birth_date, emoji: data.emoji, member_id: memberModal.id });
+        }
+      }
     }
     setMemberModal(null);
     load();

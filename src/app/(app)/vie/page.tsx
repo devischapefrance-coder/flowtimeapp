@@ -201,8 +201,37 @@ export default function ViePage() {
         }
       }
     }
-    if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
-    if (memRes.data) setMembers(memRes.data as Member[]);
+    const loadedBdays = (bdayRes.data || []) as Birthday[];
+    const loadedMembers = (memRes.data || []) as Member[];
+    // Sync: auto-create birthdays for members with birth_date not yet in birthdays
+    const membersToSync = loadedMembers.filter(
+      (m) => m.birth_date && !loadedBdays.some((b) => b.member_id === m.id)
+    );
+    if (membersToSync.length > 0) {
+      const inserts = membersToSync.map((m) => ({
+        family_id: profile.family_id,
+        name: m.name,
+        date: m.birth_date!,
+        emoji: m.emoji || "🎂",
+        member_id: m.id,
+      }));
+      const { data: newBdays } = await supabase.from("birthdays").insert(inserts).select("*");
+      if (newBdays) loadedBdays.push(...(newBdays as Birthday[]));
+    }
+    // Sync: update existing linked birthdays if member name/date/emoji changed
+    for (const b of loadedBdays) {
+      if (!b.member_id) continue;
+      const m = loadedMembers.find((mem) => mem.id === b.member_id);
+      if (!m || !m.birth_date) continue;
+      if (b.name !== m.name || b.date !== m.birth_date || b.emoji !== m.emoji) {
+        await supabase.from("birthdays").update({ name: m.name, date: m.birth_date, emoji: m.emoji }).eq("id", b.id);
+        b.name = m.name;
+        b.date = m.birth_date;
+        b.emoji = m.emoji;
+      }
+    }
+    setBirthdays(loadedBdays);
+    setMembers(loadedMembers);
     if (shopRes.data) setShoppingItems(shopRes.data as ShoppingItem[]);
     if (expRes.data) setExpenses(expRes.data as Expense[]);
     if (choreRes.data) setChores(choreRes.data as Chore[]);
