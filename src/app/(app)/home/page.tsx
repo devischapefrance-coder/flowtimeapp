@@ -600,7 +600,8 @@ export default function HomePage() {
   function resolveFlowMemberId(memberName?: string): string | null {
     const resolved = resolveMemberId(memberName);
     if (resolved) return resolved;
-    if (viewMode === "perso" && myMember) return myMember.id;
+    // Always fallback to the current user's member, regardless of view mode
+    if (myMember) return myMember.id;
     return null;
   }
 
