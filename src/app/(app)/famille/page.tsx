@@ -22,6 +22,14 @@ const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
   { key: "bebe", label: "Bébé", defaultEmoji: "👶" },
   { key: "grand-pere", label: "Grand-père", defaultEmoji: "👴" },
   { key: "grand-mere", label: "Grand-mère", defaultEmoji: "👵" },
+  { key: "beau-pere", label: "Beau-père", defaultEmoji: "👨" },
+  { key: "belle-mere", label: "Belle-mère", defaultEmoji: "👩" },
+  { key: "oncle", label: "Oncle", defaultEmoji: "👨" },
+  { key: "tante", label: "Tante", defaultEmoji: "👩" },
+  { key: "cousin", label: "Cousin", defaultEmoji: "🧑" },
+  { key: "cousine", label: "Cousine", defaultEmoji: "👩" },
+  { key: "neveu", label: "Neveu", defaultEmoji: "👦" },
+  { key: "niece", label: "Nièce", defaultEmoji: "👧" },
   { key: "autre", label: "Autre", defaultEmoji: "🧑" },
 ];
 
@@ -35,20 +43,36 @@ const ROLE_EMOJIS: Record<string, string[]> = {
   bebe:        ["👶","🧒","🍼","🧒","🧸","🐣","🌈","⭐","🎀","👣","😴"],
   "grand-pere":["👴","🧓","👨‍🦳","🎩","📰","♟️","🎣","🌳","☕","🏌️‍♂️"],
   "grand-mere":["👵","🧓","👩‍🦳","🧶","🌺","☕","🍰","📖","🪴","🌷"],
+  "beau-pere": ["👨","🧔","👨‍🦳","👔","🤵","🧑","💼","☕","🏌️‍♂️","📰"],
+  "belle-mere": ["👩","👩‍🦳","👱‍♀️","💐","🌸","🧑‍🍼","☕","🌺","🪴","🌷"],
+  oncle:       ["👨","🧔","🧑","💼","⚽","🎸","🏋️‍♂️","🍺","🎣","🏌️‍♂️"],
+  tante:       ["👩","👱‍♀️","🧑","💐","🌸","☕","🎨","💃","📚","🌺"],
+  cousin:      ["🧑","👦","⚽","🎮","🏀","🎸","🎧","💻","🛹","🏄‍♂️"],
+  cousine:     ["👩","👧","🎧","🎨","📱","💃","📚","🌟","💅","🦋"],
+  neveu:       ["👦","🧒","⚽","🎮","🏀","🎸","🤖","🦸‍♂️","🐶","🛹"],
+  niece:       ["👧","🧒","🎨","🩰","🦋","🌸","📚","🎀","🧸","🦄"],
   autre:       ["🧑","👤","😊","🌟","💫","🎭","🙂","✨","🦊","🐻","🐼"],
 };
 
 // Matrice des rôles relatifs : RELATIVE_ROLES[monRôle][rôleAutre] = label affiché
 const RELATIVE_ROLES: Record<string, Record<string, string>> = {
-  papa: { maman: "Conjointe", fils: "Fils", fille: "Fille", ado_garcon: "Fils", ado_fille: "Fille", bebe: "Bébé", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
-  maman: { papa: "Conjoint", fils: "Fils", fille: "Fille", ado_garcon: "Fils", ado_fille: "Fille", bebe: "Bébé", "grand-pere": "Beau-père", "grand-mere": "Belle-mère", autre: "Autre" },
-  fils: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
-  fille: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
-  ado_garcon: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
-  ado_fille: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
-  bebe: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", autre: "Autre" },
-  "grand-pere": { papa: "Fils", maman: "Belle-fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-mere": "Conjointe", autre: "Autre" },
-  "grand-mere": { papa: "Fils", maman: "Belle-fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-pere": "Conjoint", autre: "Autre" },
+  papa: { maman: "Conjointe", fils: "Fils", fille: "Fille", ado_garcon: "Fils", ado_fille: "Fille", bebe: "Bébé", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Beau-frère", tante: "Belle-sœur", cousin: "Neveu", cousine: "Nièce", neveu: "Neveu", niece: "Nièce" },
+  maman: { papa: "Conjoint", fils: "Fils", fille: "Fille", ado_garcon: "Fils", ado_fille: "Fille", bebe: "Bébé", "grand-pere": "Beau-père", "grand-mere": "Belle-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Frère", tante: "Sœur", cousin: "Neveu", cousine: "Nièce", neveu: "Neveu", niece: "Nièce" },
+  fils: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Oncle", tante: "Tante", cousin: "Cousin", cousine: "Cousine", neveu: "Cousin", niece: "Cousine" },
+  fille: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Oncle", tante: "Tante", cousin: "Cousin", cousine: "Cousine", neveu: "Cousin", niece: "Cousine" },
+  ado_garcon: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Oncle", tante: "Tante", cousin: "Cousin", cousine: "Cousine", neveu: "Cousin", niece: "Cousine" },
+  ado_fille: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", bebe: "Petit frère", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Oncle", tante: "Tante", cousin: "Cousin", cousine: "Cousine", neveu: "Cousin", niece: "Cousine" },
+  bebe: { papa: "Papa", maman: "Maman", fils: "Frère", fille: "Sœur", ado_garcon: "Frère", ado_fille: "Sœur", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Oncle", tante: "Tante", cousin: "Cousin", cousine: "Cousine", neveu: "Cousin", niece: "Cousine" },
+  "grand-pere": { papa: "Fils", maman: "Belle-fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-mere": "Conjointe", "beau-pere": "Beau-fils", "belle-mere": "Belle-fille", oncle: "Fils", tante: "Fille", cousin: "Petit-fils", cousine: "Petite-fille", neveu: "Petit-fils", niece: "Petite-fille" },
+  "grand-mere": { papa: "Fils", maman: "Belle-fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-pere": "Conjoint", "beau-pere": "Beau-fils", "belle-mere": "Belle-fille", oncle: "Fils", tante: "Fille", cousin: "Petit-fils", cousine: "Petite-fille", neveu: "Petit-fils", niece: "Petite-fille" },
+  "beau-pere": { papa: "Gendre", maman: "Fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-pere": "Beau-père", "grand-mere": "Belle-mère", "belle-mere": "Conjointe", oncle: "Beau-frère", tante: "Belle-sœur", cousin: "Neveu", cousine: "Nièce", neveu: "Neveu", niece: "Nièce" },
+  "belle-mere": { papa: "Gendre", maman: "Fille", fils: "Petit-fils", fille: "Petite-fille", ado_garcon: "Petit-fils", ado_fille: "Petite-fille", bebe: "Petit-fils", "grand-pere": "Beau-père", "grand-mere": "Belle-mère", "beau-pere": "Conjoint", oncle: "Beau-frère", tante: "Belle-sœur", cousin: "Neveu", cousine: "Nièce", neveu: "Neveu", niece: "Nièce" },
+  oncle: { papa: "Frère", maman: "Belle-sœur", fils: "Neveu", fille: "Nièce", ado_garcon: "Neveu", ado_fille: "Nièce", bebe: "Neveu", "grand-pere": "Père", "grand-mere": "Mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", tante: "Conjointe", cousin: "Fils", cousine: "Fille", neveu: "Neveu", niece: "Nièce" },
+  tante: { papa: "Frère", maman: "Sœur", fils: "Neveu", fille: "Nièce", ado_garcon: "Neveu", ado_fille: "Nièce", bebe: "Neveu", "grand-pere": "Père", "grand-mere": "Mère", "beau-pere": "Beau-père", "belle-mere": "Belle-mère", oncle: "Conjoint", cousin: "Fils", cousine: "Fille", neveu: "Neveu", niece: "Nièce" },
+  cousin: { papa: "Oncle", maman: "Tante", fils: "Cousin", fille: "Cousine", ado_garcon: "Cousin", ado_fille: "Cousine", bebe: "Cousin", "grand-pere": "Grand-oncle", "grand-mere": "Grand-tante", "beau-pere": "Oncle", "belle-mere": "Tante", oncle: "Père", tante: "Mère", cousine: "Sœur", neveu: "Cousin", niece: "Cousine" },
+  cousine: { papa: "Oncle", maman: "Tante", fils: "Cousin", fille: "Cousine", ado_garcon: "Cousin", ado_fille: "Cousine", bebe: "Cousin", "grand-pere": "Grand-oncle", "grand-mere": "Grand-tante", "beau-pere": "Oncle", "belle-mere": "Tante", oncle: "Père", tante: "Mère", cousin: "Frère", neveu: "Cousin", niece: "Cousine" },
+  neveu: { papa: "Oncle", maman: "Tante", fils: "Cousin", fille: "Cousine", ado_garcon: "Cousin", ado_fille: "Cousine", bebe: "Cousin", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Grand-père", "belle-mere": "Grand-mère", oncle: "Père", tante: "Mère", cousin: "Frère", cousine: "Sœur", niece: "Sœur" },
+  niece: { papa: "Oncle", maman: "Tante", fils: "Cousin", fille: "Cousine", ado_garcon: "Cousin", ado_fille: "Cousine", bebe: "Cousin", "grand-pere": "Grand-père", "grand-mere": "Grand-mère", "beau-pere": "Grand-père", "belle-mere": "Grand-mère", oncle: "Père", tante: "Mère", cousin: "Frère", cousine: "Sœur", neveu: "Frère" },
 };
 
 function getRelativeRole(myRole: string | undefined, otherRole: string): string {
@@ -131,10 +155,14 @@ export default function FamillePage() {
     if (m.data) {
       const roleOrder: Record<string, number> = {
         "grand-pere": 0, "grand-mere": 1,
-        papa: 2, maman: 3,
-        ado_garcon: 4, ado_fille: 5,
-        fils: 6, fille: 7,
-        bebe: 8, autre: 9,
+        "beau-pere": 2, "belle-mere": 3,
+        papa: 4, maman: 5,
+        oncle: 6, tante: 7,
+        ado_garcon: 8, ado_fille: 9,
+        fils: 10, fille: 11,
+        cousin: 12, cousine: 13,
+        neveu: 14, niece: 15,
+        bebe: 16, autre: 17,
       };
       const sorted = [...(m.data as Member[])].sort(
         (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
