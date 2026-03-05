@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores, useRealtimeBirthdays } from "@/lib/realtime";
@@ -49,14 +50,22 @@ export default function ViePage() {
   const { profile, setVieUnread } = useProfile();
   const { toast, toastUndo } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
-  const [tab, setTab] = useState<"notes" | "anniversaires" | "courses" | "budget" | "taches" | "photos">(() => {
+  const searchParams = useSearchParams();
+  const validTabs = ["notes", "anniversaires", "courses", "budget", "taches", "photos"] as const;
+  type Tab = typeof validTabs[number];
+  const [tab, setTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
-      const params = new URLSearchParams(window.location.search);
-      const t = params.get("tab");
-      if (t === "taches" || t === "notes" || t === "anniversaires" || t === "courses" || t === "budget" || t === "photos") return t;
+      const t = new URLSearchParams(window.location.search).get("tab");
+      if (t && validTabs.includes(t as Tab)) return t as Tab;
     }
     return "notes";
   });
+
+  // Sync tab when URL query param changes (e.g. navigating from another page)
+  useEffect(() => {
+    const t = searchParams.get("tab");
+    if (t && validTabs.includes(t as Tab)) setTab(t as Tab);
+  }, [searchParams]);
 
   // Notes state
   const [notes, setNotes] = useState<Note[]>([]);
