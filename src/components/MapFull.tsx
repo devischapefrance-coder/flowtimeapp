@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import dynamic from "next/dynamic";
-import type { MapMarker, MapStyle, RouteInfo } from "./MapView";
+import type { MapMarker, MapStyle } from "./MapView";
 
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
@@ -39,20 +39,7 @@ interface MapFullProps {
   onAddressMoved?: (id: string, lat: number, lng: number, address: string) => void;
 }
 
-function formatDistance(meters: number): string {
-  if (meters < 1000) return `${Math.round(meters)} m`;
-  return `${(meters / 1000).toFixed(1)} km`;
-}
-
-function formatDuration(seconds: number): string {
-  if (seconds < 60) return `${Math.round(seconds)} sec`;
-  if (seconds < 3600) return `${Math.round(seconds / 60)} min`;
-  const h = Math.floor(seconds / 3600);
-  const m = Math.round((seconds % 3600) / 60);
-  return `${h}h${m > 0 ? ` ${m}min` : ""}`;
-}
-
-type SideTab = "lieux" | "recherche" | "itineraire" | null;
+type SideTab = "lieux" | "recherche" | null;
 
 export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers = [], onAddressMoved }: MapFullProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -91,7 +78,6 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     red: "#FF3B30",
     green: "#34C759",
     deviceBg: isLight ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.15)",
-    routeInfoBg: isLight ? "rgba(0,122,255,0.06)" : "rgba(0,122,255,0.12)",
   };
 
   // Drag feedback
@@ -101,59 +87,6 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
   const watchRef = useRef<number | null>(null);
 
-  const [routeFrom, setRouteFrom] = useState("");
-  const [routeTo, setRouteTo] = useState("");
-  const [route, setRoute] = useState<RouteInfo | null>(null);
-  const [routeLoading, setRouteLoading] = useState(false);
-  const [routeMode, setRouteMode] = useState<"driving" | "walking" | "cycling">("driving");
-  const [routeFromCoord, setRouteFromCoord] = useState<[number, number] | null>(null);
-  const [routeToCoord, setRouteToCoord] = useState<[number, number] | null>(null);
-
-  const geocode = useCallback(async (query: string): Promise<[number, number] | null> => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`,
-        { headers: { "User-Agent": "FlowTime/1.0" } }
-      );
-      const data = await res.json();
-      if (data.length > 0) return [parseFloat(data[0].lat), parseFloat(data[0].lon)];
-    } catch { /* ignore */ }
-    return null;
-  }, []);
-
-  async function fetchRoute() {
-    setRouteLoading(true);
-    setRoute(null);
-    try {
-      let from = routeFromCoord;
-      let to = routeToCoord;
-      if (routeFrom.toLowerCase().includes("ma position") && myLocation) {
-        from = myLocation;
-      } else if (!from) {
-        from = await geocode(routeFrom);
-      }
-      if (!to) {
-        to = await geocode(routeTo);
-      }
-      if (!from || !to) { setRouteLoading(false); return; }
-      setRouteFromCoord(from);
-      setRouteToCoord(to);
-      const profile = routeMode === "driving" ? "car" : routeMode === "cycling" ? "bike" : "foot";
-      const res = await fetch(
-        `https://router.project-osrm.org/route/v1/${profile}/${from[1]},${from[0]};${to[1]},${to[0]}?overview=full&geometries=geojson`
-      );
-      const data = await res.json();
-      if (data.routes && data.routes.length > 0) {
-        const r = data.routes[0];
-        setRoute({
-          coordinates: r.geometry.coordinates.map((c: [number, number]) => [c[1], c[0]] as [number, number]),
-          distance: r.distance,
-          duration: r.duration,
-        });
-      }
-    } catch { /* ignore */ }
-    setRouteLoading(false);
-  }
 
   // Reverse geocode + update address on marker drag
   async function handleMarkerDragEnd(marker: MapMarker, newLat: number, newLng: number) {
@@ -292,11 +225,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     ? [{ lat: myLocation[0], lng: myLocation[1], emoji: "📍", name: "Ma position", type: "mylocation" }]
     : [];
 
-  const routeMarkers: MapMarker[] = [];
-  if (routeFromCoord) routeMarkers.push({ lat: routeFromCoord[0], lng: routeFromCoord[1], emoji: "🟢", name: "Depart", type: "poi" });
-  if (routeToCoord) routeMarkers.push({ lat: routeToCoord[0], lng: routeToCoord[1], emoji: "🔴", name: "Arrivee", type: "poi" });
-
-  const allMarkers = [...markers, ...deviceMarkers, ...poiMarkers, ...searchResults, ...myLocationMarker, ...routeMarkers];
+  const allMarkers = [...markers, ...deviceMarkers, ...poiMarkers, ...searchResults, ...myLocationMarker];
 
   const panelOpen = tab !== null;
 
@@ -308,7 +237,11 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     setTab(t);
     if (t !== "recherche") setSearchResults([]);
     if (t !== "lieux") { setActiveCategory(null); setPoiMarkers([]); }
-    if (t !== "itineraire") { setRoute(null); setRouteFromCoord(null); setRouteToCoord(null); }
+  }
+
+  function flyTo(lat: number, lng: number) {
+    setMapCenter([lat, lng]);
+    setTab(null);
   }
 
   return (
@@ -345,7 +278,6 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         {([
           { key: "lieux" as const, icon: "📍", label: "Lieux" },
           { key: "recherche" as const, icon: "🔍", label: "Chercher" },
-          { key: "itineraire" as const, icon: "🧭", label: "Trajet" },
         ]).map((item) => (
           <button
             key={item.key}
@@ -430,7 +362,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
           {/* Panel header — offset for safe area */}
           <div className="px-4 pb-3" style={{ paddingTop: "max(60px, calc(env(safe-area-inset-top, 16px) + 44px))" }}>
             <h2 className="text-base font-bold" style={{ color: t.text }}>
-              {tab === "lieux" ? "Lieux a proximite" : tab === "recherche" ? "Rechercher" : tab === "itineraire" ? "Itineraire" : ""}
+              {tab === "lieux" ? "Lieux a proximite" : tab === "recherche" ? "Rechercher" : ""}
             </h2>
           </div>
 
@@ -468,7 +400,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                         style={{ cursor: "pointer" }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = t.hoverBg)}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        onClick={() => setMapCenter([poi.lat, poi.lng])}
+                        onClick={() => flyTo(poi.lat, poi.lng)}
                       >
                         <span className="text-sm mt-0.5">{poi.emoji}</span>
                         <div className="flex-1 min-w-0">
@@ -497,7 +429,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                         style={{ cursor: "pointer" }}
                         onMouseEnter={(e) => (e.currentTarget.style.background = t.hoverBg)}
                         onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                        onClick={() => setMapCenter([m.lat, m.lng])}
+                        onClick={() => flyTo(m.lat, m.lng)}
                       >
                         <span className="text-sm">{m.emoji}</span>
                         <span className="text-xs font-medium truncate" style={{ color: t.text }}>{m.name}</span>
@@ -508,7 +440,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                         key={`d-${i}`}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-left transition-colors"
                         style={{ background: t.deviceBg, cursor: "pointer" }}
-                        onClick={() => setMapCenter([m.lat, m.lng])}
+                        onClick={() => flyTo(m.lat, m.lng)}
                       >
                         <span className="text-sm">{m.emoji}</span>
                         <span className="text-xs font-medium truncate" style={{ color: t.accent }}>{m.name}</span>
@@ -548,7 +480,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                       style={{ cursor: "pointer" }}
                       onMouseEnter={(e) => (e.currentTarget.style.background = t.hoverBg)}
                       onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
-                      onClick={() => setMapCenter([r.lat, r.lng])}
+                      onClick={() => flyTo(r.lat, r.lng)}
                     >
                       <span className="text-sm mt-0.5">{r.emoji}</span>
                       <div className="flex-1 min-w-0">
@@ -566,104 +498,6 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
             </div>
           )}
 
-          {/* Itineraire tab */}
-          {tab === "itineraire" && (
-            <div className="flex-1 px-3 pb-4">
-              <div className="flex flex-col gap-2 mb-3">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: t.green }} />
-                  <input
-                    placeholder="Depart"
-                    value={routeFrom}
-                    onChange={(e) => { setRouteFrom(e.target.value); setRouteFromCoord(null); }}
-                    className="flex-1 px-3 py-2 rounded-xl text-sm font-medium"
-                    style={{ background: t.inputBg, color: t.text, border: "none", outline: "none" }}
-                  />
-                  <button
-                    className="w-8 h-8 flex items-center justify-center rounded-lg text-sm"
-                    style={{ background: t.deviceBg }}
-                    title="Ma position"
-                    onClick={() => {
-                      if (myLocation) {
-                        setRouteFrom("Ma position");
-                        setRouteFromCoord(myLocation);
-                      } else {
-                        locateMe();
-                        setRouteFrom("Ma position");
-                      }
-                    }}
-                  >
-                    📍
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full flex-shrink-0" style={{ background: t.red }} />
-                  <input
-                    placeholder="Destination"
-                    value={routeTo}
-                    onChange={(e) => { setRouteTo(e.target.value); setRouteToCoord(null); }}
-                    className="flex-1 px-3 py-2 rounded-xl text-sm font-medium"
-                    style={{ background: t.inputBg, color: t.text, border: "none", outline: "none" }}
-                  />
-                </div>
-              </div>
-
-              {/* Transport mode */}
-              <div className="flex gap-1 p-1 rounded-xl mb-3" style={{ background: t.catBg }}>
-                {(["driving", "walking", "cycling"] as const).map((mode) => (
-                  <button
-                    key={mode}
-                    className="flex-1 py-2 rounded-lg text-[11px] font-bold transition-all"
-                    style={{
-                      background: routeMode === mode ? t.accent : "transparent",
-                      color: routeMode === mode ? "#fff" : t.textDim,
-                    }}
-                    onClick={() => { setRouteMode(mode); setRoute(null); }}
-                  >
-                    {mode === "driving" ? "🚗 Voiture" : mode === "walking" ? "🚶 A pied" : "🚴 Velo"}
-                  </button>
-                ))}
-              </div>
-
-              <button
-                className="w-full py-2.5 rounded-xl text-sm font-bold transition-all"
-                style={{
-                  background: routeLoading || !routeFrom.trim() || !routeTo.trim() ? "rgba(0,122,255,0.3)" : t.accent,
-                  color: "#fff",
-                  cursor: routeLoading || !routeFrom.trim() || !routeTo.trim() ? "not-allowed" : "pointer",
-                }}
-                onClick={fetchRoute}
-                disabled={routeLoading || !routeFrom.trim() || !routeTo.trim()}
-              >
-                {routeLoading ? "Calcul..." : "Calculer"}
-              </button>
-
-              {route && (
-                <div className="mt-3 p-3 rounded-xl" style={{ background: t.routeInfoBg }}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-lg font-bold" style={{ color: t.accent }}>{formatDuration(route.duration)}</span>
-                    <span className="text-xs font-medium" style={{ color: t.textDim }}>{formatDistance(route.distance)}</span>
-                  </div>
-                  <p className="text-[10px]" style={{ color: t.textDim }}>
-                    {routeMode === "driving" ? "en voiture" : routeMode === "walking" ? "a pied" : "a velo"}
-                  </p>
-                  <button
-                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold transition-all"
-                    style={{ background: "rgba(255,59,48,0.12)", color: t.red }}
-                    onClick={() => {
-                      setRoute(null);
-                      setRouteFrom("");
-                      setRouteTo("");
-                      setRouteFromCoord(null);
-                      setRouteToCoord(null);
-                    }}
-                  >
-                    Effacer l&apos;itinéraire
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
@@ -685,7 +519,6 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         height="100dvh"
         zoom={14}
         mapStyle={mapStyle}
-        route={route}
         onMarkerDragEnd={onAddressMoved ? handleMarkerDragEnd : undefined}
       />
     </div>
