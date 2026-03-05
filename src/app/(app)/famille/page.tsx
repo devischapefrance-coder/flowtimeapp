@@ -13,6 +13,7 @@ import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
+const AddressPickerMap = dynamic(() => import("@/components/AddressPickerMap"), { ssr: false });
 
 const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
   // Parents
@@ -1055,6 +1056,32 @@ export default function FamillePage() {
             <p className="text-xs px-1" style={{ color: "var(--green)" }}>
               📍 {form.address as string}
             </p>
+          )}
+          {/* Mini-map for precise marker placement */}
+          {(form.lat || form.lng) && (
+            <div className="mt-1">
+              <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "var(--dim)" }}>Position du marqueur</p>
+              <AddressPickerMap
+                lat={form.lat ? parseFloat(form.lat as string) : null}
+                lng={form.lng ? parseFloat(form.lng as string) : null}
+                emoji={(form.emoji as string) || "📍"}
+                onPositionChange={async (lat, lng) => {
+                  setForm((prev) => ({ ...prev, lat: lat.toString(), lng: lng.toString() }));
+                  try {
+                    const res = await fetch(
+                      `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=18&addressdetails=1`,
+                      { headers: { "User-Agent": "FlowTime/1.0" } }
+                    );
+                    const data = await res.json();
+                    if (data.display_name) {
+                      const short = data.display_name.split(",").slice(0, 3).join(",").trim();
+                      setForm((prev) => ({ ...prev, address: short }));
+                    }
+                  } catch {}
+                }}
+              />
+              <p className="text-[10px] mt-1" style={{ color: "var(--faint)" }}>Déplace le marqueur ou tape sur la carte pour ajuster</p>
+            </div>
           )}
           <p className="label mt-2">Visibilité</p>
           <div className="flex gap-2">
