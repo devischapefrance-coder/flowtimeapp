@@ -177,10 +177,16 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
   }
 
   function locateMe() {
-    if (watchRef.current !== null) {
-      navigator.geolocation.clearWatch(watchRef.current);
-      watchRef.current = null;
+    // Toggle off: if already tracking, stop and remove pin
+    if (myLocation) {
+      if (watchRef.current !== null) {
+        navigator.geolocation.clearWatch(watchRef.current);
+        watchRef.current = null;
+      }
+      setMyLocation(null);
+      return;
     }
+    // Toggle on: get position and start watching
     navigator.geolocation.getCurrentPosition(
       (pos) => {
         const loc: [number, number] = [pos.coords.latitude, pos.coords.longitude];
@@ -485,16 +491,28 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                   </p>
                   <div className="flex flex-col gap-1">
                     {markers.map((m, i) => (
-                      <div key={`a-${i}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg">
+                      <button
+                        key={`a-${i}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-left transition-colors"
+                        style={{ cursor: "pointer" }}
+                        onMouseEnter={(e) => (e.currentTarget.style.background = t.hoverBg)}
+                        onMouseLeave={(e) => (e.currentTarget.style.background = "transparent")}
+                        onClick={() => setMapCenter([m.lat, m.lng])}
+                      >
                         <span className="text-sm">{m.emoji}</span>
                         <span className="text-xs font-medium truncate" style={{ color: t.text }}>{m.name}</span>
-                      </div>
+                      </button>
                     ))}
                     {deviceMarkers.map((m, i) => (
-                      <div key={`d-${i}`} className="flex items-center gap-2 px-3 py-1.5 rounded-lg" style={{ background: t.deviceBg }}>
+                      <button
+                        key={`d-${i}`}
+                        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-left transition-colors"
+                        style={{ background: t.deviceBg, cursor: "pointer" }}
+                        onClick={() => setMapCenter([m.lat, m.lng])}
+                      >
                         <span className="text-sm">{m.emoji}</span>
                         <span className="text-xs font-medium truncate" style={{ color: t.accent }}>{m.name}</span>
-                      </div>
+                      </button>
                     ))}
                   </div>
                 </div>
@@ -629,6 +647,19 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                   <p className="text-[10px]" style={{ color: t.textDim }}>
                     {routeMode === "driving" ? "en voiture" : routeMode === "walking" ? "a pied" : "a velo"}
                   </p>
+                  <button
+                    className="w-full mt-2 py-2 rounded-lg text-xs font-bold transition-all"
+                    style={{ background: "rgba(255,59,48,0.12)", color: t.red }}
+                    onClick={() => {
+                      setRoute(null);
+                      setRouteFrom("");
+                      setRouteTo("");
+                      setRouteFromCoord(null);
+                      setRouteToCoord(null);
+                    }}
+                  >
+                    Effacer l&apos;itinéraire
+                  </button>
                 </div>
               )}
             </div>

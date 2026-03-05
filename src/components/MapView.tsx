@@ -5,6 +5,10 @@ import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useMemo } from "react";
 
+// Disable Leaflet's tap handler globally to fix iOS touch issues (300ms delay)
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+(L.Map as any).mergeOptions({ tap: false });
+
 export interface MapMarker {
   id?: string;
   lat: number;
@@ -189,6 +193,14 @@ function InvalidateSize() {
   return null;
 }
 
+function SetCenter({ center, zoom }: { center: [number, number]; zoom?: number }) {
+  const map = useMap();
+  useEffect(() => {
+    map.flyTo(center, zoom ?? map.getZoom(), { duration: 0.8 });
+  }, [map, center, zoom]);
+  return null;
+}
+
 function FitBounds({ markers }: { markers: MapMarker[] }) {
   const map = useMap();
   useEffect(() => {
@@ -242,6 +254,7 @@ export default function MapView({
       >
         <TileLayer url={tile.url} />
         <InvalidateSize />
+        {interactive && <SetCenter center={center} />}
         {interactive && markers.length > 1 && !route && <FitBounds markers={markers} />}
         {route && route.coordinates.length > 1 && <FitRoute route={route} />}
         {/* Route border (wider, darker) */}
