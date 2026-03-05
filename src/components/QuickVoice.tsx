@@ -52,8 +52,21 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
     setProcessing(false);
   }, [context, onAction]);
 
-  function startListening() {
-    if (!supported || listening || processing) return;
+  function stopListening() {
+    if (recognitionRef.current) {
+      recognitionRef.current.stop();
+      recognitionRef.current = null;
+    }
+    setListening(false);
+  }
+
+  function toggleListening() {
+    if (processing) return;
+    if (listening) {
+      stopListening();
+      return;
+    }
+    if (!supported) return;
 
     const SpeechRecognitionClass = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognitionClass();
@@ -104,7 +117,7 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
               : "0 6px 20px var(--accent-glow)",
           color: "#fff",
         }}
-        onClick={startListening}
+        onClick={toggleListening}
         disabled={processing}
       >
         {processing ? (
