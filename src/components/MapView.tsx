@@ -193,24 +193,25 @@ function InvalidateSize() {
   return null;
 }
 
-function SetCenter({ center, zoom }: { center: [number, number]; zoom?: number }) {
+function FlyTo({ center, zoom }: { center: [number, number]; zoom?: number }) {
   const map = useMap();
-  const prevCenter = useRef<string>("");
-  const prevZoom = useRef<number | undefined>(undefined);
+  const prevKey = useRef("");
   useEffect(() => {
-    const key = `${center[0]},${center[1]}`;
-    if (key === prevCenter.current && zoom === prevZoom.current) return;
-    prevCenter.current = key;
-    prevZoom.current = zoom;
+    const key = `${center[0]},${center[1]},${zoom}`;
+    if (key === prevKey.current) return;
+    prevKey.current = key;
     map.flyTo(center, zoom ?? map.getZoom(), { duration: 0.8 });
   }, [map, center, zoom]);
   return null;
 }
 
-function FitBounds({ markers }: { markers: MapMarker[] }) {
+function FitBoundsOnce({ markers }: { markers: MapMarker[] }) {
   const map = useMap();
+  const fitted = useRef(false);
   useEffect(() => {
+    if (fitted.current) return;
     if (markers.length > 1) {
+      fitted.current = true;
       const bounds = L.latLngBounds(markers.map((m) => [m.lat, m.lng]));
       map.fitBounds(bounds, { padding: [50, 50], maxZoom: 15 });
     }
@@ -260,8 +261,8 @@ export default function MapView({
       >
         <TileLayer url={tile.url} />
         <InvalidateSize />
-        {interactive && <SetCenter center={center} zoom={zoom} />}
-        {interactive && markers.length > 1 && !route && <FitBounds markers={markers} />}
+        {interactive && <FlyTo center={center} zoom={zoom} />}
+        {interactive && markers.length > 1 && !route && <FitBoundsOnce markers={markers} />}
         {route && route.coordinates.length > 1 && <FitRoute route={route} />}
         {/* Route border (wider, darker) */}
         {route && route.coordinates.length > 1 && (

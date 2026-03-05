@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import dynamic from "next/dynamic";
 import type { MapMarker, MapStyle } from "./MapView";
+import { supabase } from "@/lib/supabase";
 
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
@@ -37,12 +38,14 @@ interface MapFullProps {
   onClose: () => void;
   deviceMarkers?: MapMarker[];
   onAddressMoved?: (id: string, lat: number, lng: number, address: string) => void;
+  familyId?: string;
 }
 
 type SideTab = "lieux" | "recherche" | null;
 
-export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers = [], onAddressMoved }: MapFullProps) {
+export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers: initialDeviceMarkers = [], onAddressMoved, familyId }: MapFullProps) {
   const [searchQuery, setSearchQuery] = useState("");
+  const [liveDevices, setLiveDevices] = useState<MapMarker[]>(initialDeviceMarkers);
   const [searchResults, setSearchResults] = useState<MapMarker[]>([]);
   const [poiMarkers, setPoiMarkers] = useState<MapMarker[]>([]);
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
@@ -143,6 +146,32 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     };
   }, []);
 
+  // Real-time device location tracking
+  useEffect(() => {
+    if (!familyId) return;
+    const channel = supabase
+      .channel("mapfull-devices")
+      .on("postgres_changes", { event: "*", schema: "public", table: "device_locations", filter: `family_id=eq.${familyId}` },
+        () => {
+          supabase.from("device_locations").select("*").eq("family_id", familyId).then(({ data }) => {
+            if (data) {
+              setLiveDevices(data.map((d: { lat: number; lng: number; emoji: string; device_name: string; updated_at: string }) => ({
+                lat: d.lat,
+                lng: d.lng,
+                emoji: d.emoji || "📱",
+                name: d.device_name,
+                color: "#3DD6C8",
+                type: "device" as const,
+                updatedAt: d.updated_at,
+              })));
+            }
+          });
+        }
+      )
+      .subscribe();
+    return () => { supabase.removeChannel(channel); };
+  }, [familyId]);
+
   const searchPlaces = useCallback(async (query: string) => {
     if (query.length < 3) return;
     setSearching(true);
@@ -226,7 +255,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     ? [{ lat: myLocation[0], lng: myLocation[1], emoji: "📍", name: "Ma position", type: "mylocation" }]
     : [];
 
-  const allMarkers = [...markers, ...deviceMarkers, ...poiMarkers, ...searchResults, ...myLocationMarker];
+  const allMarkers = useMemo(() => [...markers, ...liveDevices, ...poiMarkers, ...searchResults, ...myLocationMarker], [markers, liveDevices, poiMarkers, searchResults, myLocationMarker]);
 
   const panelOpen = tab !== null;
 
@@ -418,7 +447,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
               )}
 
               {/* Legend */}
-              {(markers.length > 0 || deviceMarkers.length > 0) && (
+              {(markers.length > 0 || liveDevices.length > 0) && (
                 <div className="mt-4 pt-3" style={{ borderTop: `1px solid ${t.border}` }}>
                   <p className="text-[10px] font-bold uppercase tracking-wider px-1 mb-2" style={{ color: t.textDim }}>
                     Vos adresses
@@ -437,7 +466,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                         <span className="text-xs font-medium truncate" style={{ color: t.text }}>{m.name}</span>
                       </button>
                     ))}
-                    {deviceMarkers.map((m, i) => (
+                    {liveDevices.map((m, i) => (
                       <button
                         key={`d-${i}`}
                         className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-left transition-colors"

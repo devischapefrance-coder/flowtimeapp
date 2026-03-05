@@ -893,6 +893,7 @@ export default function FamillePage() {
           onClose={() => { setMapFull(false); setMapFocusCenter(null); }}
           deviceMarkers={deviceMapMarkers}
           onAddressMoved={handleAddressMoved}
+          familyId={familyId}
         />
       )}
 

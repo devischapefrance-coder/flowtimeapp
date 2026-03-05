@@ -1827,6 +1827,7 @@ export default function HomePage() {
             deviceMarkers={mapMarkers.filter((m) => m.type === "device")}
             center={mapCenter}
             onClose={() => setMapFullOpen(false)}
+            familyId={profile?.family_id}
           />
         );
       })()}
