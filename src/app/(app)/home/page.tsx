@@ -1695,6 +1695,7 @@ export default function HomePage() {
 
       {/* Quick Voice */}
       <QuickVoice context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={(actions) => {
+        if (viewMode === "perso") return; // notification handled after confirmation
         const eventActions = actions.filter((a) => a.type === "add_event" || a.type === "add_recurring");
         if (eventActions.length === 0) return;
         const titles = [...new Set(eventActions.map((a) => a.data.title as string))];
@@ -1729,6 +1730,7 @@ export default function HomePage() {
 
       {/* Chat */}
       <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={(actions) => {
+        if (viewMode === "perso") return; // notification handled after confirmation
         const eventActions = actions.filter((a) => a.type === "add_event" || a.type === "add_recurring");
         if (eventActions.length === 0) return;
         const titles = [...new Set(eventActions.map((a) => a.data.title as string))];
@@ -1767,6 +1769,11 @@ export default function HomePage() {
               style={{ background: "var(--accent)", color: "#fff" }}
               onClick={async () => {
                 await executeFlowAction(flowPending.action, flowPending.shared);
+                if (flowPending.shared) {
+                  const title = String(flowPending.action.data.title || "");
+                  const name = profile?.first_name || "Quelqu'un";
+                  notifyFamily("FlowTime 📅", `${name} a ajouté : ${title}`);
+                }
                 setFlowPending(null);
                 loadData();
               }}
