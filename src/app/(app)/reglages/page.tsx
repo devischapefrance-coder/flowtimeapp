@@ -7,6 +7,7 @@ import { useProfile, useTutorial } from "../layout";
 import Modal from "@/components/Modal";
 import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
+import { QRCodeSVG } from "qrcode.react";
 
 const PROFILE_EMOJIS = [
   // Hommes
@@ -419,6 +420,46 @@ export default function ReglagesPage() {
             {codeCopied ? "✓" : "📋"}
           </button>
         </div>
+        {/* QR Code */}
+        {getMyFamilyCode() && (
+          <div className="flex flex-col items-center gap-3 mb-3">
+            <div className="p-3 rounded-xl" style={{ background: "#fff" }}>
+              <QRCodeSVG
+                value={`https://flowtimeapp.vercel.app/join?code=${getMyFamilyCode()}`}
+                size={140}
+                level="M"
+              />
+            </div>
+            <p className="text-[10px] text-center" style={{ color: "var(--faint)" }}>
+              Scanne ce QR code pour rejoindre la famille
+            </p>
+            <button
+              className="btn btn-secondary text-xs w-full"
+              onClick={async () => {
+                const url = `https://flowtimeapp.vercel.app/join?code=${getMyFamilyCode()}`;
+                const shareData = {
+                  title: "Rejoins ma famille sur FlowTime !",
+                  text: `Utilise ce lien pour rejoindre ma famille sur FlowTime : ${url}`,
+                  url,
+                };
+                if (navigator.share) {
+                  try {
+                    await navigator.share(shareData);
+                  } catch {
+                    // User cancelled
+                  }
+                } else {
+                  await navigator.clipboard.writeText(url);
+                  setCodeCopied(true);
+                  setTimeout(() => setCodeCopied(false), 3000);
+                }
+              }}
+            >
+              Partager le lien d&apos;invitation
+            </button>
+          </div>
+        )}
+
         <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>
           Rejoindre une autre famille
         </button>

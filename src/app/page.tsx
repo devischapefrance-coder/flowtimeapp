@@ -1,98 +1,47 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import Logo from "@/components/Logo";
 
-export default function LoginPage() {
+export default function LandingPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
-  const [loading, setLoading] = useState(false);
-  const [stayLogged, setStayLogged] = useState(true);
+  const [ready, setReady] = useState(false);
 
-  // Detect OAuth redirect (Google) and redirect to /home
   useEffect(() => {
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN") {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session) {
         router.push("/home");
+      } else {
+        setReady(true);
       }
     });
-    // Also check if already signed in
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session) router.push("/home");
-    });
-    return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  async function handleForgotPassword() {
-    if (!email.trim()) {
-      setError("Entre ton email d'abord");
-      return;
-    }
-    setError("");
-    setLoading(true);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${siteUrl}/reset-password`,
-    });
-    setLoading(false);
-    if (resetError) {
-      setError(resetError.message);
-    } else {
-      setSuccess("Un email de réinitialisation a été envoyé !");
-    }
-  }
+  if (!ready) return null;
 
-  async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
+  const features = [
+    { icon: "\u{1F4C5}", title: "Planning familial", desc: "Calendrier partag\u00e9, \u00e9v\u00e9nements, rappels et r\u00e9currences pour toute la famille." },
+    { icon: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}", title: "Gestion famille", desc: "Membres, contacts, adresses et carte interactive avec localisation en temps r\u00e9el." },
+    { icon: "\u{1F30A}", title: "Assistant Flow", desc: "Une IA qui organise votre quotidien : cr\u00e9ez, modifiez, supprimez par simple conversation." },
+    { icon: "\u{1F4CC}", title: "Vie de famille", desc: "Notes, courses, d\u00e9penses, t\u00e2ches m\u00e9nag\u00e8res \u2014 tout au m\u00eame endroit." },
+  ];
 
-    const { error: authError } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
-
-    if (authError) {
-      setLoading(false);
-      if (authError.message === "Invalid login credentials") {
-        return setError("Email ou mot de passe incorrect");
-      }
-      return setError(authError.message);
-    }
-
-    if (!stayLogged) {
-      localStorage.setItem("flowtime_session_only", "true");
-    } else {
-      localStorage.removeItem("flowtime_session_only");
-    }
-    router.push("/home");
-  }
-
-  async function handleGoogleLogin() {
-    setError("");
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const { error: oauthError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: { redirectTo: `${siteUrl}/home` },
-    });
-    if (oauthError) {
-      setError(oauthError.message);
-    }
-  }
+  const strengths = [
+    { icon: "\u2728", title: "Gratuit", desc: "Toutes les fonctionnalit\u00e9s essentielles, sans frais." },
+    { icon: "\u{1F512}", title: "S\u00e9curis\u00e9", desc: "Donn\u00e9es isol\u00e9es par famille, chiffrement et RLS." },
+    { icon: "\u{1F4F1}", title: "Mobile-first", desc: "PWA installable, con\u00e7ue pour le mobile." },
+  ];
 
   return (
     <div
-      className="flex flex-col items-center min-h-dvh px-6 animate-in gradient-bg"
+      className="flex flex-col items-center min-h-dvh px-6 animate-in gradient-bg overflow-x-hidden"
       style={{
         paddingTop: "max(60px, env(safe-area-inset-top, 60px))",
-        paddingBottom: "env(safe-area-inset-bottom, 0px)",
+        paddingBottom: "max(40px, env(safe-area-inset-bottom, 40px))",
       }}
     >
       {/* Decorative orb */}
@@ -105,165 +54,107 @@ export default function LoginPage() {
         }}
       />
 
-      {/* Logo */}
-      <div
-        className="flex items-center justify-center relative"
-        style={{
-          width: 72,
-          height: 72,
-          borderRadius: 22,
-          background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
-          boxShadow: "0 8px 40px var(--accent-glow)",
-        }}
-      >
-        <Logo size={44} />
-      </div>
-
-      {/* Title */}
-      <h1
-        className="mt-4 text-[28px] font-bold"
-        style={{ fontFamily: "var(--font-fraunces), serif" }}
-      >
-        FlowTime
-      </h1>
-      <p className="mt-1 text-[13px]" style={{ color: "var(--dim)" }}>
-        Connectez-vous à votre espace famille
-      </p>
-
-      {/* Glass card form */}
-      <div
-        className="glass w-full max-w-[340px] mt-8 p-6"
-        style={{ borderRadius: "var(--radius)" }}
-      >
-        {error && (
-          <div
-            className="mb-4 p-3 rounded-xl text-xs font-bold text-center"
-            style={{
-              background: "rgba(255,107,107,0.1)",
-              color: "var(--red)",
-              border: "1px solid rgba(255,107,107,0.2)",
-            }}
-          >
-            {error}
-          </div>
-        )}
-        {success && (
-          <div
-            className="mb-4 p-3 rounded-xl text-xs font-bold text-center"
-            style={{
-              background: "rgba(94,200,158,0.1)",
-              color: "var(--green)",
-              border: "1px solid rgba(94,200,158,0.2)",
-            }}
-          >
-            {success}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
-          <div>
-            <label className="text-[11px] font-bold uppercase block mb-1.5" style={{ color: "var(--dim)", letterSpacing: "0.05em" }}>
-              Email
-            </label>
-            <input
-              type="email"
-              placeholder="votre@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              style={{ background: "var(--surface2)" }}
-            />
-          </div>
-          <div>
-            <label className="text-[11px] font-bold uppercase block mb-1.5" style={{ color: "var(--dim)", letterSpacing: "0.05em" }}>
-              Mot de passe
-            </label>
-            <input
-              type="password"
-              placeholder="••••••••"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && handleSubmit(e)}
-              style={{ background: "var(--surface2)" }}
-            />
-          </div>
-
-          <button
-            type="button"
-            className="text-[11px] font-bold self-end -mt-1"
-            style={{ color: "var(--accent)" }}
-            onClick={handleForgotPassword}
-          >
-            Mot de passe oublié ?
-          </button>
-
-          {/* Styled checkbox */}
-          <label className="flex items-center gap-2.5 cursor-pointer mt-1">
-            <div
-              className="relative w-5 h-5 rounded-md flex items-center justify-center transition-colors"
-              style={{
-                background: stayLogged ? "var(--accent)" : "var(--surface2)",
-                border: stayLogged ? "none" : "1.5px solid var(--glass-border)",
-              }}
-              onClick={(e) => { e.preventDefault(); setStayLogged(!stayLogged); }}
-            >
-              {stayLogged && (
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M20 6L9 17l-5-5" />
-                </svg>
-              )}
-            </div>
-            <span className="text-xs" style={{ color: "var(--dim)" }}>Rester connecté</span>
-          </label>
-
-          <button type="submit" className="btn btn-primary mt-3" disabled={loading}>
-            {loading ? "Connexion..." : "Se connecter"}
-          </button>
-        </form>
-
-        {/* Separator */}
-        <div className="flex items-center gap-3 my-5">
-          <div className="flex-1 h-px" style={{ background: "var(--glass-border)" }} />
-          <span className="text-[11px] font-bold" style={{ color: "var(--faint)" }}>ou continuer avec</span>
-          <div className="flex-1 h-px" style={{ background: "var(--glass-border)" }} />
+      {/* Hero */}
+      <div className="flex flex-col items-center text-center stagger-in">
+        <div
+          className="flex items-center justify-center relative"
+          style={{
+            width: 80,
+            height: 80,
+            borderRadius: 24,
+            background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
+            boxShadow: "0 8px 40px var(--accent-glow)",
+          }}
+        >
+          <Logo size={50} />
         </div>
 
-        {/* Google OAuth */}
-        <button
-          type="button"
-          className="flex items-center justify-center gap-2.5 w-full py-3 rounded-xl text-xs font-bold transition-colors"
-          style={{
-            background: "var(--surface2)",
-            border: "1px solid var(--glass-border)",
-            color: "var(--text)",
-          }}
-          onClick={handleGoogleLogin}
+        <h1
+          className="mt-5 text-[32px] font-bold"
+          style={{ fontFamily: "var(--font-fraunces), serif" }}
         >
-          <svg width="16" height="16" viewBox="0 0 24 24">
-            <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4" />
-            <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853" />
-            <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05" />
-            <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335" />
-          </svg>
-          Continuer avec Google
-        </button>
+          FlowTime
+        </h1>
+        <p className="mt-2 text-[15px] max-w-[300px] leading-relaxed" style={{ color: "var(--dim)" }}>
+          Votre famille, parfaitement synchronis&eacute;e.
+        </p>
+
+        <div className="flex gap-3 mt-6 w-full max-w-[320px]">
+          <Link href="/signup" className="btn btn-primary flex-1 text-center">
+            Commencer gratuitement
+          </Link>
+          <Link
+            href="/login"
+            className="btn btn-secondary flex-1 text-center"
+          >
+            Se connecter
+          </Link>
+        </div>
       </div>
 
-      {/* Bottom links */}
-      <p className="text-center text-[13px] mt-6" style={{ color: "var(--dim)" }}>
-        Pas encore inscrit ?{" "}
-        <Link href="/signup" className="font-bold" style={{ color: "var(--accent)" }}>
-          Créer un compte
-        </Link>
+      {/* Features */}
+      <div className="w-full max-w-[380px] mt-12">
+        <h2
+          className="text-lg font-bold text-center mb-5"
+          style={{ fontFamily: "var(--font-fraunces), serif" }}
+        >
+          Tout pour votre famille
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          {features.map((f, i) => (
+            <div
+              key={i}
+              className="glass p-4 stagger-in"
+              style={{ borderRadius: "var(--radius)", animationDelay: `${i * 80}ms` }}
+            >
+              <div className="text-2xl mb-2">{f.icon}</div>
+              <p className="text-sm font-bold mb-1">{f.title}</p>
+              <p className="text-[11px] leading-relaxed" style={{ color: "var(--dim)" }}>
+                {f.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Strengths */}
+      <div className="w-full max-w-[380px] mt-10">
+        <div className="flex gap-3">
+          {strengths.map((s, i) => (
+            <div
+              key={i}
+              className="flex-1 text-center stagger-in"
+              style={{ animationDelay: `${i * 100}ms` }}
+            >
+              <div className="text-2xl mb-1.5">{s.icon}</div>
+              <p className="text-xs font-bold">{s.title}</p>
+              <p className="text-[10px] mt-0.5" style={{ color: "var(--dim)" }}>
+                {s.desc}
+              </p>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Final CTA */}
+      <div className="w-full max-w-[380px] mt-12 mb-6 text-center stagger-in" style={{ animationDelay: "300ms" }}>
+        <div className="glass p-6" style={{ borderRadius: "var(--radius)" }}>
+          <p className="text-sm font-bold mb-1">
+            Rejoignez des familles qui s&apos;organisent mieux
+          </p>
+          <p className="text-[11px] mb-4" style={{ color: "var(--dim)" }}>
+            Inscription gratuite, aucune carte requise.
+          </p>
+          <Link href="/signup" className="btn btn-primary w-full text-center">
+            Cr&eacute;er mon espace famille
+          </Link>
+        </div>
+      </div>
+
+      {/* Footer */}
+      <p className="text-[10px] mb-2" style={{ color: "var(--faint)" }}>
+        Fait avec &hearts; par FlowTime Team
       </p>
-      <Link
-        href="/demo"
-        className="text-center text-[13px] mt-3 transition-colors"
-        style={{ color: "var(--dim)" }}
-        onMouseEnter={(e) => (e.currentTarget.style.color = "var(--accent)")}
-        onMouseLeave={(e) => (e.currentTarget.style.color = "var(--dim)")}
-      >
-        Essayer la démo →
-      </Link>
     </div>
   );
 }

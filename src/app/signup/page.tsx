@@ -217,7 +217,7 @@ export default function SignupPage() {
 
       <p className="text-center text-[13px] mt-6" style={{ color: "var(--dim)" }}>
         Déjà inscrit ?{" "}
-        <Link href="/" className="font-bold" style={{ color: "var(--accent)" }}>
+        <Link href="/login" className="font-bold" style={{ color: "var(--accent)" }}>
           Se connecter
         </Link>
       </p>
