@@ -1584,7 +1584,7 @@ export default function HomePage() {
       </Modal>
 
       {/* Quick Voice */}
-      <QuickVoice context={flowContext} onAction={handleFlowAction} />
+      <QuickVoice context={flowContext} userId={profile?.id} onAction={handleFlowAction} />
 
       {/* FAB */}
       <button
@@ -1608,7 +1608,7 @@ export default function HomePage() {
       <NotificationManager events={events} birthdays={birthdays} enabled={true} />
 
       {/* Chat */}
-      <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} onAction={handleFlowAction} />
+      <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} />
 
       {/* Family Chat */}
 

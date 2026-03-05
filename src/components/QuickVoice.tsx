@@ -5,10 +5,11 @@ import { supabase } from "@/lib/supabase";
 
 interface QuickVoiceProps {
   context: Record<string, unknown>;
+  userId?: string;
   onAction?: (action: { type: string; data: Record<string, unknown> }) => void;
 }
 
-export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
+export default function QuickVoice({ context, userId, onAction }: QuickVoiceProps) {
   const [listening, setListening] = useState(false);
   const [processing, setProcessing] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
@@ -40,12 +41,14 @@ export default function QuickVoice({ context, onAction }: QuickVoiceProps) {
       setToast(text.slice(0, 120));
       setTimeout(() => setToast(null), 4000);
 
-      // Sync to FlowChat sessionStorage so voice messages appear in chat
+      // Sync to FlowChat storage so voice messages appear in chat
       try {
-        const saved = sessionStorage.getItem("flowtime_chat");
+        const key = userId ? `flowtime_chat_${userId}` : "flowtime_chat";
+        const saved = localStorage.getItem(key) || sessionStorage.getItem("flowtime_chat");
         const msgs = saved ? JSON.parse(saved) : [];
         msgs.push({ role: "user", text: transcript });
         msgs.push({ role: "flow", text, actions: data.actions || undefined });
+        localStorage.setItem(key, JSON.stringify(msgs));
         sessionStorage.setItem("flowtime_chat", JSON.stringify(msgs));
       } catch { /* ignore */ }
 

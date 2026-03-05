@@ -15,7 +15,12 @@ interface FlowChatProps {
   open: boolean;
   onClose: () => void;
   context: Record<string, unknown>;
+  userId?: string;
   onAction?: (action: { type: string; data: Record<string, unknown> }) => void;
+}
+
+function chatStorageKey(userId?: string) {
+  return userId ? `flowtime_chat_${userId}` : "flowtime_chat";
 }
 
 const SUGGESTIONS = [
@@ -47,21 +52,39 @@ function cleanForSpeech(text: string): string {
     .trim();
 }
 
-export default function FlowChat({ open, onClose, context, onAction }: FlowChatProps) {
+export default function FlowChat({ open, onClose, context, userId, onAction }: FlowChatProps) {
+  const defaultMsg: Message[] = [{ role: "flow", text: "Salut ! Je suis Flow, ton assistant familial. Dis-moi ce que tu veux organiser, je m'occupe de tout !" }];
+
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window !== "undefined") {
       try {
-        const saved = sessionStorage.getItem("flowtime_chat");
+        const key = chatStorageKey(userId);
+        const saved = localStorage.getItem(key);
         if (saved) return JSON.parse(saved);
       } catch { /* ignore */ }
     }
-    return [{ role: "flow", text: "Salut ! Je suis Flow, ton assistant familial. Dis-moi ce que tu veux organiser, je m'occupe de tout !" }];
+    return defaultMsg;
   });
 
-  // Persist messages to sessionStorage
+  // Reload messages when userId changes (different user logs in)
   useEffect(() => {
-    try { sessionStorage.setItem("flowtime_chat", JSON.stringify(messages)); } catch { /* ignore */ }
-  }, [messages]);
+    try {
+      const key = chatStorageKey(userId);
+      const saved = localStorage.getItem(key);
+      if (saved) setMessages(JSON.parse(saved));
+      else setMessages(defaultMsg);
+    } catch { /* ignore */ }
+  }, [userId]);
+
+  // Persist messages to localStorage per user
+  useEffect(() => {
+    try {
+      const key = chatStorageKey(userId);
+      localStorage.setItem(key, JSON.stringify(messages));
+      // Also keep sessionStorage in sync for QuickVoice compatibility
+      sessionStorage.setItem("flowtime_chat", JSON.stringify(messages));
+    } catch { /* ignore */ }
+  }, [messages, userId]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const [imageBase64, setImageBase64] = useState<string | null>(null);
@@ -97,9 +120,9 @@ export default function FlowChat({ open, onClose, context, onAction }: FlowChatP
       document.body.style.overflow = "hidden";
       // Re-sync from sessionStorage (QuickVoice may have added messages)
       try {
-        const saved = sessionStorage.getItem("flowtime_chat");
-        if (saved) {
-          const parsed = JSON.parse(saved);
+        const sessionSaved = sessionStorage.getItem("flowtime_chat");
+        if (sessionSaved) {
+          const parsed = JSON.parse(sessionSaved);
           if (parsed.length > messages.length) setMessages(parsed);
         }
       } catch { /* ignore */ }
