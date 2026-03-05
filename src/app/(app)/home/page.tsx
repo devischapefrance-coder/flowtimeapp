@@ -1336,7 +1336,7 @@ export default function HomePage() {
           <EmptyState icon="🧹" title="Aucune tâche configurée" subtitle="Ajoute des tâches dans Vie de famille" />
         )}
         {totalCount > 0 && (
-          <Link href="/vie?tab=taches" className="block text-center text-[10px] font-bold mt-3 transition-colors" style={{ color: "var(--faint)" }}>
+          <Link href={{ pathname: "/vie", query: { tab: "taches" } }} className="block text-center text-[10px] font-bold mt-3 transition-colors" style={{ color: "var(--faint)" }}>
             Gérer →
           </Link>
         )}
