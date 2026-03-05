@@ -497,7 +497,7 @@ export default function ViePage() {
   });
 
   return (
-    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: "calc(80px + env(safe-area-inset-bottom))" }}>
+    <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 80 }}>
       <h1 className="text-xl font-bold mb-4">Vie de famille</h1>
 
       {/* Tab switcher */}

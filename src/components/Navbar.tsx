@@ -28,7 +28,7 @@ export default function Navbar() {
           backdropFilter: "blur(20px)",
           borderTop: "1px solid var(--glass-border)",
           paddingTop: 10,
-          paddingBottom: "calc(10px + env(safe-area-inset-bottom))",
+          paddingBottom: 10,
           zIndex: 100,
         }}
       >
