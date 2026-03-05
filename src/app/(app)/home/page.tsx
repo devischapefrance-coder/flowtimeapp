@@ -1074,10 +1074,10 @@ export default function HomePage() {
         </div>
 
         {viewType === "timeline" ? (
-          <Timeline events={filteredEvents} allEvents={dayEvents} onDelete={deleteEvent} onDeleteSeries={deleteEventSeries}
+          <Timeline events={filteredEvents} allEvents={dayEvents} selectedDate={currentDate} onDelete={deleteEvent} onDeleteSeries={deleteEventSeries}
             onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }} />
         ) : (
-          <DayAgenda events={filteredEvents} onDelete={deleteEvent}
+          <DayAgenda events={filteredEvents} selectedDate={currentDate} onDelete={deleteEvent}
             onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }} />
         )}
 

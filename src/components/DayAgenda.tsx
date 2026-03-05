@@ -6,6 +6,7 @@ import { getCategoryColor } from "@/lib/categories";
 
 interface DayAgendaProps {
   events: Event[];
+  selectedDate?: string;
   onDelete: (id: string) => void;
   onReorder?: (eventId: string, newTime: string) => void;
 }
@@ -24,8 +25,14 @@ function pxToTime(px: number): string {
   return `${String(clampedH).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
 
-export default function DayAgenda({ events, onDelete, onReorder }: DayAgendaProps) {
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export default function DayAgenda({ events, selectedDate, onDelete, onReorder }: DayAgendaProps) {
   const now = new Date();
+  const todayStr = localDateStr(now);
+  const isToday = !selectedDate || selectedDate === todayStr;
   const currentHour = now.getHours();
   const currentMin = now.getMinutes();
   const nowOffset = currentHour >= START_HOUR && currentHour <= END_HOUR
@@ -146,7 +153,7 @@ export default function DayAgenda({ events, onDelete, onReorder }: DayAgendaProp
         const isDragging = draggingId === ev.id;
         const top = isDragging && dragOffset !== null ? dragOffset : getEventTop(ev);
         const catColor = getCategoryColor(ev.category);
-        const isPast = h < currentHour || (h === currentHour && m < currentMin);
+        const isPast = isToday && (h < currentHour || (h === currentHour && m < currentMin));
 
         return (
           <div

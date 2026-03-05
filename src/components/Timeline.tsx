@@ -21,6 +21,7 @@ import { CSS } from "@dnd-kit/utilities";
 interface TimelineProps {
   events: Event[];
   allEvents?: Event[];
+  selectedDate?: string;
   onDelete: (id: string) => void;
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
@@ -244,8 +245,14 @@ function SortableEvent({
   );
 }
 
-export default function Timeline({ events, allEvents, onDelete, onDeleteSeries, onEditSeries, onReorder }: TimelineProps) {
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder }: TimelineProps) {
   const now = new Date();
+  const todayStr = localDateStr(now);
+  const isToday = !selectedDate || selectedDate === todayStr;
   const currentHour = now.getHours();
   const currentMin = now.getMinutes();
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -285,7 +292,7 @@ export default function Timeline({ events, allEvents, onDelete, onDeleteSeries, 
 
           {sorted.map((ev, i) => {
             const [h, m] = ev.time.split(":").map(Number);
-            const isPast = h < currentHour || (h === currentHour && m < currentMin);
+            const isPast = isToday && (h < currentHour || (h === currentHour && m < currentMin));
             const isNext = !isPast && (i === 0 || sorted.slice(0, i).every((e) => {
               const [eh, em] = e.time.split(":").map(Number);
               return eh < currentHour || (eh === currentHour && em < currentMin);
