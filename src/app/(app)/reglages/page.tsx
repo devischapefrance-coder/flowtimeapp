@@ -465,6 +465,16 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.0.0", date: "5 mars 2026", tag: "Famille",
+            changes: [
+              "Rôles relatifs : les liens familiaux s'adaptent au point de vue du membre connecté",
+              "Bouton « C'est moi » pour lier son compte à un membre",
+              "Nouveaux rôles : beau-père, belle-mère, oncle, tante, cousin(e), neveu, nièce",
+              "Synchronisation automatique des anniversaires depuis les dates de naissance des membres",
+              "Connexion Google (OAuth)",
+            ],
+          },
+          {
             version: "1.9.0", date: "4 mars 2026", tag: "Nouveau",
             changes: [
               "Tutoriel interactif avec spotlight sur les éléments clés",
