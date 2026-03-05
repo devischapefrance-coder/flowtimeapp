@@ -22,19 +22,37 @@ interface FamilyChatProps {
   userId: string;
   userName: string;
   userEmoji: string;
+  userAvatarUrl?: string | null;
   onUnread?: (count: number) => void;
 }
 
 const MAX_MESSAGES = 100;
 
-export default function FamilyChat({ open, onClose, familyId, userId, userName, userEmoji, onUnread }: FamilyChatProps) {
+export default function FamilyChat({ open, onClose, familyId, userId, userName, userEmoji, userAvatarUrl, onUnread }: FamilyChatProps) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [text, setText] = useState("");
   const [unread, setUnread] = useState(0);
   const [loaded, setLoaded] = useState(false);
+  const [avatarMap, setAvatarMap] = useState<Record<string, string | null>>({});
   const scrollRef = useRef<HTMLDivElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
+
+  // Load family member avatars
+  useEffect(() => {
+    if (!familyId) return;
+    supabase
+      .from("profiles")
+      .select("id, avatar_url")
+      .eq("family_id", familyId)
+      .then(({ data }) => {
+        if (data) {
+          const map: Record<string, string | null> = {};
+          for (const p of data) map[p.id] = p.avatar_url;
+          setAvatarMap(map);
+        }
+      });
+  }, [familyId]);
 
   // Load messages from DB
   const loadMessages = useCallback(async () => {
@@ -172,12 +190,21 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
           )}
           {messages.map((msg) => {
             const isMe = msg.sender_id === userId;
+            const avatarUrl = isMe ? userAvatarUrl : avatarMap[msg.sender_id];
             return (
-              <div key={msg.id} className={`flex ${isMe ? "justify-end" : "justify-start"}`}>
-                <div className={`max-w-[80%] ${isMe ? "items-end" : "items-start"}`}>
+              <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
+                {/* Avatar */}
+                <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-xs overflow-hidden mt-auto" style={{ background: "var(--surface2)" }}>
+                  {avatarUrl ? (
+                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <span>{msg.sender_emoji || "👤"}</span>
+                  )}
+                </div>
+                <div className={`max-w-[75%] flex flex-col ${isMe ? "items-end" : "items-start"}`}>
                   {!isMe && (
                     <p className="text-[10px] font-bold mb-0.5" style={{ color: "var(--dim)" }}>
-                      {msg.sender_emoji} {msg.sender_name}
+                      {msg.sender_name}
                     </p>
                   )}
                   <div

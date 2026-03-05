@@ -213,6 +213,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
                 userId={profile.id}
                 userName={profile.first_name || "Moi"}
                 userEmoji={profile.emoji || "👤"}
+                userAvatarUrl={profile.avatar_url}
                 onUnread={handleUnread}
               />
             )}

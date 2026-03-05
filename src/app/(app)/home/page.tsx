@@ -1278,102 +1278,143 @@ export default function HomePage() {
   }
 
   function renderChores() {
-    const displayChores = chores.slice(0, 3);
-    const freqLabel = (f: string) => f === "daily" ? "Quotidien" : "Hebdo";
+    // Show all chores: daily always, weekly if within rotation window
+    const displayChores = chores;
+    const doneCount = displayChores.filter((ch) => ch.last_rotated === todayStr).length;
+    const totalCount = displayChores.length;
     return (
       <div className="card !mb-0">
-        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Tâches ménagères</p>
-        {displayChores.length > 0 ? (
-          <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between mb-3">
+          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Tâches du jour</p>
+          {totalCount > 0 && (
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: doneCount === totalCount ? "rgba(94,200,158,0.15)" : "var(--surface2)", color: doneCount === totalCount ? "var(--green)" : "var(--dim)" }}>
+              {doneCount}/{totalCount} faites
+            </span>
+          )}
+        </div>
+        {totalCount > 0 ? (
+          <div className="flex flex-col gap-1.5">
             {displayChores.map((ch) => {
+              const isDone = ch.last_rotated === todayStr;
               const assignedMember = ch.assigned_members.length > 0
-                ? members.find((m) => m.id === ch.assigned_members[ch.current_index % ch.assigned_members.length])
+                ? members.find((m) => m.id === ch.assigned_members[
+                    isDone
+                      ? (ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length
+                      : ch.current_index % ch.assigned_members.length
+                  ])
                 : null;
               return (
-                <div key={ch.id} className="flex items-center gap-3">
-                  <button
-                    className="w-8 h-8 rounded-full flex items-center justify-center text-sm shrink-0 active:scale-90 transition-all"
-                    style={{ background: "rgba(94,200,158,0.12)", color: "var(--green)" }}
-                    onClick={() => completeChore(ch.id, ch.current_index)}
-                    title="Marquer comme fait"
+                <button
+                  key={ch.id}
+                  className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
+                  style={{ background: "var(--surface2)", opacity: isDone ? 0.4 : 1 }}
+                  onClick={() => !isDone && completeChore(ch.id, ch.current_index)}
+                  disabled={isDone}
+                >
+                  <span
+                    className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] shrink-0 transition-all"
+                    style={{
+                      borderColor: isDone ? "var(--green)" : "var(--border)",
+                      background: isDone ? "var(--green)" : "transparent",
+                      color: isDone ? "#fff" : "transparent",
+                    }}
                   >
-                    ✓
-                  </button>
-                  <span className="text-xl">{ch.emoji || "🧹"}</span>
-                  <div className="flex-1">
-                    <p className="text-sm font-bold">{ch.name}</p>
-                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>
-                      {assignedMember ? `${assignedMember.emoji} ${assignedMember.name}` : "Non assigné"}
-                    </p>
-                  </div>
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
-                    {freqLabel(ch.frequency)}
+                    {isDone && "✓"}
                   </span>
-                </div>
+                  <span className="text-base">{ch.emoji || "🧹"}</span>
+                  <span className={`text-xs font-medium flex-1 ${isDone ? "line-through" : ""}`}>{ch.name}</span>
+                  {assignedMember && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "rgba(124,107,240,0.12)", color: "var(--accent)" }}>
+                      {assignedMember.emoji} {assignedMember.name}
+                    </span>
+                  )}
+                </button>
               );
             })}
           </div>
         ) : (
           <EmptyState icon="🧹" title="Aucune tâche configurée" subtitle="Ajoute des tâches dans Vie de famille" />
         )}
+        {totalCount > 0 && (
+          <Link href="/vie?tab=taches" className="block text-center text-[10px] font-bold mt-3 transition-colors" style={{ color: "var(--faint)" }}>
+            Gérer →
+          </Link>
+        )}
       </div>
     );
   }
 
   function renderActivity() {
-    // Build activity feed from recent events, chores, and expenses
-    const activities: { emoji: string; text: string; time: string; key: string }[] = [];
+    // Build grouped activity sections
+    const dayEvents = events.filter((e) => e.date === currentDate);
+    const doneChores = chores.filter((c) => c.last_rotated === todayStr);
+    const recentExpenses = expenses.slice(0, 3);
+    const totalCount = dayEvents.length + doneChores.length + recentExpenses.length;
 
-    // All events for selected date
-    for (const ev of events.filter((e) => e.date === currentDate)) {
+    const renderSection = (emoji: string, title: string, items: React.ReactNode[], limit?: number) => {
+      if (items.length === 0) return null;
+      const display = limit ? items.slice(0, limit) : items;
+      return (
+        <div>
+          <p className="text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1" style={{ color: "var(--dim)" }}>
+            <span>{emoji}</span> {title}
+          </p>
+          <div className="flex flex-col gap-1">{display}</div>
+        </div>
+      );
+    };
+
+    const eventItems = dayEvents.map((ev) => {
       const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
-      activities.push({
-        emoji: "📅",
-        text: `${mem ? mem.name : "Famille"} — ${ev.title}`,
-        time: ev.time || "",
-        key: `ev-${ev.id}`,
-      });
-    }
+      return (
+        <div key={`ev-${ev.id}`} className="flex items-center gap-2 text-xs">
+          {ev.time && <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--accent)" }}>{ev.time}</span>}
+          <span className="truncate flex-1">{ev.title}</span>
+          {mem && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem.emoji} {mem.name}</span>}
+        </div>
+      );
+    });
 
-    // All chore completions for today
-    for (const ch of chores.filter((c) => c.last_rotated === todayStr)) {
+    const choreItems = doneChores.map((ch) => {
       const mem = ch.assigned_members.length > 0
         ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
         : null;
-      activities.push({
-        emoji: "✅",
-        text: `${mem?.name || "Quelqu'un"} a fait "${ch.name}"`,
-        time: "",
-        key: `ch-${ch.id}`,
-      });
-    }
+      return (
+        <div key={`ch-${ch.id}`} className="flex items-center gap-2 text-xs">
+          <span>{ch.emoji || "🧹"}</span>
+          <span className="truncate flex-1">{ch.name}</span>
+          <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem?.name || "—"}</span>
+        </div>
+      );
+    });
 
-    // All recent expenses
-    for (const exp of expenses) {
+    const expenseItems = recentExpenses.map((exp) => {
       const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
-      activities.push({
-        emoji: "💰",
-        text: `${mem?.name || "Famille"} — ${exp.description} (${Number(exp.amount).toFixed(0)}€)`,
-        time: exp.date || "",
-        key: `exp-${exp.id}`,
-      });
-    }
+      const daysAgo = Math.round((Date.now() - new Date(exp.date).getTime()) / 86400000);
+      const relative = daysAgo === 0 ? "Aujourd'hui" : daysAgo === 1 ? "Hier" : `Il y a ${daysAgo}j`;
+      return (
+        <div key={`exp-${exp.id}`} className="flex items-center gap-2 text-xs">
+          <span className="font-bold shrink-0" style={{ color: "var(--warm)" }}>{Number(exp.amount).toFixed(0)}€</span>
+          <span className="truncate flex-1">{exp.description}</span>
+          <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{relative}</span>
+        </div>
+      );
+    });
 
     return (
       <div className="card !mb-0 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setActivityOpen(true)}>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Activité récente</p>
-          <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
+          <div className="flex items-center gap-2">
+            {totalCount > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>{totalCount} activités</span>}
+            <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
+          </div>
         </div>
-        {activities.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {activities.slice(0, 6).map((a) => (
-              <div key={a.key} className="flex items-center gap-2.5">
-                <span className="text-base">{a.emoji}</span>
-                <p className="text-xs flex-1 truncate">{a.text}</p>
-                {a.time && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{a.time}</span>}
-              </div>
-            ))}
+        {totalCount > 0 ? (
+          <div className="flex flex-col gap-3">
+            {renderSection("📅", "Événements", eventItems, 2)}
+            {renderSection("✅", "Tâches faites", choreItems, 2)}
+            {renderSection("💰", "Dépenses", expenseItems, 3)}
           </div>
         ) : (
           <p className="text-xs" style={{ color: "var(--faint)" }}>Rien à afficher pour le moment</p>
@@ -1821,32 +1862,61 @@ export default function HomePage() {
       })()}
 
       {(() => {
-        const activities: { emoji: string; text: string; time: string; key: string }[] = [];
-        for (const ev of events.filter((e) => e.date === currentDate)) {
-          const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
-          activities.push({ emoji: "📅", text: `${mem ? mem.name : "Famille"} — ${ev.title}`, time: ev.time || "", key: `ev-${ev.id}` });
-        }
-        for (const ch of chores.filter((c) => c.last_rotated === todayStr)) {
-          const mem = ch.assigned_members.length > 0
-            ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
-            : null;
-          activities.push({ emoji: "✅", text: `${mem?.name || "Quelqu'un"} a fait "${ch.name}"`, time: "", key: `ch-${ch.id}` });
-        }
-        for (const exp of expenses) {
-          const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
-          activities.push({ emoji: "💰", text: `${mem?.name || "Famille"} — ${exp.description} (${Number(exp.amount).toFixed(0)}€)`, time: exp.date || "", key: `exp-${exp.id}` });
-        }
+        const allDayEvents = events.filter((e) => e.date === currentDate);
+        const allDoneChores = chores.filter((c) => c.last_rotated === todayStr);
+        const allExpenses = expenses;
+        const hasAny = allDayEvents.length + allDoneChores.length + allExpenses.length > 0;
+
+        const renderModalSection = (emoji: string, title: string, items: React.ReactNode[]) => {
+          if (items.length === 0) return null;
+          return (
+            <div>
+              <p className="text-[11px] font-bold uppercase mb-2 flex items-center gap-1.5" style={{ color: "var(--dim)" }}>
+                <span>{emoji}</span> {title} <span className="text-[10px] font-normal">({items.length})</span>
+              </p>
+              <div className="flex flex-col gap-1.5">{items}</div>
+            </div>
+          );
+        };
+
         return (
           <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="Activité complète">
-            {activities.length > 0 ? (
-              <div className="flex flex-col gap-2">
-                {activities.map((a) => (
-                  <div key={a.key} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
-                    <span className="text-lg">{a.emoji}</span>
-                    <p className="text-xs flex-1">{a.text}</p>
-                    {a.time && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{a.time}</span>}
-                  </div>
-                ))}
+            {hasAny ? (
+              <div className="flex flex-col gap-4">
+                {renderModalSection("📅", "Événements du jour", allDayEvents.map((ev) => {
+                  const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
+                  return (
+                    <div key={`ev-${ev.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                      {ev.time && <span className="text-[11px] font-mono shrink-0" style={{ color: "var(--accent)" }}>{ev.time}</span>}
+                      <span className="text-xs flex-1">{ev.title}</span>
+                      {mem && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem.emoji} {mem.name}</span>}
+                    </div>
+                  );
+                }))}
+                {renderModalSection("✅", "Tâches faites", allDoneChores.map((ch) => {
+                  const mem = ch.assigned_members.length > 0
+                    ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
+                    : null;
+                  return (
+                    <div key={`ch-${ch.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                      <span>{ch.emoji || "🧹"}</span>
+                      <span className="text-xs flex-1">{ch.name}</span>
+                      <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem?.name || "—"}</span>
+                    </div>
+                  );
+                }))}
+                {renderModalSection("💰", "Dépenses du mois", allExpenses.map((exp) => {
+                  const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
+                  const daysAgo = Math.round((Date.now() - new Date(exp.date).getTime()) / 86400000);
+                  const relative = daysAgo === 0 ? "Aujourd'hui" : daysAgo === 1 ? "Hier" : `Il y a ${daysAgo}j`;
+                  return (
+                    <div key={`exp-${exp.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                      <span className="text-xs font-bold shrink-0" style={{ color: "var(--warm)" }}>{Number(exp.amount).toFixed(0)}€</span>
+                      <span className="text-xs flex-1">{exp.description}</span>
+                      <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{relative}</span>
+                    </div>
+                  );
+                }))}
               </div>
             ) : (
               <p className="text-xs text-center py-4" style={{ color: "var(--faint)" }}>Aucune activité pour le moment</p>
