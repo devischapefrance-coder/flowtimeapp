@@ -253,6 +253,7 @@ export default function Timeline({ events, allEvents, selectedDate, onDelete, on
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
+  const isPastDay = !!selectedDate && selectedDate < todayStr;
   const currentHour = now.getHours();
   const currentMin = now.getMinutes();
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
@@ -292,7 +293,7 @@ export default function Timeline({ events, allEvents, selectedDate, onDelete, on
 
           {sorted.map((ev, i) => {
             const [h, m] = ev.time.split(":").map(Number);
-            const isPast = isToday && (h < currentHour || (h === currentHour && m < currentMin));
+            const isPast = isPastDay || (isToday && (h < currentHour || (h === currentHour && m < currentMin)));
             const isNext = !isPast && (i === 0 || sorted.slice(0, i).every((e) => {
               const [eh, em] = e.time.split(":").map(Number);
               return eh < currentHour || (eh === currentHour && em < currentMin);

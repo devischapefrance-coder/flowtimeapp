@@ -33,6 +33,7 @@ export default function DayAgenda({ events, selectedDate, onDelete, onReorder }:
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
+  const isPastDay = !!selectedDate && selectedDate < todayStr;
   const currentHour = now.getHours();
   const currentMin = now.getMinutes();
   const nowOffset = currentHour >= START_HOUR && currentHour <= END_HOUR
@@ -153,7 +154,7 @@ export default function DayAgenda({ events, selectedDate, onDelete, onReorder }:
         const isDragging = draggingId === ev.id;
         const top = isDragging && dragOffset !== null ? dragOffset : getEventTop(ev);
         const catColor = getCategoryColor(ev.category);
-        const isPast = isToday && (h < currentHour || (h === currentHour && m < currentMin));
+        const isPast = isPastDay || (isToday && (h < currentHour || (h === currentHour && m < currentMin)));
 
         return (
           <div
