@@ -10,6 +10,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/Toast";
 import FamilyChat from "@/components/FamilyChat";
 import TutorialOverlay from "@/components/TutorialOverlay";
+import { subscribeToPush, isPushSubscribed } from "@/lib/push";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -141,6 +142,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }
     }
     setReady(true);
+
+    // Auto-subscribe to push notifications if not already done
+    if (data && !localStorage.getItem("flowtime_push_asked")) {
+      localStorage.setItem("flowtime_push_asked", "true");
+      setTimeout(async () => {
+        const already = await isPushSubscribed();
+        if (!already) await subscribeToPush();
+      }, 3000);
+    }
 
     // Check onboarding
     if (!localStorage.getItem("flowtime_onboarded") && data) {
