@@ -143,6 +143,7 @@ export default function FamillePage() {
   const [monthEvents, setMonthEvents] = useState<Event[]>([]);
   const [showStats, setShowStats] = useState(false);
   const [mapFull, setMapFull] = useState(false);
+  const [mapFocusCenter, setMapFocusCenter] = useState<[number, number] | null>(null);
   const [sharingLocation, setSharingLocation] = useState(false);
   const [showFamilyCode, setShowFamilyCode] = useState(false);
 
@@ -804,6 +805,14 @@ export default function FamillePage() {
               return names.length > 0 ? <p className="text-[10px] mt-0.5" style={{ color: "var(--faint)" }}>De {names.join(", ")}</p> : null;
             })()}
           </div>
+          {a.lat && a.lng && (
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-full shrink-0 active:scale-90 transition-transform"
+              style={{ background: "var(--accent-soft)" }}
+              onClick={(e) => { e.stopPropagation(); setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}
+              title="Voir sur la carte"
+            >📍</button>
+          )}
         </div>
       ))}
       <button className="btn btn-secondary mt-1 mb-6" onClick={() => openAddressModal("new")}>＋ Ajouter une adresse</button>
@@ -835,11 +844,17 @@ export default function FamillePage() {
             {devices.map((d) => {
               const ago = Math.round((Date.now() - new Date(d.updated_at).getTime()) / 60000);
               return (
-                <div key={d.id} className="flex items-center gap-2 text-xs">
+                <div
+                  key={d.id}
+                  className="flex items-center gap-2 text-xs cursor-pointer active:scale-[0.98] transition-transform rounded-xl px-2 py-1.5 -mx-2"
+                  style={{ background: "transparent" }}
+                  onClick={() => { setMapFocusCenter([d.lat, d.lng]); setMapFull(true); }}
+                >
                   <span className="text-base">{d.emoji}</span>
                   <span className="font-bold">{d.device_name}</span>
                   <span style={{ color: "var(--dim)" }}>· {ago < 1 ? "à l'instant" : `il y a ${ago} min`}</span>
                   <span className="w-1.5 h-1.5 rounded-full" style={{ background: ago < 5 ? "var(--green)" : ago < 30 ? "var(--warm)" : "var(--red)" }} />
+                  <span className="ml-auto text-sm" style={{ color: "var(--faint)" }}>›</span>
                 </div>
               );
             })}
@@ -874,8 +889,8 @@ export default function FamillePage() {
       {mapFull && (
         <MapFullDynamic
           markers={mapMarkers}
-          center={mapCenter}
-          onClose={() => setMapFull(false)}
+          center={mapFocusCenter || mapCenter}
+          onClose={() => { setMapFull(false); setMapFocusCenter(null); }}
           deviceMarkers={deviceMapMarkers}
           onAddressMoved={handleAddressMoved}
         />
