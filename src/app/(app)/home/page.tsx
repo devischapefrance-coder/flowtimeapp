@@ -607,6 +607,8 @@ export default function HomePage() {
 
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
+    // In perso mode, events are private by default; in famille mode, shared
+    const isShared = viewMode === "famille";
 
     if (action.type === "add_event") {
       const title = action.data.title as string;
@@ -618,7 +620,7 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
-        shared: action.data.shared !== false,
+        shared: action.data.shared !== undefined ? action.data.shared !== false : isShared,
       });
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
@@ -633,7 +635,7 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
-        shared: action.data.shared !== false,
+        shared: action.data.shared !== undefined ? action.data.shared !== false : isShared,
       });
     } else if (action.type === "add_recurring") {
       const memberId = resolveFlowMemberId(action.data.member_name as string);
@@ -654,6 +656,7 @@ export default function HomePage() {
             member_id: memberId,
             recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
             category,
+            shared: isShared,
           });
           count++;
         }
