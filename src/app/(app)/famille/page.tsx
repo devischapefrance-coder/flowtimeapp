@@ -300,15 +300,6 @@ export default function FamillePage() {
     }
   }
 
-  async function linkMemberToMe(memberId: string) {
-    if (!profile) return;
-    // Retirer user_id d'un éventuel autre membre
-    await supabase.from("members").update({ user_id: null }).eq("user_id", profile.id);
-    // Lier ce membre au compte connecté
-    await supabase.from("members").update({ user_id: profile.id }).eq("id", memberId);
-    load();
-  }
-
   // CONTACT CRUD
   function openContactModal(c: Contact | "new") {
     if (c === "new") {
@@ -555,8 +546,7 @@ export default function FamillePage() {
       <div data-tutorial="famille-membres" className="stagger-in">
       <p className="label">Membres de la famille</p>
       {(() => {
-        return members.map((m) => {
-        const isMe = m.user_id === profile?.id;
+        return members.filter((m) => m.user_id !== profile?.id).map((m) => {
         const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
         return (
           <div key={m.id} className="card flex items-center gap-3 active:scale-[0.98] transition-transform">
@@ -564,7 +554,6 @@ export default function FamillePage() {
             <div className="flex-1 cursor-pointer" onClick={() => openMemberModal(m)}>
               <p className="font-bold text-sm flex items-center gap-1.5">
                 {m.name}
-                {isMe && <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>Vous</span>}
               </p>
               <p className="text-xs" style={{ color: "var(--dim)" }}>
                 {ROLES.find((r) => r.key === m.role)?.label || m.role}
@@ -949,26 +938,6 @@ export default function FamillePage() {
               <button key={c} className="w-8 h-8 rounded-full" style={{ background: c, outline: form.color === c ? "2px solid var(--text)" : "none", outlineOffset: 2 }} onClick={() => setForm({ ...form, color: c })} />
             ))}
           </div>
-          {memberModal && memberModal !== "new" && (() => {
-            const isMe = (memberModal as Member).user_id === profile?.id;
-            return (
-              <button
-                className="btn mt-3 text-sm font-bold"
-                style={{
-                  background: isMe ? "rgba(61,214,200,0.15)" : "var(--surface2)",
-                  color: isMe ? "var(--teal)" : "var(--text)",
-                }}
-                onClick={async () => {
-                  if (!isMe && memberModal) {
-                    await linkMemberToMe((memberModal as Member).id);
-                    setMemberModal(null);
-                  }
-                }}
-              >
-                {isMe ? "✓ C'est vous" : "🙋 C'est moi"}
-              </button>
-            );
-          })()}
           <button className="btn btn-primary mt-3" onClick={saveMember}>Sauvegarder</button>
           {memberModal !== "new" && <button className="btn btn-danger" onClick={deleteMember}>Supprimer</button>}
         </div>

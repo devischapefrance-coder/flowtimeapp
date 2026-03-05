@@ -47,13 +47,16 @@ export async function POST(req: NextRequest) {
     let query = supabaseAdmin.from("push_subscriptions").select("*");
     if (userId) {
       query = query.eq("user_id", userId);
-    } else if (familyId) {
+    } else {
+      // Send to all family members except the caller
+      const targetFamilyId = familyId || callerProfile.family_id;
       const { data: profiles } = await supabaseAdmin
         .from("profiles")
         .select("id")
-        .eq("family_id", familyId);
+        .eq("family_id", targetFamilyId);
       if (profiles && profiles.length > 0) {
-        const ids = profiles.map((p: { id: string }) => p.id);
+        const ids = profiles.map((p: { id: string }) => p.id).filter((id: string) => id !== user.id);
+        if (ids.length === 0) return NextResponse.json({ sent: 0 });
         query = query.in("user_id", ids);
       }
     }

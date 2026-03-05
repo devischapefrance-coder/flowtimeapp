@@ -10,6 +10,7 @@ import DayAgenda from "@/components/DayAgenda";
 import QuickVoice from "@/components/QuickVoice";
 import NotificationManager from "@/components/NotificationManager";
 import type { Event, Member, Address, Contact, Meal, Birthday, Expense, Chore, DeviceLocation } from "@/lib/types";
+import { notifyFamily } from "@/lib/push";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
 import { useRealtimeEvents, useRealtimeChores, useRealtimeMeals, useRealtimeBirthdays, useRealtimeMembers, useRealtimeExpenses } from "@/lib/realtime";
@@ -584,6 +585,7 @@ export default function HomePage() {
         category: (action.data.category as string) || detectCategory(title),
         shared: action.data.shared !== false,
       });
+      notifyFamily("FlowTime 📅", `${profile.first_name || "Quelqu'un"} a ajouté : ${title}`);
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
     } else if (action.type === "edit_event") {
@@ -654,6 +656,7 @@ export default function HomePage() {
 
     if (qeRecurrence === "none") {
       await supabase.from("events").insert({ ...baseEvent, date: currentDate });
+      notifyFamily("FlowTime 📅", `${profile.first_name || "Quelqu'un"} a ajouté : ${qeTitle.trim()} à ${qeTime}`);
       toast(`"${qeTitle.trim()}" ajouté`, "success");
     } else {
       // Generate recurring events for 4 weeks
@@ -669,6 +672,7 @@ export default function HomePage() {
       for (const date of dates) {
         await supabase.from("events").insert({ ...baseEvent, date, recurring: { type: qeRecurrence } });
       }
+      notifyFamily("FlowTime 📅", `${profile.first_name || "Quelqu'un"} a créé ${dates.length} évènements récurrents : ${qeTitle.trim()}`);
       toast(`${dates.length} évènements récurrents créés`, "success");
     }
     setQuickEventModal(false);
@@ -716,6 +720,7 @@ export default function HomePage() {
         name: mealName.trim(),
         emoji: mealEmoji,
       });
+      notifyFamily("FlowTime 🍽️", `${profile.first_name || "Quelqu'un"} a prévu : ${mealEmoji} ${mealName.trim()}`);
     }
     setMealModal(false);
     loadData();

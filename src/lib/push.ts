@@ -72,3 +72,15 @@ export async function isPushSubscribed(): Promise<boolean> {
     return false;
   }
 }
+
+/** Send a push notification to all family members (except caller) */
+export async function notifyFamily(title: string, body: string): Promise<void> {
+  try {
+    const authHeaders = await getAuthHeaders();
+    await fetch("/api/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ title, body }),
+    });
+  } catch { /* silent — don't block UI for push failures */ }
+}

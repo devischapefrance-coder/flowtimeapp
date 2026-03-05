@@ -36,8 +36,20 @@ function LoginContent() {
 
   // Detect OAuth redirect (Google) and redirect to /home
   useEffect(() => {
+    async function checkProfileExists(userId: string): Promise<boolean> {
+      const { data } = await supabase.from("profiles").select("id").eq("id", userId).single();
+      return !!data;
+    }
+
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_IN" && session) {
+        // Block Google OAuth if no account exists (must sign up first)
+        const hasProfile = await checkProfileExists(session.user.id);
+        if (!hasProfile) {
+          await supabase.auth.signOut();
+          setError("Aucun compte trouvé. Inscrivez-vous d'abord !");
+          return;
+        }
         await handleJoinAfterLogin(session.access_token);
         router.push("/home");
       }
@@ -45,6 +57,11 @@ function LoginContent() {
     // Also check if already signed in
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (session) {
+        const hasProfile = await checkProfileExists(session.user.id);
+        if (!hasProfile) {
+          await supabase.auth.signOut();
+          return;
+        }
         await handleJoinAfterLogin(session.access_token);
         router.push("/home");
       }

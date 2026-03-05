@@ -8,6 +8,7 @@ import PhotoAlbum from "@/components/PhotoAlbum";
 import Modal from "@/components/Modal";
 import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
 import { useToast } from "@/components/Toast";
+import { notifyFamily } from "@/lib/push";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 import EmptyState from "@/components/EmptyState";
 import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
@@ -342,6 +343,7 @@ export default function ViePage() {
         visible_to: noteVisibleTo && noteVisibleTo.length > 0 ? noteVisibleTo : null,
         author_name: profile.first_name || "",
       });
+      notifyFamily("FlowTime 📝", `${profile.first_name || "Quelqu'un"} a ajouté une note : ${noteTitle.trim()}`);
     }
     setNoteModal(false);
     loadData();
@@ -438,6 +440,7 @@ export default function ViePage() {
       author_name: profile.first_name || "",
       content: newComment.trim(),
     });
+    notifyFamily("FlowTime 💬", `${profile.first_name || "Quelqu'un"} a commenté : ${detailNote.title}`);
     setNewComment("");
     // Reload comments
     const { data } = await supabase
@@ -485,6 +488,7 @@ export default function ViePage() {
         emoji: bdayEmoji,
         member_id: bdayMemberId || null,
       });
+      notifyFamily("FlowTime 🎂", `${profile.first_name || "Quelqu'un"} a ajouté l'anniversaire de ${bdayName.trim()}`);
     }
     setBdayModal(false);
     loadData();
@@ -749,6 +753,7 @@ export default function ViePage() {
             category: detectedCat,
             added_by: profile.first_name || "",
           });
+          notifyFamily("FlowTime 🛒", `${profile.first_name || "Quelqu'un"} a ajouté "${newShoppingText.trim()}" aux courses`);
           setNewShoppingText("");
           loadData();
         }
@@ -933,6 +938,7 @@ export default function ViePage() {
             member_id: expMember || null,
             date: expDate,
           });
+          notifyFamily("FlowTime 💰", `${profile.first_name || "Quelqu'un"} a ajouté une dépense : ${expDesc.trim()} (${expAmount}€)`);
           setExpenseModal(false);
           setExpAmount("");
           setExpDesc("");
@@ -1106,7 +1112,7 @@ export default function ViePage() {
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Date</label>
             <input type="date" className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expDate} onChange={(e) => setExpDate(e.target.value)} />
           </div>
-          <button className="btn btn-primary" onClick={() => { const addExpense = async () => { if (!profile?.family_id || !expAmount || !expDesc.trim()) return; await supabase.from("expenses").insert({ family_id: profile.family_id, amount: parseFloat(expAmount), description: expDesc.trim(), category: expCategory, member_id: expMember || null, date: expDate }); setExpenseModal(false); setExpAmount(""); setExpDesc(""); setExpCategory("autre"); setExpMember(""); loadData(); }; addExpense(); }}>
+          <button className="btn btn-primary" onClick={() => { const addExpense = async () => { if (!profile?.family_id || !expAmount || !expDesc.trim()) return; await supabase.from("expenses").insert({ family_id: profile.family_id, amount: parseFloat(expAmount), description: expDesc.trim(), category: expCategory, member_id: expMember || null, date: expDate }); notifyFamily("FlowTime 💰", `${profile.first_name || "Quelqu'un"} a ajouté une dépense : ${expDesc.trim()} (${expAmount}€)`); setExpenseModal(false); setExpAmount(""); setExpDesc(""); setExpCategory("autre"); setExpMember(""); loadData(); }; addExpense(); }}>
             Ajouter
           </button>
         </div>
@@ -1127,6 +1133,7 @@ export default function ViePage() {
             current_index: 0,
             last_rotated: new Date().toISOString().split("T")[0],
           });
+          notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`);
           setChoreModal(false);
           setChoreName("");
           setChoreEmoji("🧹");
@@ -1257,7 +1264,7 @@ export default function ViePage() {
               </div>
             </div>
           )}
-          <button className="btn btn-primary" onClick={() => { const addChore = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: new Date().toISOString().split("T")[0] }); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; addChore(); }}>
+          <button className="btn btn-primary" onClick={() => { const addChore = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: new Date().toISOString().split("T")[0] }); notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; addChore(); }}>
             Ajouter
           </button>
         </div>
