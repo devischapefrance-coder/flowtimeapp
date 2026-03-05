@@ -242,7 +242,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
   function flyTo(lat: number, lng: number) {
     setMapCenter([lat, lng]);
-    setMapZoom(16);
+    setMapZoom(17);
     setTab(null);
   }
 

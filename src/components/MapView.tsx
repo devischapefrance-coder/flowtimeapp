@@ -195,7 +195,13 @@ function InvalidateSize() {
 
 function SetCenter({ center, zoom }: { center: [number, number]; zoom?: number }) {
   const map = useMap();
+  const prevCenter = useRef<string>("");
+  const prevZoom = useRef<number | undefined>(undefined);
   useEffect(() => {
+    const key = `${center[0]},${center[1]}`;
+    if (key === prevCenter.current && zoom === prevZoom.current) return;
+    prevCenter.current = key;
+    prevZoom.current = zoom;
     map.flyTo(center, zoom ?? map.getZoom(), { duration: 0.8 });
   }, [map, center, zoom]);
   return null;
