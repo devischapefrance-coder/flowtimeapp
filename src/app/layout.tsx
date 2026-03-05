@@ -45,7 +45,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon" href="/icons/icon-192.png" />
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var t=localStorage.getItem('flowtime_theme')||'dark';if(t==='system'){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}if(['light','ocean','forest','sunset','cherry','lavender','midnight','amber','nord'].indexOf(t)!==-1){document.documentElement.classList.add(t)}}catch(e){}})()`,
+            __html: `(function(){try{var t=localStorage.getItem('flowtime_theme')||'dark';if(t==='system'){t=window.matchMedia('(prefers-color-scheme:light)').matches?'light':'dark'}if(t!=='dark'){document.documentElement.classList.add(t)}}catch(e){}})()`,
           }}
         />
       </head>

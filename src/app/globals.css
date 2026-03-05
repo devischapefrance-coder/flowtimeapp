@@ -27,211 +27,208 @@
     --overlay: rgba(0, 0, 0, 0.5);
   }
 
-  :root.ocean {
-    --bg: #0A1628;
-    --surface: rgba(74, 158, 240, 0.06);
-    --surface2: rgba(74, 158, 240, 0.1);
-    --surface-solid: #0F1E35;
-    --nav-bg: rgba(10, 22, 40, 0.85);
-    --accent: #4A9EF0;
-    --accent-soft: rgba(74, 158, 240, 0.12);
-    --accent-glow: rgba(74, 158, 240, 0.2);
-    --teal: #5ED4C8;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #B39DDB;
-    --blue: #6BA3F0;
-    --text: #E0EAF6;
-    --dim: rgba(224, 234, 246, 0.5);
-    --faint: rgba(224, 234, 246, 0.2);
-    --glass: rgba(74, 158, 240, 0.03);
-    --glass-border: rgba(74, 158, 240, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(74, 158, 240, 0.1);
-    --overlay: rgba(0, 0, 0, 0.5);
+  /* Palette 1 — Ocean blue */
+  :root.p1 {
+    --bg: #0A1628; --surface: rgba(74,158,240,0.06); --surface2: rgba(74,158,240,0.1);
+    --surface-solid: #0F1E35; --nav-bg: rgba(10,22,40,0.85);
+    --accent: #4A9EF0; --accent-soft: rgba(74,158,240,0.12); --accent-glow: rgba(74,158,240,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #E0EAF6; --dim: rgba(224,234,246,0.5); --faint: rgba(224,234,246,0.2);
+    --glass: rgba(74,158,240,0.03); --glass-border: rgba(74,158,240,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(74,158,240,0.1); --overlay: rgba(0,0,0,0.5);
   }
-
-  :root.forest {
-    --bg: #0C1A0F;
-    --surface: rgba(76, 175, 80, 0.06);
-    --surface2: rgba(76, 175, 80, 0.1);
-    --surface-solid: #122016;
-    --nav-bg: rgba(12, 26, 15, 0.85);
-    --accent: #4CAF50;
-    --accent-soft: rgba(76, 175, 80, 0.12);
-    --accent-glow: rgba(76, 175, 80, 0.2);
-    --teal: #66BB6A;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #B39DDB;
-    --blue: #6BA3F0;
-    --text: #E0F0E2;
-    --dim: rgba(224, 240, 226, 0.5);
-    --faint: rgba(224, 240, 226, 0.2);
-    --glass: rgba(76, 175, 80, 0.03);
-    --glass-border: rgba(76, 175, 80, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(76, 175, 80, 0.1);
-    --overlay: rgba(0, 0, 0, 0.5);
+  /* Palette 2 — Forest green */
+  :root.p2 {
+    --bg: #0C1A0F; --surface: rgba(76,175,80,0.06); --surface2: rgba(76,175,80,0.1);
+    --surface-solid: #122016; --nav-bg: rgba(12,26,15,0.85);
+    --accent: #4CAF50; --accent-soft: rgba(76,175,80,0.12); --accent-glow: rgba(76,175,80,0.2);
+    --teal: #66BB6A; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #E0F0E2; --dim: rgba(224,240,226,0.5); --faint: rgba(224,240,226,0.2);
+    --glass: rgba(76,175,80,0.03); --glass-border: rgba(76,175,80,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(76,175,80,0.1); --overlay: rgba(0,0,0,0.5);
   }
-
-  :root.sunset {
-    --bg: #1A0F0F;
-    --surface: rgba(240, 124, 74, 0.06);
-    --surface2: rgba(240, 124, 74, 0.1);
-    --surface-solid: #241414;
-    --nav-bg: rgba(26, 15, 15, 0.85);
-    --accent: #F07C4A;
-    --accent-soft: rgba(240, 124, 74, 0.12);
-    --accent-glow: rgba(240, 124, 74, 0.2);
-    --teal: #5ED4C8;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #B39DDB;
-    --blue: #6BA3F0;
-    --text: #F6E6E0;
-    --dim: rgba(246, 230, 224, 0.5);
-    --faint: rgba(246, 230, 224, 0.2);
-    --glass: rgba(240, 124, 74, 0.03);
-    --glass-border: rgba(240, 124, 74, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(240, 124, 74, 0.1);
-    --overlay: rgba(0, 0, 0, 0.5);
+  /* Palette 3 — Sunset orange */
+  :root.p3 {
+    --bg: #1A0F0F; --surface: rgba(240,124,74,0.06); --surface2: rgba(240,124,74,0.1);
+    --surface-solid: #241414; --nav-bg: rgba(26,15,15,0.85);
+    --accent: #F07C4A; --accent-soft: rgba(240,124,74,0.12); --accent-glow: rgba(240,124,74,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #F6E6E0; --dim: rgba(246,230,224,0.5); --faint: rgba(246,230,224,0.2);
+    --glass: rgba(240,124,74,0.03); --glass-border: rgba(240,124,74,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(240,124,74,0.1); --overlay: rgba(0,0,0,0.5);
   }
-
-  :root.cherry {
-    --bg: #1A0B14;
-    --surface: rgba(224, 64, 105, 0.06);
-    --surface2: rgba(224, 64, 105, 0.1);
-    --surface-solid: #241018;
-    --nav-bg: rgba(26, 11, 20, 0.85);
-    --accent: #E04069;
-    --accent-soft: rgba(224, 64, 105, 0.12);
-    --accent-glow: rgba(224, 64, 105, 0.2);
-    --teal: #5ED4C8;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #D4A0D4;
-    --blue: #6BA3F0;
-    --text: #F6E0EA;
-    --dim: rgba(246, 224, 234, 0.5);
-    --faint: rgba(246, 224, 234, 0.2);
-    --glass: rgba(224, 64, 105, 0.03);
-    --glass-border: rgba(224, 64, 105, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(224, 64, 105, 0.1);
-    --overlay: rgba(0, 0, 0, 0.5);
+  /* Palette 4 — Cherry pink */
+  :root.p4 {
+    --bg: #1A0B14; --surface: rgba(224,64,105,0.06); --surface2: rgba(224,64,105,0.1);
+    --surface-solid: #241018; --nav-bg: rgba(26,11,20,0.85);
+    --accent: #E04069; --accent-soft: rgba(224,64,105,0.12); --accent-glow: rgba(224,64,105,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #D4A0D4; --blue: #6BA3F0;
+    --text: #F6E0EA; --dim: rgba(246,224,234,0.5); --faint: rgba(246,224,234,0.2);
+    --glass: rgba(224,64,105,0.03); --glass-border: rgba(224,64,105,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(224,64,105,0.1); --overlay: rgba(0,0,0,0.5);
   }
-
-  :root.lavender {
-    --bg: #12101A;
-    --surface: rgba(161, 130, 224, 0.06);
-    --surface2: rgba(161, 130, 224, 0.1);
-    --surface-solid: #1A1624;
-    --nav-bg: rgba(18, 16, 26, 0.85);
-    --accent: #A182E0;
-    --accent-soft: rgba(161, 130, 224, 0.12);
-    --accent-glow: rgba(161, 130, 224, 0.2);
-    --teal: #5ED4C8;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #C9A0F0;
-    --blue: #8B9CF0;
-    --text: #EAE0F6;
-    --dim: rgba(234, 224, 246, 0.5);
-    --faint: rgba(234, 224, 246, 0.2);
-    --glass: rgba(161, 130, 224, 0.03);
-    --glass-border: rgba(161, 130, 224, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(161, 130, 224, 0.1);
-    --overlay: rgba(0, 0, 0, 0.5);
+  /* Palette 5 — Lavender */
+  :root.p5 {
+    --bg: #12101A; --surface: rgba(161,130,224,0.06); --surface2: rgba(161,130,224,0.1);
+    --surface-solid: #1A1624; --nav-bg: rgba(18,16,26,0.85);
+    --accent: #A182E0; --accent-soft: rgba(161,130,224,0.12); --accent-glow: rgba(161,130,224,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #C9A0F0; --blue: #8B9CF0;
+    --text: #EAE0F6; --dim: rgba(234,224,246,0.5); --faint: rgba(234,224,246,0.2);
+    --glass: rgba(161,130,224,0.03); --glass-border: rgba(161,130,224,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(161,130,224,0.1); --overlay: rgba(0,0,0,0.5);
   }
-
-  :root.midnight {
-    --bg: #080C18;
-    --surface: rgba(56, 96, 176, 0.06);
-    --surface2: rgba(56, 96, 176, 0.1);
-    --surface-solid: #0C1224;
-    --nav-bg: rgba(8, 12, 24, 0.85);
-    --accent: #3860B0;
-    --accent-soft: rgba(56, 96, 176, 0.12);
-    --accent-glow: rgba(56, 96, 176, 0.2);
-    --teal: #5ED4C8;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #B39DDB;
-    --blue: #5B8DEF;
-    --text: #C8D6F0;
-    --dim: rgba(200, 214, 240, 0.5);
-    --faint: rgba(200, 214, 240, 0.2);
-    --glass: rgba(56, 96, 176, 0.03);
-    --glass-border: rgba(56, 96, 176, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(56, 96, 176, 0.1);
-    --overlay: rgba(0, 0, 0, 0.6);
+  /* Palette 6 — Midnight navy */
+  :root.p6 {
+    --bg: #080C18; --surface: rgba(56,96,176,0.06); --surface2: rgba(56,96,176,0.1);
+    --surface-solid: #0C1224; --nav-bg: rgba(8,12,24,0.85);
+    --accent: #3860B0; --accent-soft: rgba(56,96,176,0.12); --accent-glow: rgba(56,96,176,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #5B8DEF;
+    --text: #C8D6F0; --dim: rgba(200,214,240,0.5); --faint: rgba(200,214,240,0.2);
+    --glass: rgba(56,96,176,0.03); --glass-border: rgba(56,96,176,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(56,96,176,0.1); --overlay: rgba(0,0,0,0.6);
   }
-
-  :root.amber {
-    --bg: #1A150A;
-    --surface: rgba(218, 165, 50, 0.06);
-    --surface2: rgba(218, 165, 50, 0.1);
-    --surface-solid: #241E10;
-    --nav-bg: rgba(26, 21, 10, 0.85);
-    --accent: #DAA532;
-    --accent-soft: rgba(218, 165, 50, 0.12);
-    --accent-glow: rgba(218, 165, 50, 0.2);
-    --teal: #5ED4C8;
-    --warm: #F5C563;
-    --red: #F06B7E;
-    --green: #5EC89E;
-    --lavender: #B39DDB;
-    --blue: #6BA3F0;
-    --text: #F6F0E0;
-    --dim: rgba(246, 240, 224, 0.5);
-    --faint: rgba(246, 240, 224, 0.2);
-    --glass: rgba(218, 165, 50, 0.03);
-    --glass-border: rgba(218, 165, 50, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(218, 165, 50, 0.1);
-    --overlay: rgba(0, 0, 0, 0.5);
+  /* Palette 7 — Amber gold */
+  :root.p7 {
+    --bg: #1A150A; --surface: rgba(218,165,50,0.06); --surface2: rgba(218,165,50,0.1);
+    --surface-solid: #241E10; --nav-bg: rgba(26,21,10,0.85);
+    --accent: #DAA532; --accent-soft: rgba(218,165,50,0.12); --accent-glow: rgba(218,165,50,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #F6F0E0; --dim: rgba(246,240,224,0.5); --faint: rgba(246,240,224,0.2);
+    --glass: rgba(218,165,50,0.03); --glass-border: rgba(218,165,50,0.08);
+    --radius: 16px; --radius-sm: 12px;
+    --card-hover: rgba(218,165,50,0.1);
+    --overlay: rgba(0,0,0,0.5);
   }
-
-  :root.nord {
-    --bg: #0E1218;
-    --surface: rgba(136, 168, 194, 0.06);
-    --surface2: rgba(136, 168, 194, 0.1);
-    --surface-solid: #151B24;
-    --nav-bg: rgba(14, 18, 24, 0.85);
-    --accent: #88A8C2;
-    --accent-soft: rgba(136, 168, 194, 0.12);
-    --accent-glow: rgba(136, 168, 194, 0.2);
-    --teal: #8FBCBB;
-    --warm: #EBCB8B;
-    --red: #BF616A;
-    --green: #A3BE8C;
-    --lavender: #B48EAD;
-    --blue: #81A1C1;
-    --text: #D8DEE9;
-    --dim: rgba(216, 222, 233, 0.5);
-    --faint: rgba(216, 222, 233, 0.2);
-    --glass: rgba(136, 168, 194, 0.03);
-    --glass-border: rgba(136, 168, 194, 0.08);
-    --radius: 16px;
-    --radius-sm: 12px;
-    --card-hover: rgba(136, 168, 194, 0.1);
+  /* Palette 8 — Nord gray-blue */
+  :root.p8 {
+    --bg: #0E1218; --surface: rgba(136,168,194,0.06); --surface2: rgba(136,168,194,0.1);
+    --surface-solid: #151B24; --nav-bg: rgba(14,18,24,0.85);
+    --accent: #88A8C2; --accent-soft: rgba(136,168,194,0.12); --accent-glow: rgba(136,168,194,0.2);
+    --teal: #8FBCBB; --warm: #EBCB8B; --red: #BF616A; --green: #A3BE8C; --lavender: #B48EAD; --blue: #81A1C1;
+    --text: #D8DEE9; --dim: rgba(216,222,233,0.5); --faint: rgba(216,222,233,0.2);
+    --glass: rgba(136,168,194,0.03); --glass-border: rgba(136,168,194,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(136,168,194,0.1);
+    --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 9 — Rose quartz */
+  :root.p9 {
+    --bg: #1A1016; --surface: rgba(219,142,176,0.06); --surface2: rgba(219,142,176,0.1);
+    --surface-solid: #24161E; --nav-bg: rgba(26,16,22,0.85);
+    --accent: #DB8EB0; --accent-soft: rgba(219,142,176,0.12); --accent-glow: rgba(219,142,176,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #D4A0D4; --blue: #6BA3F0;
+    --text: #F6E4EE; --dim: rgba(246,228,238,0.5); --faint: rgba(246,228,238,0.2);
+    --glass: rgba(219,142,176,0.03); --glass-border: rgba(219,142,176,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(219,142,176,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 10 — Teal cyan */
+  :root.p10 {
+    --bg: #0A1818; --surface: rgba(64,206,196,0.06); --surface2: rgba(64,206,196,0.1);
+    --surface-solid: #0E2222; --nav-bg: rgba(10,24,24,0.85);
+    --accent: #40CEC4; --accent-soft: rgba(64,206,196,0.12); --accent-glow: rgba(64,206,196,0.2);
+    --teal: #40CEC4; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #E0F6F4; --dim: rgba(224,246,244,0.5); --faint: rgba(224,246,244,0.2);
+    --glass: rgba(64,206,196,0.03); --glass-border: rgba(64,206,196,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(64,206,196,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 11 — Coral */
+  :root.p11 {
+    --bg: #1A0E0E; --surface: rgba(240,98,98,0.06); --surface2: rgba(240,98,98,0.1);
+    --surface-solid: #241414; --nav-bg: rgba(26,14,14,0.85);
+    --accent: #F06262; --accent-soft: rgba(240,98,98,0.12); --accent-glow: rgba(240,98,98,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #F6E2E2; --dim: rgba(246,226,226,0.5); --faint: rgba(246,226,226,0.2);
+    --glass: rgba(240,98,98,0.03); --glass-border: rgba(240,98,98,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(240,98,98,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 12 — Lime green */
+  :root.p12 {
+    --bg: #101A0A; --surface: rgba(156,204,60,0.06); --surface2: rgba(156,204,60,0.1);
+    --surface-solid: #16220E; --nav-bg: rgba(16,26,10,0.85);
+    --accent: #9CCC3C; --accent-soft: rgba(156,204,60,0.12); --accent-glow: rgba(156,204,60,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #9CCC3C; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #EEF6E0; --dim: rgba(238,246,224,0.5); --faint: rgba(238,246,224,0.2);
+    --glass: rgba(156,204,60,0.03); --glass-border: rgba(156,204,60,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(156,204,60,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 13 — Indigo */
+  :root.p13 {
+    --bg: #0E0C1A; --surface: rgba(92,78,204,0.06); --surface2: rgba(92,78,204,0.1);
+    --surface-solid: #141224; --nav-bg: rgba(14,12,26,0.85);
+    --accent: #5C4ECC; --accent-soft: rgba(92,78,204,0.12); --accent-glow: rgba(92,78,204,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #7B6EF0;
+    --text: #E2E0F6; --dim: rgba(226,224,246,0.5); --faint: rgba(226,224,246,0.2);
+    --glass: rgba(92,78,204,0.03); --glass-border: rgba(92,78,204,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(92,78,204,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 14 — Copper */
+  :root.p14 {
+    --bg: #1A120A; --surface: rgba(196,130,72,0.06); --surface2: rgba(196,130,72,0.1);
+    --surface-solid: #241A10; --nav-bg: rgba(26,18,10,0.85);
+    --accent: #C48248; --accent-soft: rgba(196,130,72,0.12); --accent-glow: rgba(196,130,72,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #F6ECE0; --dim: rgba(246,236,224,0.5); --faint: rgba(246,236,224,0.2);
+    --glass: rgba(196,130,72,0.03); --glass-border: rgba(196,130,72,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(196,130,72,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 15 — Fuchsia */
+  :root.p15 {
+    --bg: #1A0A1A; --surface: rgba(200,60,200,0.06); --surface2: rgba(200,60,200,0.1);
+    --surface-solid: #240E24; --nav-bg: rgba(26,10,26,0.85);
+    --accent: #C83CC8; --accent-soft: rgba(200,60,200,0.12); --accent-glow: rgba(200,60,200,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #D4A0F0; --blue: #6BA3F0;
+    --text: #F6E0F6; --dim: rgba(246,224,246,0.5); --faint: rgba(246,224,246,0.2);
+    --glass: rgba(200,60,200,0.03); --glass-border: rgba(200,60,200,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(200,60,200,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 16 — Sky blue */
+  :root.p16 {
+    --bg: #0A1420; --surface: rgba(96,180,240,0.06); --surface2: rgba(96,180,240,0.1);
+    --surface-solid: #0E1C2C; --nav-bg: rgba(10,20,32,0.85);
+    --accent: #60B4F0; --accent-soft: rgba(96,180,240,0.12); --accent-glow: rgba(96,180,240,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #60B4F0;
+    --text: #E0F0FA; --dim: rgba(224,240,250,0.5); --faint: rgba(224,240,250,0.2);
+    --glass: rgba(96,180,240,0.03); --glass-border: rgba(96,180,240,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(96,180,240,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 17 — Emerald */
+  :root.p17 {
+    --bg: #0A1A14; --surface: rgba(52,196,132,0.06); --surface2: rgba(52,196,132,0.1);
+    --surface-solid: #0E241A; --nav-bg: rgba(10,26,20,0.85);
+    --accent: #34C484; --accent-soft: rgba(52,196,132,0.12); --accent-glow: rgba(52,196,132,0.2);
+    --teal: #34C484; --warm: #F5C563; --red: #F06B7E; --green: #34C484; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #E0F6EE; --dim: rgba(224,246,238,0.5); --faint: rgba(224,246,238,0.2);
+    --glass: rgba(52,196,132,0.03); --glass-border: rgba(52,196,132,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(52,196,132,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 18 — Slate */
+  :root.p18 {
+    --bg: #111316; --surface: rgba(148,163,184,0.06); --surface2: rgba(148,163,184,0.1);
+    --surface-solid: #181C22; --nav-bg: rgba(17,19,22,0.85);
+    --accent: #94A3B8; --accent-soft: rgba(148,163,184,0.12); --accent-glow: rgba(148,163,184,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #E2E8F0; --dim: rgba(226,232,240,0.5); --faint: rgba(226,232,240,0.2);
+    --glass: rgba(148,163,184,0.03); --glass-border: rgba(148,163,184,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(148,163,184,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 19 — Wine burgundy */
+  :root.p19 {
+    --bg: #180A0E; --surface: rgba(160,48,72,0.06); --surface2: rgba(160,48,72,0.1);
+    --surface-solid: #220E14; --nav-bg: rgba(24,10,14,0.85);
+    --accent: #A03048; --accent-soft: rgba(160,48,72,0.12); --accent-glow: rgba(160,48,72,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #B39DDB; --blue: #6BA3F0;
+    --text: #F4E0E4; --dim: rgba(244,224,228,0.5); --faint: rgba(244,224,228,0.2);
+    --glass: rgba(160,48,72,0.03); --glass-border: rgba(160,48,72,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(160,48,72,0.1); --overlay: rgba(0,0,0,0.5);
+  }
+  /* Palette 20 — Electric violet */
+  :root.p20 {
+    --bg: #10081A; --surface: rgba(140,60,240,0.06); --surface2: rgba(140,60,240,0.1);
+    --surface-solid: #180E28; --nav-bg: rgba(16,8,26,0.85);
+    --accent: #8C3CF0; --accent-soft: rgba(140,60,240,0.12); --accent-glow: rgba(140,60,240,0.2);
+    --teal: #5ED4C8; --warm: #F5C563; --red: #F06B7E; --green: #5EC89E; --lavender: #C090F0; --blue: #6BA3F0;
+    --text: #EAE0FA; --dim: rgba(234,224,250,0.5); --faint: rgba(234,224,250,0.2);
+    --glass: rgba(140,60,240,0.03); --glass-border: rgba(140,60,240,0.08);
+    --radius: 16px; --radius-sm: 12px; --card-hover: rgba(140,60,240,0.1);
     --overlay: rgba(0, 0, 0, 0.5);
   }
 

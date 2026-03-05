@@ -44,9 +44,9 @@ export default function ReglagesPage() {
   const [passwordError, setPasswordError] = useState("");
   const [passwordSuccess, setPasswordSuccess] = useState("");
 
-  const [theme, setTheme] = useState<"dark" | "light" | "system" | "ocean" | "forest" | "sunset" | "cherry" | "lavender" | "midnight" | "amber" | "nord">(() => {
+  const [theme, setTheme] = useState<string>(() => {
     if (typeof window !== "undefined") {
-      return (localStorage.getItem("flowtime_theme") as "dark" | "light" | "system" | "ocean" | "forest" | "sunset" | "cherry" | "lavender" | "midnight" | "amber" | "nord") || "dark";
+      return localStorage.getItem("flowtime_theme") || "dark";
     }
     return "dark";
   });
@@ -57,10 +57,12 @@ export default function ReglagesPage() {
     return "fr";
   });
 
-  function changeTheme(t: "dark" | "light" | "system" | "ocean" | "forest" | "sunset" | "cherry" | "lavender" | "midnight" | "amber" | "nord") {
+  const PALETTE_CLASSES = ["light","p1","p2","p3","p4","p5","p6","p7","p8","p9","p10","p11","p12","p13","p14","p15","p16","p17","p18","p19","p20"];
+
+  function changeTheme(t: string) {
     setTheme(t);
     localStorage.setItem("flowtime_theme", t);
-    const themeClasses = ["light", "ocean", "forest", "sunset", "cherry", "lavender", "midnight", "amber", "nord"];
+    const themeClasses = PALETTE_CLASSES;
     document.documentElement.classList.remove(...themeClasses);
     if (t === "system") {
       const resolved = window.matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
@@ -259,31 +261,26 @@ export default function ReglagesPage() {
             </button>
           ))}
         </div>
-        <p className="text-sm font-bold mb-3 mt-4">Palettes</p>
-        <div className="grid grid-cols-4 gap-2">
+        <p className="text-sm font-bold mb-3 mt-4">Couleur d&apos;accent</p>
+        <div className="flex flex-wrap gap-2.5 justify-center">
           {([
-            ["ocean", "#4A9EF0", "Ocean"],
-            ["forest", "#4CAF50", "Forêt"],
-            ["sunset", "#F07C4A", "Sunset"],
-            ["cherry", "#E04069", "Cerise"],
-            ["lavender", "#A182E0", "Lavande"],
-            ["midnight", "#3860B0", "Minuit"],
-            ["amber", "#DAA532", "Ambre"],
-            ["nord", "#88A8C2", "Nord"],
-          ] as const).map(([key, color, label]) => (
+            ["p1", "#4A9EF0"], ["p2", "#4CAF50"], ["p3", "#F07C4A"], ["p4", "#E04069"],
+            ["p5", "#A182E0"], ["p6", "#3860B0"], ["p7", "#DAA532"], ["p8", "#88A8C2"],
+            ["p9", "#DB8EB0"], ["p10", "#40CEC4"], ["p11", "#F06262"], ["p12", "#9CCC3C"],
+            ["p13", "#5C4ECC"], ["p14", "#C48248"], ["p15", "#C83CC8"], ["p16", "#60B4F0"],
+            ["p17", "#34C484"], ["p18", "#94A3B8"], ["p19", "#A03048"], ["p20", "#8C3CF0"],
+          ]).map(([key, color]) => (
             <button
               key={key}
-              className="py-2 rounded-xl text-[11px] font-bold transition-colors text-center flex flex-col items-center justify-center gap-1"
+              className="w-8 h-8 rounded-full transition-all"
               style={{
-                background: theme === key ? color : "var(--surface2)",
-                color: theme === key ? "#fff" : "var(--text)",
-                border: theme === key ? "none" : `1.5px solid ${color}30`,
+                background: color,
+                boxShadow: theme === key ? `0 0 0 3px var(--bg), 0 0 0 5px ${color}` : "none",
+                transform: theme === key ? "scale(1.15)" : "scale(1)",
               }}
               onClick={() => changeTheme(key)}
-            >
-              <span className="w-4 h-4 rounded-full" style={{ background: color, boxShadow: theme === key ? "0 0 8px " + color : "none" }} />
-              {label}
-            </button>
+              aria-label={`Palette ${key}`}
+            />
           ))}
         </div>
       </div>
