@@ -1201,34 +1201,24 @@ export default function HomePage() {
         ? [profile.lat, profile.lng]
         : [46.6, 2.5];
     return (
-      <>
-        <div className="card !mb-0 block cursor-pointer" style={{ position: "relative", zIndex: 1 }} onClick={() => setMapFullOpen(true)}>
-          <div className="flex items-center justify-between mb-2">
-            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
-              {devices.length} appareil{devices.length !== 1 ? "s" : ""} · Voir →
-            </span>
-          </div>
-          <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
-            <MapView
-              markers={mapMarkers}
-              center={center}
-              zoom={mapMarkers.length > 0 ? 12 : 6}
-              height="180px"
-              mapStyle="dark"
-              interactive={false}
-            />
-          </div>
+      <div className="card !mb-0 block cursor-pointer" onClick={() => setMapFullOpen(true)}>
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+            {devices.length} appareil{devices.length !== 1 ? "s" : ""} · Voir →
+          </span>
         </div>
-        {mapFullOpen && (
-          <MapFull
-            markers={mapMarkers.filter((m) => m.type === "address")}
-            deviceMarkers={mapMarkers.filter((m) => m.type === "device")}
+        <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
+          <MapView
+            markers={mapMarkers}
             center={center}
-            onClose={() => setMapFullOpen(false)}
+            zoom={mapMarkers.length > 0 ? 12 : 6}
+            height="180px"
+            mapStyle="dark"
+            interactive={false}
           />
-        )}
-      </>
+        </div>
+      </div>
     );
   }
 
@@ -1622,6 +1612,42 @@ export default function HomePage() {
       <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} onAction={handleFlowAction} />
 
       {/* Family Chat */}
+
+      {/* Full-screen map (portal-level to avoid stacking context issues) */}
+      {mapFullOpen && (() => {
+        const mapMarkers: MapMarker[] = [
+          ...devices.map((d) => ({
+            id: d.id,
+            lat: d.lat,
+            lng: d.lng,
+            emoji: d.emoji || "📱",
+            name: d.device_name,
+            type: "device" as const,
+            detail: new Date(d.updated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
+          })),
+          ...addresses.filter((a) => a.lat && a.lng).map((a) => ({
+            id: a.id,
+            lat: a.lat!,
+            lng: a.lng!,
+            emoji: a.emoji || "📍",
+            name: a.name,
+            type: "address" as const,
+          })),
+        ];
+        const mapCenter: [number, number] = devices.length > 0
+          ? [devices[0].lat, devices[0].lng]
+          : profile?.lat && profile?.lng
+            ? [profile.lat, profile.lng]
+            : [46.6, 2.5];
+        return (
+          <MapFull
+            markers={mapMarkers.filter((m) => m.type === "address")}
+            deviceMarkers={mapMarkers.filter((m) => m.type === "device")}
+            center={mapCenter}
+            onClose={() => setMapFullOpen(false)}
+          />
+        );
+      })()}
     </div>
   );
 }
