@@ -110,7 +110,36 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       data = created;
     }
 
-    if (data) setProfile(data as Profile);
+    if (data) {
+      setProfile(data as Profile);
+
+      // Auto-link: ensure this user has a member with their user_id
+      if (data.family_id) {
+        const { data: linked } = await supabase
+          .from("members")
+          .select("id")
+          .eq("family_id", data.family_id)
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (!linked) {
+          // Try to find an unlinked member by name match
+          const { data: allMembers } = await supabase
+            .from("members")
+            .select("id, name, user_id")
+            .eq("family_id", data.family_id)
+            .is("user_id", null);
+
+          if (allMembers) {
+            const firstName = (data.first_name || "").toLowerCase();
+            const match = allMembers.find((m: { name: string }) => m.name.toLowerCase() === firstName);
+            if (match) {
+              await supabase.from("members").update({ user_id: user.id }).eq("id", match.id);
+            }
+          }
+        }
+      }
+    }
     setReady(true);
 
     // Check onboarding
