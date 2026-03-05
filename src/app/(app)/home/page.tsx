@@ -793,7 +793,8 @@ export default function HomePage() {
 
   const flowContext = {
     userName: profile?.first_name,
-    members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji })),
+    members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji, birth_date: m.birth_date })),
+    birthdays: birthdays.map((b) => ({ name: b.name, date: b.date, emoji: b.emoji })),
     todayEvents: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name, category: e.category })),
     weekEvents: viewEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name, category: e.category })),
     addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
