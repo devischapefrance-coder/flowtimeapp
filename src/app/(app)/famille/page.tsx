@@ -15,44 +15,86 @@ const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: fals
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
 
 const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
+  // Parents
   { key: "papa", label: "Papa", defaultEmoji: "👨" },
   { key: "maman", label: "Maman", defaultEmoji: "👩" },
+  // Conjoints
+  { key: "conjoint", label: "Conjoint", defaultEmoji: "👨" },
+  { key: "conjointe", label: "Conjointe", defaultEmoji: "👩" },
+  // Enfants
   { key: "fils", label: "Fils", defaultEmoji: "👦" },
   { key: "fille", label: "Fille", defaultEmoji: "👧" },
   { key: "ado_garcon", label: "Ado (garçon)", defaultEmoji: "🧑" },
   { key: "ado_fille", label: "Ado (fille)", defaultEmoji: "👩" },
   { key: "bebe", label: "Bébé", defaultEmoji: "👶" },
+  // Fratrie
+  { key: "frere", label: "Frère", defaultEmoji: "👦" },
+  { key: "soeur", label: "Sœur", defaultEmoji: "👧" },
+  // Grands-parents
   { key: "grand-pere", label: "Grand-père", defaultEmoji: "👴" },
   { key: "grand-mere", label: "Grand-mère", defaultEmoji: "👵" },
+  { key: "arriere-grand-pere", label: "Arrière-grand-père", defaultEmoji: "👴" },
+  { key: "arriere-grand-mere", label: "Arrière-grand-mère", defaultEmoji: "👵" },
+  // Petits-enfants
+  { key: "petit-fils", label: "Petit-fils", defaultEmoji: "👦" },
+  { key: "petite-fille", label: "Petite-fille", defaultEmoji: "👧" },
+  // Belle-famille
   { key: "beau-pere", label: "Beau-père", defaultEmoji: "👨" },
   { key: "belle-mere", label: "Belle-mère", defaultEmoji: "👩" },
+  { key: "beau-frere", label: "Beau-frère", defaultEmoji: "👨" },
+  { key: "belle-soeur", label: "Belle-sœur", defaultEmoji: "👩" },
+  { key: "gendre", label: "Gendre", defaultEmoji: "👨" },
+  { key: "belle-fille", label: "Belle-fille", defaultEmoji: "👩" },
+  // Famille élargie
   { key: "oncle", label: "Oncle", defaultEmoji: "👨" },
   { key: "tante", label: "Tante", defaultEmoji: "👩" },
   { key: "cousin", label: "Cousin", defaultEmoji: "🧑" },
   { key: "cousine", label: "Cousine", defaultEmoji: "👩" },
   { key: "neveu", label: "Neveu", defaultEmoji: "👦" },
   { key: "niece", label: "Nièce", defaultEmoji: "👧" },
+  // Parrainage
+  { key: "parrain", label: "Parrain", defaultEmoji: "🧔" },
+  { key: "marraine", label: "Marraine", defaultEmoji: "👩" },
+  { key: "filleul", label: "Filleul", defaultEmoji: "👦" },
+  { key: "filleule", label: "Filleule", defaultEmoji: "👧" },
+  // Autre
   { key: "autre", label: "Autre", defaultEmoji: "🧑" },
 ];
 
 const ROLE_EMOJIS: Record<string, string[]> = {
   papa:        ["👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🧑‍🦲","🤴","🧑","💪","👔","🏋️‍♂️"],
   maman:       ["👩","👱‍♀️","👩‍🦰","👩‍🦱","👩‍🦳","👸","🧑‍🍼","💃","👠","🌸","🦋"],
+  conjoint:    ["👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","🤵","💍","🧑","💪","👔"],
+  conjointe:   ["👩","👱‍♀️","👩‍🦰","👩‍🦱","👰","💍","💃","👠","🌸","🦋"],
   fils:        ["👦","🧒","⚽","🎮","🏀","🚴‍♂️","🎸","🏊‍♂️","🤖","🦸‍♂️","🐶"],
   fille:       ["👧","🧒","🎨","🩰","🦋","🌸","📚","🎀","🧸","🦄","🐱"],
   ado_garcon:  ["🧑","👦","🎮","⚽","🎸","🏀","🎧","📱","🛹","🏄‍♂️","💻"],
   ado_fille:   ["👩","👧","🎧","📱","🎨","💃","📚","🎤","🧘‍♀️","🌟","💅"],
   bebe:        ["👶","🧒","🍼","🧒","🧸","🐣","🌈","⭐","🎀","👣","😴"],
+  frere:       ["👦","🧑","⚽","🎮","🏀","🎸","🏋️‍♂️","💪","🛹","🏄‍♂️"],
+  soeur:       ["👧","👩","🎨","🩰","🦋","🌸","📚","🎧","💃","🌟"],
   "grand-pere":["👴","🧓","👨‍🦳","🎩","📰","♟️","🎣","🌳","☕","🏌️‍♂️"],
   "grand-mere":["👵","🧓","👩‍🦳","🧶","🌺","☕","🍰","📖","🪴","🌷"],
+  "arriere-grand-pere":["👴","🧓","👨‍🦳","🎩","☕","♟️","📰","🌳"],
+  "arriere-grand-mere":["👵","🧓","👩‍🦳","🧶","☕","🌺","🍰","📖"],
+  "petit-fils": ["👦","🧒","⚽","🎮","🏀","🤖","🦸‍♂️","🐶"],
+  "petite-fille":["👧","🧒","🎨","🩰","🦋","🧸","🦄","🐱"],
   "beau-pere": ["👨","🧔","👨‍🦳","👔","🤵","🧑","💼","☕","🏌️‍♂️","📰"],
   "belle-mere": ["👩","👩‍🦳","👱‍♀️","💐","🌸","🧑‍🍼","☕","🌺","🪴","🌷"],
+  "beau-frere":["👨","🧔","🧑","⚽","💼","🎸","🏋️‍♂️","🍺","💪"],
+  "belle-soeur":["👩","👱‍♀️","🧑","💐","🌸","☕","🎨","💃","🦋"],
+  gendre:      ["👨","🧔","🤵","👔","💼","🧑","💪","⚽"],
+  "belle-fille":["👩","👰","👱‍♀️","💐","🌸","💃","🦋","☕"],
   oncle:       ["👨","🧔","🧑","💼","⚽","🎸","🏋️‍♂️","🍺","🎣","🏌️‍♂️"],
   tante:       ["👩","👱‍♀️","🧑","💐","🌸","☕","🎨","💃","📚","🌺"],
   cousin:      ["🧑","👦","⚽","🎮","🏀","🎸","🎧","💻","🛹","🏄‍♂️"],
   cousine:     ["👩","👧","🎧","🎨","📱","💃","📚","🌟","💅","🦋"],
   neveu:       ["👦","🧒","⚽","🎮","🏀","🎸","🤖","🦸‍♂️","🐶","🛹"],
   niece:       ["👧","🧒","🎨","🩰","🦋","🌸","📚","🎀","🧸","🦄"],
+  parrain:     ["🧔","👨","👨‍🦳","🤵","🎩","💼","⭐","🌟"],
+  marraine:    ["👩","👱‍♀️","👩‍🦳","👸","💐","🌸","⭐","🌟"],
+  filleul:     ["👦","🧒","⚽","🎮","🌟","⭐","🤖","🦸‍♂️"],
+  filleule:    ["👧","🧒","🎨","🌟","⭐","🦋","🧸","🦄"],
   autre:       ["🧑","👤","😊","🌟","💫","🎭","🙂","✨","🦊","🐻","🐼"],
 };
 
@@ -132,15 +174,24 @@ export default function FamillePage() {
     ]);
     if (m.data) {
       const roleOrder: Record<string, number> = {
-        "grand-pere": 0, "grand-mere": 1,
-        "beau-pere": 2, "belle-mere": 3,
-        papa: 4, maman: 5,
-        oncle: 6, tante: 7,
-        ado_garcon: 8, ado_fille: 9,
-        fils: 10, fille: 11,
-        cousin: 12, cousine: 13,
-        neveu: 14, niece: 15,
-        bebe: 16, autre: 17,
+        "arriere-grand-pere": 0, "arriere-grand-mere": 1,
+        "grand-pere": 2, "grand-mere": 3,
+        "beau-pere": 4, "belle-mere": 5,
+        papa: 6, maman: 7,
+        conjoint: 8, conjointe: 9,
+        frere: 10, soeur: 11,
+        "beau-frere": 12, "belle-soeur": 13,
+        oncle: 14, tante: 15,
+        ado_garcon: 16, ado_fille: 17,
+        fils: 18, fille: 19,
+        gendre: 20, "belle-fille": 21,
+        cousin: 22, cousine: 23,
+        neveu: 24, niece: 25,
+        "petit-fils": 26, "petite-fille": 27,
+        bebe: 28,
+        parrain: 29, marraine: 30,
+        filleul: 31, filleule: 32,
+        autre: 33,
       };
       const sorted = [...(m.data as Member[])].sort(
         (a, b) => (roleOrder[a.role] ?? 9) - (roleOrder[b.role] ?? 9)
