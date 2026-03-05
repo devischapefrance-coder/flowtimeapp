@@ -24,6 +24,7 @@ import { exportPDF } from "@/lib/pdf-export";
 import { EVENT_CATEGORIES, getCategoryColor, detectCategory } from "@/lib/categories";
 import { cacheData, getCachedData } from "@/lib/offline";
 import { getWeatherWithGeolocation } from "@/lib/weather";
+import type { WeatherData } from "@/lib/weather";
 import { useToast } from "@/components/Toast";
 import EmptyState from "@/components/EmptyState";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
@@ -156,14 +157,6 @@ function getGreeting(date: Date): string {
   return "Bonsoir";
 }
 
-// ---- Weather type ----
-interface WeatherData {
-  temperature: number;
-  weatherCode: number;
-  description: string;
-  icon: string;
-}
-
 export default function HomePage() {
   const { profile, chatUnread, openChat } = useProfile();
   const [events, setEvents] = useState<Event[]>([]);
@@ -235,6 +228,12 @@ export default function HomePage() {
 
   // Weather state
   const [weather, setWeather] = useState<WeatherData | null>(null);
+
+  // Widget expanded modal states
+  const [weatherOpen, setWeatherOpen] = useState(false);
+  const [activityOpen, setActivityOpen] = useState(false);
+  const [expensesOpen, setExpensesOpen] = useState(false);
+  const [birthdaysOpen, setBirthdaysOpen] = useState(false);
 
   // On mount: check goto-date override from search
   useEffect(() => {
@@ -773,21 +772,22 @@ export default function HomePage() {
     .sort((a, b) => b[1] - a[1])
     .slice(0, 3);
 
-  // Birthdays: next 3
-  const upcomingBirthdays = (() => {
+  // Birthdays: all sorted by upcoming, widget shows 3
+  const allBirthdaysSorted = (() => {
     const today = new Date();
     const thisYear = today.getFullYear();
     return birthdays
       .map((b) => {
-        const [, m, d] = b.date.split("-").map(Number);
+        const [birthYear, m, d] = b.date.split("-").map(Number);
         let nextBday = new Date(thisYear, m - 1, d);
         if (nextBday < today) nextBday = new Date(thisYear + 1, m - 1, d);
         const daysUntil = Math.ceil((nextBday.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-        return { ...b, daysUntil, nextBday };
+        const age = nextBday.getFullYear() - birthYear;
+        return { ...b, daysUntil, nextBday, age: birthYear > 1900 ? age : null };
       })
-      .sort((a, b) => a.daysUntil - b.daysUntil)
-      .slice(0, 3);
+      .sort((a, b) => a.daysUntil - b.daysUntil);
   })();
+  const upcomingBirthdays = allBirthdaysSorted.slice(0, 3);
 
   const monthDays = calendarView === "month" ? getMonthDays(monthYear, monthMonth) : [];
 
@@ -891,15 +891,57 @@ export default function HomePage() {
         </div>
       );
     }
+    const DAY_NAMES_SHORT = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
     return (
-      <div className="card !mb-0 flex items-center gap-3">
-        <span className="text-3xl">{weather.icon}</span>
-        <div className="flex-1">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
-          <p className="text-lg font-bold">{weather.temperature}°C</p>
-          <p className="text-xs" style={{ color: "var(--dim)" }}>{weather.description}</p>
+      <>
+        <div className="card !mb-0 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setWeatherOpen(true)}>
+          <span className="text-3xl">{weather.icon}</span>
+          <div className="flex-1">
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
+            <p className="text-lg font-bold">{weather.temperature}°C</p>
+            <p className="text-xs" style={{ color: "var(--dim)" }}>{weather.description}</p>
+          </div>
+          <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
         </div>
-      </div>
+        <Modal open={weatherOpen} onClose={() => setWeatherOpen(false)} title="Météo — 7 jours">
+          {/* Current conditions */}
+          <div className="flex items-center gap-4 mb-4 p-3 rounded-2xl" style={{ background: "var(--surface2)" }}>
+            <span className="text-4xl">{weather.icon}</span>
+            <div className="flex-1">
+              <p className="text-2xl font-bold">{weather.temperature}°C</p>
+              <p className="text-xs" style={{ color: "var(--dim)" }}>{weather.description}</p>
+            </div>
+            <div className="flex flex-col gap-1 text-right">
+              {weather.windSpeed != null && <p className="text-xs" style={{ color: "var(--dim)" }}>💨 {weather.windSpeed} km/h</p>}
+              {weather.humidity != null && <p className="text-xs" style={{ color: "var(--dim)" }}>💧 {weather.humidity}%</p>}
+            </div>
+          </div>
+          {/* Sunrise/sunset for today */}
+          {weather.daily?.[0] && (
+            <div className="flex justify-center gap-6 mb-4">
+              <span className="text-xs" style={{ color: "var(--dim)" }}>🌅 {weather.daily[0].sunrise.split("T")[1]}</span>
+              <span className="text-xs" style={{ color: "var(--dim)" }}>🌇 {weather.daily[0].sunset.split("T")[1]}</span>
+            </div>
+          )}
+          {/* 7-day forecast */}
+          <div className="flex flex-col gap-2">
+            {weather.daily?.map((d, i) => {
+              const date = new Date(d.date + "T00:00:00");
+              const dayLabel = i === 0 ? "Aujourd'hui" : DAY_NAMES_SHORT[date.getDay()] + " " + date.getDate();
+              return (
+                <div key={d.date} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                  <span className="text-lg w-7 text-center">{d.icon}</span>
+                  <span className="text-xs font-bold flex-1 capitalize">{dayLabel}</span>
+                  <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>{d.max}°</span>
+                  <span className="text-xs" style={{ color: "var(--faint)" }}>{d.min}°</span>
+                  {d.precip > 0 && <span className="text-[10px]" style={{ color: "var(--teal)" }}>💧{d.precip.toFixed(1)}</span>}
+                  <span className="text-[10px] w-12 text-right" style={{ color: "var(--dim)" }}>💨 {d.wind}</span>
+                </div>
+              );
+            })}
+          </div>
+        </Modal>
+      </>
     );
   }
 
@@ -1123,58 +1165,162 @@ export default function HomePage() {
   }
 
   function renderExpenses() {
+    const allCategories = Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1]);
     return (
-      <div className="card !mb-0">
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Dépenses du mois</p>
-          <p className="text-lg font-bold" style={{ color: "var(--warm)" }}>{expenseTotal.toFixed(0)} €</p>
-        </div>
-        {topExpenseCategories.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            {topExpenseCategories.map(([cat, amount]) => (
-              <div key={cat} className="flex items-center justify-between">
-                <span className="text-xs capitalize" style={{ color: "var(--dim)" }}>{cat}</span>
-                <span className="text-xs font-bold">{amount.toFixed(0)} €</span>
-              </div>
-            ))}
+      <>
+        <div className="card !mb-0 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setExpensesOpen(true)}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Dépenses du mois</p>
+            <div className="flex items-center gap-2">
+              <p className="text-lg font-bold" style={{ color: "var(--warm)" }}>{expenseTotal.toFixed(0)} €</p>
+              <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
+            </div>
           </div>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune depense ce mois</p>
-        )}
-      </div>
+          {topExpenseCategories.length > 0 ? (
+            <div className="flex flex-col gap-1.5">
+              {topExpenseCategories.map(([cat, amount]) => (
+                <div key={cat} className="flex items-center justify-between">
+                  <span className="text-xs capitalize" style={{ color: "var(--dim)" }}>{cat}</span>
+                  <span className="text-xs font-bold">{amount.toFixed(0)} €</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune depense ce mois</p>
+          )}
+        </div>
+        <Modal open={expensesOpen} onClose={() => setExpensesOpen(false)} title="Dépenses du mois">
+          {/* Total */}
+          <div className="text-center mb-4 p-4 rounded-2xl" style={{ background: "var(--surface2)" }}>
+            <p className="text-3xl font-bold" style={{ color: "var(--warm)" }}>{expenseTotal.toFixed(2)} €</p>
+            <p className="text-xs mt-1" style={{ color: "var(--dim)" }}>Total ce mois</p>
+          </div>
+          {/* Categories with progress bars */}
+          {allCategories.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Par catégorie</p>
+              <div className="flex flex-col gap-2.5">
+                {allCategories.map(([cat, amount]) => (
+                  <div key={cat}>
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="text-xs capitalize font-bold">{cat}</span>
+                      <span className="text-xs font-bold" style={{ color: "var(--warm)" }}>{amount.toFixed(0)} €</span>
+                    </div>
+                    <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+                      <div className="h-full rounded-full" style={{ width: `${expenseTotal > 0 ? (amount / expenseTotal) * 100 : 0}%`, background: "var(--warm)" }} />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {/* Recent transactions */}
+          <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Dernières transactions</p>
+          {expenses.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {expenses.slice(0, 20).map((exp) => {
+                const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
+                return (
+                  <div key={exp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: "var(--surface2)" }}>
+                    <span className="text-base">💰</span>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold truncate">{exp.description}</p>
+                      <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+                        {mem?.name || "Famille"} · {exp.category} · {new Date(exp.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold shrink-0" style={{ color: "var(--warm)" }}>{Number(exp.amount).toFixed(0)} €</span>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune transaction</p>
+          )}
+        </Modal>
+      </>
     );
   }
 
   function renderBirthdays() {
+    // Group all birthdays by month for the modal
+    const birthdaysByMonth: Record<number, typeof allBirthdaysSorted> = {};
+    for (const b of allBirthdaysSorted) {
+      const month = b.nextBday.getMonth();
+      if (!birthdaysByMonth[month]) birthdaysByMonth[month] = [];
+      birthdaysByMonth[month].push(b);
+    }
+    const MONTH_NAMES = ["Janvier", "Février", "Mars", "Avril", "Mai", "Juin", "Juillet", "Août", "Septembre", "Octobre", "Novembre", "Décembre"];
+
     return (
-      <div className="card !mb-0">
-        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Prochains anniversaires</p>
-        {upcomingBirthdays.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {upcomingBirthdays.map((b) => (
-              <div key={b.id} className="flex items-center gap-3">
-                <span className="text-xl">{b.emoji || "🎂"}</span>
-                <div className="flex-1">
-                  <p className="text-sm font-bold">{b.name}</p>
-                  <p className="text-[10px]" style={{ color: "var(--dim)" }}>
-                    {b.daysUntil === 0
-                      ? "Aujourd'hui !"
-                      : b.daysUntil === 1
-                        ? "Demain"
-                        : `Dans ${b.daysUntil} jours`}
-                  </p>
-                </div>
-                <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
-                  background: b.daysUntil <= 7 ? "rgba(240,107,126,0.15)" : "var(--surface2)",
-                  color: b.daysUntil <= 7 ? "var(--red)" : "var(--dim)",
-                }}>{b.nextBday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-              </div>
-            ))}
+      <>
+        <div className="card !mb-0 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setBirthdaysOpen(true)}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Prochains anniversaires</p>
+            <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
           </div>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun anniversaire enregistre</p>
-        )}
-      </div>
+          {upcomingBirthdays.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {upcomingBirthdays.map((b) => (
+                <div key={b.id} className="flex items-center gap-3">
+                  <span className="text-xl">{b.emoji || "🎂"}</span>
+                  <div className="flex-1">
+                    <p className="text-sm font-bold">{b.name}</p>
+                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+                      {b.daysUntil === 0
+                        ? "Aujourd'hui !"
+                        : b.daysUntil === 1
+                          ? "Demain"
+                          : `Dans ${b.daysUntil} jours`}
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
+                    background: b.daysUntil <= 7 ? "rgba(240,107,126,0.15)" : "var(--surface2)",
+                    color: b.daysUntil <= 7 ? "var(--red)" : "var(--dim)",
+                  }}>{b.nextBday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun anniversaire enregistre</p>
+          )}
+        </div>
+        <Modal open={birthdaysOpen} onClose={() => setBirthdaysOpen(false)} title="Tous les anniversaires">
+          {allBirthdaysSorted.length > 0 ? (
+            <div className="flex flex-col gap-4">
+              {Object.entries(birthdaysByMonth)
+                .sort(([a], [b]) => Number(a) - Number(b))
+                .map(([monthIdx, bdays]) => (
+                  <div key={monthIdx}>
+                    <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--accent)" }}>{MONTH_NAMES[Number(monthIdx)]}</p>
+                    <div className="flex flex-col gap-2">
+                      {bdays.map((b) => (
+                        <div key={b.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                          <span className="text-xl">{b.emoji || "🎂"}</span>
+                          <div className="flex-1">
+                            <p className="text-sm font-bold">{b.name}</p>
+                            <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+                              {b.nextBday.toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
+                              {b.age != null && ` · ${b.age} ans`}
+                            </p>
+                          </div>
+                          <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
+                            background: b.daysUntil <= 7 ? "rgba(240,107,126,0.15)" : "var(--surface2)",
+                            color: b.daysUntil <= 7 ? "var(--red)" : "var(--dim)",
+                          }}>
+                            {b.daysUntil === 0 ? "Aujourd'hui !" : b.daysUntil === 1 ? "Demain" : `J-${b.daysUntil}`}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+            </div>
+          ) : (
+            <p className="text-xs text-center py-4" style={{ color: "var(--faint)" }}>Aucun anniversaire enregistré</p>
+          )}
+        </Modal>
+      </>
     );
   }
 
@@ -1277,8 +1423,8 @@ export default function HomePage() {
     // Build activity feed from recent events, chores, and expenses
     const activities: { emoji: string; text: string; time: string; key: string }[] = [];
 
-    // Recent events created (today or selected date)
-    for (const ev of events.filter((e) => e.date === currentDate).slice(0, 5)) {
+    // All events for selected date
+    for (const ev of events.filter((e) => e.date === currentDate)) {
       const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
       activities.push({
         emoji: "📅",
@@ -1288,8 +1434,8 @@ export default function HomePage() {
       });
     }
 
-    // Recent chore completions
-    for (const ch of chores.filter((c) => c.last_rotated === todayStr).slice(0, 3)) {
+    // All chore completions for today
+    for (const ch of chores.filter((c) => c.last_rotated === todayStr)) {
       const mem = ch.assigned_members.length > 0
         ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
         : null;
@@ -1301,8 +1447,8 @@ export default function HomePage() {
       });
     }
 
-    // Recent expenses
-    for (const exp of expenses.slice(0, 3)) {
+    // All recent expenses
+    for (const exp of expenses) {
       const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
       activities.push({
         emoji: "💰",
@@ -1313,22 +1459,42 @@ export default function HomePage() {
     }
 
     return (
-      <div className="card !mb-0">
-        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Activité récente</p>
-        {activities.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {activities.slice(0, 6).map((a) => (
-              <div key={a.key} className="flex items-center gap-2.5">
-                <span className="text-base">{a.emoji}</span>
-                <p className="text-xs flex-1 truncate">{a.text}</p>
-                {a.time && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{a.time}</span>}
-              </div>
-            ))}
+      <>
+        <div className="card !mb-0 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setActivityOpen(true)}>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Activité récente</p>
+            <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
           </div>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Rien à afficher pour le moment</p>
-        )}
-      </div>
+          {activities.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {activities.slice(0, 6).map((a) => (
+                <div key={a.key} className="flex items-center gap-2.5">
+                  <span className="text-base">{a.emoji}</span>
+                  <p className="text-xs flex-1 truncate">{a.text}</p>
+                  {a.time && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{a.time}</span>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs" style={{ color: "var(--faint)" }}>Rien à afficher pour le moment</p>
+          )}
+        </div>
+        <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="Activité complète">
+          {activities.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              {activities.map((a) => (
+                <div key={a.key} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
+                  <span className="text-lg">{a.emoji}</span>
+                  <p className="text-xs flex-1">{a.text}</p>
+                  {a.time && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{a.time}</span>}
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="text-xs text-center py-4" style={{ color: "var(--faint)" }}>Aucune activité pour le moment</p>
+          )}
+        </Modal>
+      </>
     );
   }
 

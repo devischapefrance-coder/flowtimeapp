@@ -1,11 +1,27 @@
 const CACHE_KEY = "flowtime_weather_cache";
 const CACHE_DURATION = 30 * 60 * 1000; // 30 minutes
 
-interface WeatherData {
+export interface DailyForecast {
+  date: string;
+  max: number;
+  min: number;
+  code: number;
+  icon: string;
+  description: string;
+  precip: number;
+  wind: number;
+  sunrise: string;
+  sunset: string;
+}
+
+export interface WeatherData {
   temperature: number;
   weatherCode: number;
   description: string;
   icon: string;
+  humidity?: number;
+  windSpeed?: number;
+  daily: DailyForecast[];
 }
 
 interface CachedWeather {
@@ -42,6 +58,8 @@ const WEATHER_CODES: Record<number, { description: string; icon: string }> = {
   99: { description: "Orage violent avec grele", icon: "⛈️" },
 };
 
+export { WEATHER_CODES };
+
 function getCached(): WeatherData | null {
   try {
     const raw = localStorage.getItem(CACHE_KEY);
@@ -64,17 +82,45 @@ export async function fetchWeather(lat: number, lng: number): Promise<WeatherDat
 
   try {
     const res = await fetch(
-      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}&current=temperature_2m,weathercode&timezone=auto`
+      `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lng}` +
+      `&current=temperature_2m,weathercode,relative_humidity_2m,wind_speed_10m` +
+      `&daily=temperature_2m_max,temperature_2m_min,weathercode,precipitation_sum,wind_speed_10m_max,sunrise,sunset` +
+      `&forecast_days=7&timezone=auto`
     );
     if (!res.ok) return null;
     const json = await res.json();
     const code = json.current?.weathercode ?? 0;
     const info = WEATHER_CODES[code] || { description: "Inconnu", icon: "🌡️" };
+
+    const daily: DailyForecast[] = [];
+    const d = json.daily;
+    if (d?.time) {
+      for (let i = 0; i < d.time.length; i++) {
+        const dayCode = d.weathercode?.[i] ?? 0;
+        const dayInfo = WEATHER_CODES[dayCode] || { description: "Inconnu", icon: "🌡️" };
+        daily.push({
+          date: d.time[i],
+          max: Math.round(d.temperature_2m_max?.[i] ?? 0),
+          min: Math.round(d.temperature_2m_min?.[i] ?? 0),
+          code: dayCode,
+          icon: dayInfo.icon,
+          description: dayInfo.description,
+          precip: d.precipitation_sum?.[i] ?? 0,
+          wind: Math.round(d.wind_speed_10m_max?.[i] ?? 0),
+          sunrise: d.sunrise?.[i] ?? "",
+          sunset: d.sunset?.[i] ?? "",
+        });
+      }
+    }
+
     const data: WeatherData = {
       temperature: Math.round(json.current?.temperature_2m ?? 0),
       weatherCode: code,
       description: info.description,
       icon: info.icon,
+      humidity: json.current?.relative_humidity_2m,
+      windSpeed: json.current?.wind_speed_10m ? Math.round(json.current.wind_speed_10m) : undefined,
+      daily,
     };
     setCache(data);
     return data;
