@@ -978,7 +978,6 @@ export default function HomePage() {
           <p className="text-[11px] truncate" style={{ color: "var(--dim)" }}>{msg.main}</p>
           {msg.sub && <p className="text-[10px] truncate" style={{ color: "var(--faint)" }}>{msg.sub}</p>}
         </div>
-        <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "var(--green)", color: "#fff" }}>En ligne</span>
       </div>
     );
   }
