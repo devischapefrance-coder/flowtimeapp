@@ -368,6 +368,7 @@
   }
   .card:hover { border-color: var(--card-hover); }
   .card:active { transform: scale(0.97); opacity: 0.9; }
+  .card.no-press:active { transform: none; opacity: 1; }
 
   .label {
     font-size: 11px;

@@ -540,7 +540,7 @@ export default function FamillePage() {
           </div>
         </div>
       )}
-      <div className="card">
+      <div className="card no-press">
         {/* Member list */}
         <div className="flex flex-col gap-2">
           {members.filter((m) => m.user_id !== profile?.id).map((m) => {
@@ -611,7 +611,7 @@ export default function FamillePage() {
 
       {/* CONTACTS */}
       <p className="label">Contacts de confiance</p>
-      <div className="card">
+      <div className="card no-press">
         <div className="flex flex-col gap-2">
         {Object.entries(CONTACT_CATEGORIES).map(([cat]) => {
           const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
@@ -741,7 +741,7 @@ export default function FamillePage() {
 
       {/* ADRESSES */}
       <p className="label">Mes adresses</p>
-      <div className="card">
+      <div className="card no-press">
         {addresses.length > 0 && filledAddresses < addresses.length && (
           <div className="mb-3">
             <p className="text-xs mb-1" style={{ color: "var(--dim)" }}>{filledAddresses}/{addresses.length} adresses remplies</p>

@@ -21,7 +21,7 @@ import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, Sh
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
   { value: "important", label: "Important", color: "var(--red, #ef4444)", emoji: "🔴" },
-  { value: "rappel", label: "Rappel", color: "var(--warm, #f59e0b)", emoji: "🔔" },
+  { value: "rappel", label: "Code d'usage", color: "var(--warm, #f59e0b)", emoji: "📋" },
 ] as const;
 
 function getCategoryStyle(cat: string) {
@@ -29,22 +29,6 @@ function getCategoryStyle(cat: string) {
   return { color: c?.color || "var(--teal)", emoji: c?.emoji || "💡" };
 }
 
-function getBirthdayCountdown(dateStr: string): { days: number; label: string } {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const [, month, day] = dateStr.split("-").map(Number);
-  const next = new Date(today.getFullYear(), month - 1, day);
-  if (next < today) next.setFullYear(next.getFullYear() + 1);
-  const diff = Math.round((next.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
-  if (diff === 0) return { days: 0, label: "Aujourd'hui !" };
-  if (diff === 1) return { days: 1, label: "Demain !" };
-  return { days: diff, label: `Dans ${diff} jours` };
-}
-
-function getAge(dateStr: string): number {
-  const [year] = dateStr.split("-").map(Number);
-  return new Date().getFullYear() - year;
-}
 
 function genId() {
   return crypto.randomUUID();
@@ -55,7 +39,7 @@ export default function ViePage() {
   const { toast, toastUndo } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
   const searchParams = useSearchParams();
-  const validTabs = ["notes", "anniversaires", "courses", "budget", "taches", "photos"] as const;
+  const validTabs = ["notes", "courses", "budget", "taches", "photos"] as const;
   type Tab = typeof validTabs[number];
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
@@ -98,12 +82,6 @@ export default function ViePage() {
   // Birthdays state
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
-  const [bdayModal, setBdayModal] = useState(false);
-  const [editingBday, setEditingBday] = useState<Birthday | null>(null);
-  const [bdayName, setBdayName] = useState("");
-  const [bdayDate, setBdayDate] = useState("");
-  const [bdayEmoji, setBdayEmoji] = useState("🎂");
-  const [bdayMemberId, setBdayMemberId] = useState<string>("");
 
   // Shopping state
   const [shoppingItems, setShoppingItems] = useState<ShoppingItem[]>([]);
@@ -137,7 +115,7 @@ export default function ViePage() {
   const dataLoadedRef = useRef(false);
 
   // --- Badge "nouveautés" helpers ---
-  const TAB_KEYS = ["notes", "anniversaires", "courses", "budget", "taches", "photos"] as const;
+  const TAB_KEYS = ["notes", "courses", "budget", "taches", "photos"] as const;
 
   function getLastSeen(t: string): string {
     return localStorage.getItem(`flowtime_vie_lastSeen_${t}`) || "1970-01-01T00:00:00.000Z";
@@ -151,7 +129,7 @@ export default function ViePage() {
   const newCounts = useMemo(() => {
     const counts: Record<string, number> = {};
     const dataMap: Record<string, { created_at: string }[]> = {
-      notes, anniversaires: birthdays, courses: shoppingItems,
+      notes, courses: shoppingItems,
       budget: expenses, taches: chores, photos,
     };
     for (const key of TAB_KEYS) {
@@ -160,16 +138,16 @@ export default function ViePage() {
     }
     return counts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, birthdays, shoppingItems, expenses, chores, photos]);
+  }, [notes, shoppingItems, expenses, chores, photos]);
 
   // Mark the active tab as seen once data loads & propagate total to Navbar
   useEffect(() => {
-    const hasData = notes.length || birthdays.length || shoppingItems.length || expenses.length || chores.length || photos.length;
+    const hasData = notes.length || shoppingItems.length || expenses.length || chores.length || photos.length;
     if (hasData && !dataLoadedRef.current) {
       dataLoadedRef.current = true;
       markSeen(tab);
     }
-  }, [notes, birthdays, shoppingItems, expenses, chores, photos, tab]);
+  }, [notes, shoppingItems, expenses, chores, photos, tab]);
 
   // Propagate total unread to Navbar via layout context
   useEffect(() => {
@@ -466,57 +444,6 @@ export default function ViePage() {
     loadData();
   }
 
-  // --- Birthday CRUD ---
-  function openNewBday() {
-    setEditingBday(null);
-    setBdayName("");
-    setBdayDate("");
-    setBdayEmoji("🎂");
-    setBdayMemberId("");
-    setBdayModal(true);
-  }
-
-  function openEditBday(b: Birthday) {
-    setEditingBday(b);
-    setBdayName(b.name);
-    setBdayDate(b.date);
-    setBdayEmoji(b.emoji);
-    setBdayMemberId(b.member_id || "");
-    setBdayModal(true);
-  }
-
-  async function saveBday() {
-    if (!profile?.family_id || !bdayName.trim() || !bdayDate) return;
-    if (editingBday) {
-      await supabase.from("birthdays").update({
-        name: bdayName.trim(),
-        date: bdayDate,
-        emoji: bdayEmoji,
-        member_id: bdayMemberId || null,
-      }).eq("id", editingBday.id);
-    } else {
-      await supabase.from("birthdays").insert({
-        family_id: profile.family_id,
-        name: bdayName.trim(),
-        date: bdayDate,
-        emoji: bdayEmoji,
-        member_id: bdayMemberId || null,
-      });
-      notifyFamily("FlowTime 🎂", `${profile.first_name || "Quelqu'un"} a ajouté l'anniversaire de ${bdayName.trim()}`);
-    }
-    setBdayModal(false);
-    loadData();
-  }
-
-  async function deleteBday(id: string) {
-    await supabase.from("birthdays").delete().eq("id", id);
-    loadData();
-  }
-
-  const sortedBirthdays = [...birthdays].sort((a, b) => {
-    return getBirthdayCountdown(a.date).days - getBirthdayCountdown(b.date).days;
-  });
-
   return (
     <div className="px-4 py-4 animate-in gradient-bg" style={{ paddingBottom: 80 }}>
       <PullIndicator pullDistance={pullDistance} refreshing={refreshing} />
@@ -526,7 +453,6 @@ export default function ViePage() {
       <div data-tutorial="vie-tabs" className="flex gap-1 mb-5 overflow-x-auto overflow-y-visible pb-1 pt-2">
         {([
           ["notes", "📝", "Notes"],
-          ["anniversaires", "🎂", "Anniv."],
           ["courses", "🛒", "Courses"],
           ["budget", "💰", "Budget"],
           ["taches", "🧹", "Tâches"],
@@ -685,73 +611,6 @@ export default function ViePage() {
         </div>
       )}
 
-      {/* Anniversaires tab */}
-      {tab === "anniversaires" && (
-        <div>
-          <div className="flex items-center justify-between mb-3">
-            <p className="label !mb-0">Anniversaires</p>
-            <button
-              className="text-xs font-bold px-3 py-1.5 rounded-full"
-              style={{ background: "var(--accent)", color: "#fff" }}
-              onClick={openNewBday}
-            >
-              + Ajouter
-            </button>
-          </div>
-
-          {sortedBirthdays.length === 0 && (
-            <div className="text-center py-8">
-              <p className="text-3xl mb-2">🎂</p>
-              <p className="text-sm" style={{ color: "var(--dim)" }}>Aucun anniversaire enregistre</p>
-            </div>
-          )}
-
-          <div className="flex flex-col gap-2">
-            {sortedBirthdays.map((b) => {
-              const countdown = getBirthdayCountdown(b.date);
-              const age = getAge(b.date);
-              const isToday = countdown.days === 0;
-              return (
-                <div
-                  key={b.id}
-                  className="card !mb-0 cursor-pointer"
-                  style={{
-                    borderLeft: isToday ? "3px solid var(--accent)" : undefined,
-                    background: isToday ? "var(--accent-soft)" : undefined,
-                  }}
-                  onClick={() => openEditBday(b)}
-                >
-                  <div className="flex items-center gap-3">
-                    <span className="text-2xl">{b.emoji}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold">{b.name}</p>
-                      <p className="text-xs" style={{ color: "var(--dim)" }}>
-                        {new Date(b.date + "T00:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" })}
-                        {" · "}{age} ans
-                      </p>
-                    </div>
-                    <div className="text-right shrink-0">
-                      <p
-                        className="text-xs font-bold"
-                        style={{ color: isToday ? "var(--accent)" : countdown.days <= 7 ? "var(--warm, #f59e0b)" : "var(--dim)" }}
-                      >
-                        {countdown.label}
-                      </p>
-                    </div>
-                    <button
-                      className="text-xs p-1 rounded-full shrink-0"
-                      style={{ color: "var(--red, #ef4444)" }}
-                      onClick={(e) => { e.stopPropagation(); deleteBday(b.id); }}
-                    >
-                      🗑️
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* Courses tab */}
       {tab === "courses" && (() => {
@@ -1625,72 +1484,6 @@ export default function ViePage() {
       </Modal>
 
       {/* Birthday Modal */}
-      <Modal open={bdayModal} onClose={() => setBdayModal(false)} title={editingBday ? "Modifier l'anniversaire" : "Nouvel anniversaire"}>
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Nom</label>
-            <input
-              className="w-full px-3 py-2.5 rounded-xl text-sm"
-              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
-              value={bdayName}
-              onChange={(e) => setBdayName(e.target.value)}
-              placeholder="Nom de la personne..."
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Date de naissance</label>
-            <input
-              type="date"
-              className="w-full px-3 py-2.5 rounded-xl text-sm"
-              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
-              value={bdayDate}
-              onChange={(e) => setBdayDate(e.target.value)}
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Emoji</label>
-            <div className="flex gap-2">
-              {["🎂", "🎉", "🎁", "🎈", "👑", "❤️"].map((e) => (
-                <button
-                  key={e}
-                  className="w-10 h-10 rounded-xl flex items-center justify-center text-lg"
-                  style={{
-                    background: bdayEmoji === e ? "var(--accent-soft)" : "var(--surface2)",
-                    border: bdayEmoji === e ? "1px solid var(--accent)" : "1px solid transparent",
-                  }}
-                  onClick={() => setBdayEmoji(e)}
-                >
-                  {e}
-                </button>
-              ))}
-            </div>
-          </div>
-          {members.length > 0 && (
-            <div>
-              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Membre de la famille (optionnel)</label>
-              <select
-                className="w-full px-3 py-2.5 rounded-xl text-sm"
-                style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
-                value={bdayMemberId}
-                onChange={(e) => setBdayMemberId(e.target.value)}
-              >
-                <option value="">Aucun</option>
-                {members.map((m) => (
-                  <option key={m.id} value={m.id}>{m.emoji} {m.name}</option>
-                ))}
-              </select>
-            </div>
-          )}
-          <button
-            className="w-full py-3 rounded-xl font-bold text-sm"
-            style={{ background: "var(--accent)", color: "#fff" }}
-            onClick={saveBday}
-          >
-            {editingBday ? "Modifier" : "Ajouter"}
-          </button>
-        </div>
-      </Modal>
-
       {/* Fullscreen image viewer */}
       {previewImage && (
         <div
