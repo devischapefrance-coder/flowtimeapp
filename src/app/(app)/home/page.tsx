@@ -38,7 +38,6 @@ interface WidgetConfig {
 
 const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "stats", label: "Stats rapides", icon: "📊" },
-  { id: "next_event", label: "Prochain event", icon: "⏭️" },
   { id: "flow", label: "Flow AI", icon: "🤖" },
   { id: "weather", label: "Météo", icon: "🌤️" },
   { id: "calendar", label: "Planning", icon: "📅" },
@@ -867,7 +866,6 @@ export default function HomePage() {
   function renderWidget(widgetId: string) {
     switch (widgetId) {
       case "stats": return renderStats();
-      case "next_event": return renderNextEvent();
       case "flow": return renderFlow();
       case "weather": return renderWeather();
       case "calendar": return renderCalendar();
@@ -892,23 +890,6 @@ export default function HomePage() {
           <p className="text-lg font-bold" style={{ color: "var(--teal)" }}>{totalWeekEvents}</p>
           <p className="text-[10px]" style={{ color: "var(--dim)" }}>Cette semaine</p>
         </div>
-      </div>
-    );
-  }
-
-  function renderNextEvent() {
-    if (!nextEvent) return null;
-    return (
-      <div
-        className="card flex items-center gap-3 !mb-0"
-        style={{ borderLeft: `3px solid ${getCategoryColor(nextEvent.category)}` }}
-      >
-        <div className="flex-1">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--accent)" }}>Prochain</p>
-          <p className="text-sm font-bold mt-0.5">{nextEvent.title}</p>
-          <p className="text-xs" style={{ color: "var(--dim)" }}>{nextEvent.time}{nextEvent.members ? ` · ${nextEvent.members.name}` : ""}</p>
-        </div>
-        <span className="text-2xl">{nextEvent.members?.emoji || "📅"}</span>
       </div>
     );
   }
