@@ -913,7 +913,72 @@ export default function HomePage() {
     );
   }
 
+  function getProactiveMessage(): { main: string; sub?: string } {
+    const nowMins = now.getHours() * 60 + now.getMinutes();
+
+    // 1. Event imminent (< 30 min)
+    if (nextEvent?.time) {
+      const [h, m] = nextEvent.time.split(":").map(Number);
+      const evMins = h * 60 + m;
+      const diff = evMins - nowMins;
+      if (diff > 0 && diff <= 30) {
+        return { main: `🔔 ${nextEvent.title} dans ${diff} min`, sub: `À ${nextEvent.time.replace(":", "h")}` };
+      }
+    }
+
+    // 2. Event en cours (started < 1h ago, no time-based end)
+    const currentEvent = dayEvents.find((e) => {
+      if (!e.time) return false;
+      const [h, m] = e.time.split(":").map(Number);
+      const evMins = h * 60 + m;
+      return nowMins >= evMins && nowMins - evMins < 60;
+    });
+    if (currentEvent) {
+      return { main: `📍 ${currentEvent.title} en cours`, sub: `Depuis ${currentEvent.time.replace(":", "h")}` };
+    }
+
+    // 3. Prochain event du jour
+    if (nextEvent?.time) {
+      return { main: `📅 Prochain : ${nextEvent.title}`, sub: `À ${nextEvent.time.replace(":", "h")}` };
+    }
+
+    // 4. Journée chargée (5+ events)
+    if (dayEvents.length >= 5) {
+      return { main: `💪 Journée bien remplie`, sub: `${dayEvents.length} événements aujourd'hui` };
+    }
+
+    // 5. Anniversaire aujourd'hui
+    const todayMMDD = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const bdayToday = birthdays.find((b) => b.date.slice(5) === todayMMDD);
+    if (bdayToday) {
+      return { main: `🎂 C'est l'anniversaire de ${bdayToday.name} !` };
+    }
+
+    // 6. Anniversaire dans 1-3 jours
+    for (let d = 1; d <= 3; d++) {
+      const future = new Date(now);
+      future.setDate(future.getDate() + d);
+      const futureMMDD = `${String(future.getMonth() + 1).padStart(2, "0")}-${String(future.getDate()).padStart(2, "0")}`;
+      const bdaySoon = birthdays.find((b) => b.date.slice(5) === futureMMDD);
+      if (bdaySoon) {
+        return { main: `🎂 Anniversaire de ${bdaySoon.name} dans ${d} jour${d > 1 ? "s" : ""}` };
+      }
+    }
+
+    // 7. Journée libre (0 events today)
+    if (todayEvents.length === 0) {
+      return { main: `☀️ Rien de prévu aujourd'hui`, sub: `Profitez-en !` };
+    }
+
+    // 8. Fallback
+    const hour = now.getHours();
+    const greeting = hour < 12 ? "matin" : hour < 18 ? "après-midi" : "soirée";
+    const firstName = profile?.first_name || "tous";
+    return { main: `👋 Bon${greeting === "après-midi" ? "ne" : ""} ${greeting}, ${firstName} !` };
+  }
+
   function renderFlow() {
+    const msg = getProactiveMessage();
     return (
       <div
         className="card flex items-center gap-3 !mb-0 cursor-pointer"
@@ -927,11 +992,12 @@ export default function HomePage() {
         >
           <Logo size={24} />
         </div>
-        <div className="flex-1">
+        <div className="flex-1 min-w-0">
           <p className="text-[13px] font-bold">Flow</p>
-          <p className="text-[11px]" style={{ color: "var(--dim)" }}>Demande-moi n&apos;importe quoi</p>
+          <p className="text-[11px] truncate" style={{ color: "var(--dim)" }}>{msg.main}</p>
+          {msg.sub && <p className="text-[10px] truncate" style={{ color: "var(--faint)" }}>{msg.sub}</p>}
         </div>
-        <span className="text-xs px-2 py-0.5 rounded-full" style={{ background: "var(--green)", color: "#fff" }}>En ligne</span>
+        <span className="text-xs px-2 py-0.5 rounded-full shrink-0" style={{ background: "var(--green)", color: "#fff" }}>En ligne</span>
       </div>
     );
   }
