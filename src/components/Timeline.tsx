@@ -28,6 +28,7 @@ interface TimelineProps {
   onReorder?: (eventId: string, newTime: string) => void;
   onEditTitle?: (eventId: string, newTitle: string) => void;
   onEditDescription?: (eventId: string, newDesc: string) => void;
+  getAvatarUrl?: (userId: string) => string | null;
 }
 
 function findConflicts(events: Event[]): Set<string> {
@@ -61,6 +62,7 @@ function SortableEvent({
   onEditDescription,
   menuOpen,
   setMenuOpen,
+  getAvatarUrl,
 }: {
   ev: Event;
   isPast: boolean;
@@ -75,6 +77,7 @@ function SortableEvent({
   onEditDescription?: (eventId: string, newDesc: string) => void;
   menuOpen: string | null;
   setMenuOpen: (id: string | null) => void;
+  getAvatarUrl?: (userId: string) => string | null;
 }) {
   const [editingTime, setEditingTime] = useState(false);
   const [tempTime, setTempTime] = useState(ev.time);
@@ -267,13 +270,20 @@ function SortableEvent({
               + description
             </p>
           ) : null}
-          {ev.members && (
+          {ev.members && (() => {
+            const avatarSrc = ev.members.user_id && getAvatarUrl ? getAvatarUrl(ev.members.user_id) : null;
+            return (
             <div className="flex items-center gap-1.5 mt-1.5">
-              <span className="text-sm">{ev.members.emoji}</span>
+              {avatarSrc ? (
+                <img src={avatarSrc} alt="" className="w-5 h-5 rounded-full object-cover shrink-0" />
+              ) : (
+                <span className="text-sm">{ev.members.emoji}</span>
+              )}
               <span className="text-xs" style={{ color: "var(--dim)" }}>{ev.members.name}</span>
               <span className="w-1.5 h-1.5 rounded-full" style={{ background: (ev.members as unknown as { color: string }).color || "var(--teal)" }} />
             </div>
-          )}
+            );
+          })()}
         </div>
         <div className="flex items-center gap-1">
           {ev.recurring && (onDeleteSeries || onEditSeries) && (
@@ -334,7 +344,7 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle, onEditDescription }: TimelineProps) {
+export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle, onEditDescription, getAvatarUrl }: TimelineProps) {
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -401,6 +411,7 @@ export default function Timeline({ events, allEvents, selectedDate, onDelete, on
                 onEditDescription={onEditDescription}
                 menuOpen={menuOpen}
                 setMenuOpen={setMenuOpen}
+                getAvatarUrl={getAvatarUrl}
               />
             );
           })}

@@ -9,6 +9,7 @@ interface DayAgendaProps {
   selectedDate?: string;
   onDelete: (id: string) => void;
   onReorder?: (eventId: string, newTime: string) => void;
+  getAvatarUrl?: (userId: string) => string | null;
 }
 
 const START_HOUR = 6;
@@ -82,7 +83,7 @@ function computeColumns(events: Event[]): Map<string, { col: number; totalCols: 
   return result;
 }
 
-export default function DayAgenda({ events, selectedDate, onDelete }: DayAgendaProps) {
+export default function DayAgenda({ events, selectedDate, onDelete, getAvatarUrl }: DayAgendaProps) {
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -177,11 +178,18 @@ export default function DayAgenda({ events, selectedDate, onDelete }: DayAgendaP
                   <p className="text-xs font-bold truncate">{ev.title}</p>
                   <div className="flex items-center gap-1.5">
                     <span className="text-[10px]" style={{ color: "var(--dim)" }}>{ev.time}</span>
-                    {ev.members && (
-                      <span className="text-[10px]" style={{ color: "var(--dim)" }}>
-                        {ev.members.emoji} {ev.members.name}
+                    {ev.members && (() => {
+                      const avatarSrc = ev.members.user_id && getAvatarUrl ? getAvatarUrl(ev.members.user_id) : null;
+                      return (
+                      <span className="text-[10px] flex items-center gap-1" style={{ color: "var(--dim)" }}>
+                        {avatarSrc ? (
+                          <img src={avatarSrc} alt="" className="w-4 h-4 rounded-full object-cover inline-block" />
+                        ) : (
+                          ev.members!.emoji
+                        )} {ev.members!.name}
                       </span>
-                    )}
+                      );
+                    })()}
                   </div>
                 </div>
               </div>

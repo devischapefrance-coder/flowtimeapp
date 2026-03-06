@@ -1323,10 +1323,12 @@ export default function HomePage() {
           <Timeline events={filteredEvents} allEvents={dayEvents} selectedDate={currentDate} onDelete={deleteEvent} onDeleteSeries={deleteEventSeries}
             onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }}
             onEditTitle={async (eventId, newTitle) => { await supabase.from("events").update({ title: newTitle }).eq("id", eventId); loadData(); }}
-            onEditDescription={async (eventId, newDesc) => { await supabase.from("events").update({ description: newDesc }).eq("id", eventId); loadData(); }} />
+            onEditDescription={async (eventId, newDesc) => { await supabase.from("events").update({ description: newDesc }).eq("id", eventId); loadData(); }}
+            getAvatarUrl={(userId) => failedAvatars.has(userId) ? null : getAvatarUrl(userId)} />
         ) : (
           <DayAgenda events={filteredEvents} selectedDate={currentDate} onDelete={deleteEvent}
-            onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }} />
+            onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }}
+            getAvatarUrl={(userId) => failedAvatars.has(userId) ? null : getAvatarUrl(userId)} />
         )}
 
         {filteredEvents.length === 0 && (
@@ -1402,9 +1404,18 @@ export default function HomePage() {
         </div>
         {upcomingBirthdays.length > 0 ? (
           <div className="flex flex-col gap-2">
-            {upcomingBirthdays.map((b) => (
+            {upcomingBirthdays.map((b) => {
+              const bMember = b.member_id ? members.find((m) => m.id === b.member_id) : null;
+              const bUserId = bMember?.user_id;
+              return (
               <div key={b.id} className="flex items-center gap-3">
-                <span className="text-xl">{b.emoji || "🎂"}</span>
+                {bUserId && !failedAvatars.has(bUserId) ? (
+                  <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                    <img src={getAvatarUrl(bUserId)} alt="" className="w-full h-full object-cover" onError={() => setFailedAvatars((prev) => new Set(prev).add(bUserId))} />
+                  </div>
+                ) : (
+                  <span className="text-xl">{b.emoji || "🎂"}</span>
+                )}
                 <div className="flex-1">
                   <p className="text-sm font-bold">{b.name}</p>
                   <p className="text-[10px]" style={{ color: "var(--dim)" }}>
@@ -1420,7 +1431,8 @@ export default function HomePage() {
                   color: b.daysUntil <= 7 ? "var(--red)" : "var(--dim)",
                 }}>{b.nextBday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun anniversaire enregistre</p>

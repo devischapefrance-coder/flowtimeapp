@@ -570,10 +570,13 @@ export default function FamillePage() {
             return (
               <div
                 key={m.id}
-                className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 active:scale-[0.98] transition-transform cursor-pointer"
-                onClick={() => device ? (setMapFocusCenter([device.lat, device.lng]), setMapFull(true)) : openMemberModal(m)}
+                className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2"
               >
-                <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl overflow-hidden relative" style={{ background: "var(--surface2)" }}>
+                <div
+                  className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl overflow-hidden relative cursor-pointer active:scale-90 transition-transform"
+                  style={{ background: "var(--surface2)" }}
+                  onClick={() => openMemberModal(m)}
+                >
                   {m.user_id && !failedAvatars.has(m.user_id) ? (
                     <img
                       src={getAvatarUrl(m.user_id)}
@@ -591,7 +594,15 @@ export default function FamillePage() {
                     />
                   )}
                 </div>
-                <div className="flex-1 min-w-0">
+                <div
+                  className={`flex-1 min-w-0${device ? " cursor-pointer active:opacity-70" : ""}`}
+                  onClick={() => {
+                    if (device) {
+                      setMapFocusCenter([device.lat, device.lng]);
+                      setMapFull(true);
+                    }
+                  }}
+                >
                   <p className="font-bold text-sm">{m.name}</p>
                   <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
                     {ROLES.find((r) => r.key === getLocalRole(m.id, m.role))?.label || getLocalRole(m.id, m.role)}
