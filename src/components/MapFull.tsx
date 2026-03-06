@@ -156,7 +156,8 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         () => {
           supabase.from("device_locations").select("*").eq("family_id", familyId).then(({ data }) => {
             if (data) {
-              setLiveDevices(data.map((d: { lat: number; lng: number; emoji: string; device_name: string; updated_at: string }) => ({
+              setLiveDevices(data.map((d: { id: string; lat: number; lng: number; emoji: string; device_name: string; updated_at: string }) => ({
+                id: d.id,
                 lat: d.lat,
                 lng: d.lng,
                 emoji: d.emoji || "📱",

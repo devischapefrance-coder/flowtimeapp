@@ -184,6 +184,38 @@ function createIcon(marker: MapMarker) {
   });
 }
 
+function LiveMarker({ marker: m, interactive }: { marker: MapMarker; interactive?: boolean }) {
+  const markerRef = useRef<L.Marker>(null);
+
+  // Update position smoothly when coords change
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setLatLng([m.lat, m.lng]);
+    }
+  }, [m.lat, m.lng]);
+
+  // Update icon when marker data changes
+  useEffect(() => {
+    if (markerRef.current) {
+      markerRef.current.setIcon(createIcon(m));
+    }
+  }, [m.emoji, m.name, m.color, m.type]);
+
+  return (
+    <Marker ref={markerRef} position={[m.lat, m.lng]} icon={createIcon(m)}>
+      {interactive && (
+        <Popup>
+          <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
+            <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
+            {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
+            {m.updatedAt && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#AEAEB2" }}>Mis a jour : {new Date(m.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>}
+          </div>
+        </Popup>
+      )}
+    </Marker>
+  );
+}
+
 function InvalidateSize() {
   const map = useMap();
   useEffect(() => {
@@ -281,24 +313,14 @@ export default function MapView({
         {markers.map((m, i) => (
           m.draggable && onMarkerDragEnd ? (
             <DraggableMarker
-              key={`${m.id || i}-drag`}
+              key={m.id || `drag-${i}`}
               m={m}
               icon={createIcon(m)}
               interactive={interactive}
               onDragEnd={onMarkerDragEnd}
             />
           ) : (
-            <Marker key={`${m.lat}-${m.lng}-${i}`} position={[m.lat, m.lng]} icon={createIcon(m)}>
-              {interactive && (
-                <Popup>
-                  <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
-                    <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
-                    {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
-                    {m.updatedAt && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#AEAEB2" }}>Mis a jour : {new Date(m.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>}
-                  </div>
-                </Popup>
-              )}
-            </Marker>
+            <LiveMarker key={m.id || `${m.type}-${m.name}-${i}`} marker={m} interactive={interactive} />
           )
         ))}
       </MapContainer>

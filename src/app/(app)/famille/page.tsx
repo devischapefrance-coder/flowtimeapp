@@ -512,6 +512,7 @@ export default function FamillePage() {
       : [46.2044, 5.226];
 
   const deviceMapMarkers = devices.map((d) => ({
+    id: d.id,
     lat: d.lat,
     lng: d.lng,
     emoji: d.emoji,
