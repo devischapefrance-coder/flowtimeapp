@@ -620,91 +620,93 @@ export default function FamillePage() {
 
       {/* CONTACTS */}
       <p className="label">Contacts de confiance</p>
-      {Object.entries(CONTACT_CATEGORIES).map(([cat]) => {
-        const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
-        const catContacts = contacts.filter((c) => {
-          const allRelations = CONTACT_CATEGORIES[cat];
-          const matchesCat = allRelations.includes(c.relation) || c.relation === cat.toLowerCase();
-          if (!matchesCat) return false;
-          if (!c.visible_to || c.visible_to.length === 0) return true;
-          if (myMember && c.visible_to.includes(myMember.id)) return true;
-          return false;
-        });
-        if (catContacts.length === 0) return null;
-        return (
-          <div key={cat} className="mb-3">
-            <p className="text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1" style={{ color: "var(--dim)" }}>
-              {CONTACT_EMOJIS[cat] || "📌"} {cat}
-            </p>
-            {catContacts.map((c) => (
-              <div key={c.id} className="card !mb-1.5 flex items-center gap-3 active:scale-[0.98] transition-transform">
-                <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openContactModal(c)}>
-                  {CONTACT_EMOJIS[c.relation] || c.emoji}
+      <div className="card">
+        <div className="flex flex-col gap-2">
+        {Object.entries(CONTACT_CATEGORIES).map(([cat]) => {
+          const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+          const catContacts = contacts.filter((c) => {
+            const allRelations = CONTACT_CATEGORIES[cat];
+            const matchesCat = allRelations.includes(c.relation) || c.relation === cat.toLowerCase();
+            if (!matchesCat) return false;
+            if (!c.visible_to || c.visible_to.length === 0) return true;
+            if (myMember && c.visible_to.includes(myMember.id)) return true;
+            return false;
+          });
+          if (catContacts.length === 0) return null;
+          return (
+            <div key={cat}>
+              <p className="text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1" style={{ color: "var(--dim)" }}>
+                {CONTACT_EMOJIS[cat] || "📌"} {cat}
+              </p>
+              {catContacts.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => openContactModal(c)}>
+                  <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0" style={{ background: "var(--surface2)" }}>
+                    {CONTACT_EMOJIS[c.relation] || c.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{c.name}</p>
+                    <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
+                      {c.relation}
+                      {c.visible_to && c.visible_to.length > 0 && <span style={{ color: "var(--faint)" }}> · 🔒</span>}
+                      {(() => {
+                        const arr = Array.isArray(c.assigned_to) ? c.assigned_to : [];
+                        const names = arr.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean);
+                        return names.length > 0 ? <span style={{ color: "var(--faint)" }}> · {names.join(", ")}</span> : null;
+                      })()}
+                    </p>
+                  </div>
+                  {c.phone && (
+                    <a
+                      href={`tel:${c.phone}`}
+                      className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
+                      style={{ background: "rgba(94,200,158,0.12)" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      📞
+                    </a>
+                  )}
                 </div>
-                <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
-                  <p className="font-bold text-sm">{c.name}</p>
-                  <p className="text-xs" style={{ color: "var(--dim)" }}>
-                    {c.relation}
-                    {c.visible_to && c.visible_to.length > 0 && <span style={{ color: "var(--faint)" }}> · 🔒 {c.visible_to.length}</span>}
-                    {(() => {
-                      const arr = Array.isArray(c.assigned_to) ? c.assigned_to : [];
-                      const names = arr.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean);
-                      return names.length > 0 ? <span style={{ color: "var(--faint)" }}> · De {names.join(", ")}</span> : null;
-                    })()}
-                  </p>
-                </div>
-                {c.phone && (
-                  <a
-                    href={`tel:${c.phone}`}
-                    className="w-10 h-10 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
-                    style={{ background: "rgba(94,200,158,0.12)" }}
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    📞
-                  </a>
-                )}
-              </div>
-            ))}
-          </div>
-        );
-      })}
-      {/* Contacts without matching category */}
-      {(() => {
-        const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
-        const otherContacts = contacts.filter((c) => {
-          const inCat = Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) || Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation);
-          if (inCat) return false;
-          if (!c.visible_to || c.visible_to.length === 0) return true;
-          if (myMember && c.visible_to.includes(myMember.id)) return true;
-          return false;
-        });
-        if (otherContacts.length === 0) return null;
-        return (
-        <div className="mb-3">
-          <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "var(--dim)" }}>📌 Autres</p>
-          {otherContacts.map((c) => (
-            <div key={c.id} className="card !mb-1.5 flex items-center gap-3 active:scale-[0.98] transition-transform">
-              <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openContactModal(c)}>{c.emoji}</div>
-              <div className="flex-1 cursor-pointer" onClick={() => openContactModal(c)}>
-                <p className="font-bold text-sm">{c.name}</p>
-                <p className="text-xs" style={{ color: "var(--dim)" }}>
-                  {c.relation}{c.phone ? ` · ${c.phone}` : ""}
-                  {(() => {
-                    const arr = Array.isArray(c.assigned_to) ? c.assigned_to : [];
-                    const names = arr.map((id) => { const m = members.find((m) => m.id === id); return m ? `${m.emoji} ${m.name}` : ""; }).filter(Boolean);
-                    return names.length > 0 ? <span style={{ color: "var(--faint)" }}> · De {names.join(", ")}</span> : null;
-                  })()}
-                </p>
-              </div>
-              {c.phone && (
-                <a href={`tel:${c.phone}`} className="w-10 h-10 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
-                  style={{ background: "rgba(94,200,158,0.12)" }} onClick={(e) => e.stopPropagation()}>📞</a>
-              )}
+              ))}
             </div>
-          ))}
+          );
+        })}
+        {/* Contacts without matching category */}
+        {(() => {
+          const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+          const otherContacts = contacts.filter((c) => {
+            const inCat = Object.values(CONTACT_CATEGORIES).flat().includes(c.relation) || Object.keys(CONTACT_CATEGORIES).map(k => k.toLowerCase()).includes(c.relation);
+            if (inCat) return false;
+            if (!c.visible_to || c.visible_to.length === 0) return true;
+            if (myMember && c.visible_to.includes(myMember.id)) return true;
+            return false;
+          });
+          if (otherContacts.length === 0) return null;
+          return (
+            <div>
+              <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "var(--dim)" }}>📌 Autres</p>
+              {otherContacts.map((c) => (
+                <div key={c.id} className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => openContactModal(c)}>
+                  <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0" style={{ background: "var(--surface2)" }}>{c.emoji}</div>
+                  <div className="flex-1 min-w-0">
+                    <p className="font-bold text-sm">{c.name}</p>
+                    <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
+                      {c.relation}{c.phone ? ` · ${c.phone}` : ""}
+                    </p>
+                  </div>
+                  {c.phone && (
+                    <a href={`tel:${c.phone}`} className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
+                      style={{ background: "rgba(94,200,158,0.12)" }} onClick={(e) => e.stopPropagation()}>📞</a>
+                  )}
+                </div>
+              ))}
+            </div>
+          );
+        })()}
+        {contacts.length === 0 && (
+          <p className="text-xs text-center py-2" style={{ color: "var(--faint)" }}>Aucun contact pour le moment</p>
+        )}
         </div>
-        );
-      })()}
+      </div>
 
       {/* MINI CARTE */}
       <div className="mb-4 mt-4" data-tutorial="famille-map" style={{ position: "relative", zIndex: 0 }}>
@@ -722,61 +724,60 @@ export default function FamillePage() {
 
       {/* ADRESSES */}
       <p className="label">Mes adresses</p>
-      {addresses.length > 0 && filledAddresses < addresses.length && (
-        <div className="mb-3">
-          <p className="text-xs mb-1" style={{ color: "var(--dim)" }}>{filledAddresses}/{addresses.length} adresses remplies</p>
-          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+      <div className="card">
+        {addresses.length > 0 && filledAddresses < addresses.length && (
+          <div className="mb-3">
+            <p className="text-xs mb-1" style={{ color: "var(--dim)" }}>{filledAddresses}/{addresses.length} adresses remplies</p>
+            <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${(filledAddresses / addresses.length) * 100}%`,
+                  background: filledAddresses >= addresses.length / 2 ? "var(--warm)" : "var(--red)",
+                }}
+              />
+            </div>
+          </div>
+        )}
+        {addresses.length === 0 && (
+          <button className="btn btn-secondary mb-3" onClick={createDefaultAddresses}>
+            Ajouter les adresses suggérées
+          </button>
+        )}
+        <div className="flex flex-col gap-2">
+          {addresses.filter((a) => {
+            if (!a.visible_to || a.visible_to.length === 0) return true;
+            const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+            return myMember ? a.visible_to.includes(myMember.id) : false;
+          }).map((a) => (
             <div
-              className="h-full rounded-full transition-all"
-              style={{
-                width: `${(filledAddresses / addresses.length) * 100}%`,
-                background: filledAddresses === addresses.length ? "var(--green)" : filledAddresses >= addresses.length / 2 ? "var(--warm)" : "var(--red)",
-              }}
-            />
-          </div>
+              key={a.id}
+              className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 cursor-pointer active:scale-[0.98] transition-transform"
+              onClick={() => openAddressModal(a)}
+            >
+              <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0" style={{ background: "var(--surface2)" }}>
+                {a.emoji}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm">
+                  {a.name}
+                  {a.visible_to && a.visible_to.length > 0 && <span className="text-[10px] ml-1.5" style={{ color: "var(--faint)" }}>🔒</span>}
+                </p>
+                <p className="text-[10px] truncate" style={{ color: a.address ? "var(--dim)" : "var(--red)" }}>
+                  {a.address || "⚠️ Adresse manquante"}
+                </p>
+              </div>
+              {a.lat && a.lng && (
+                <button
+                  className="w-9 h-9 flex items-center justify-center rounded-full shrink-0 active:scale-90 transition-transform"
+                  style={{ background: "var(--accent-soft)" }}
+                  onClick={(e) => { e.stopPropagation(); setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}
+                >📍</button>
+              )}
+            </div>
+          ))}
         </div>
-      )}
-      {addresses.length === 0 && (
-        <button className="btn btn-secondary mb-3" onClick={createDefaultAddresses}>
-          Ajouter les adresses suggérées
-        </button>
-      )}
-      {addresses.filter((a) => {
-        if (!a.visible_to || a.visible_to.length === 0) return true;
-        const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
-        return myMember ? a.visible_to.includes(myMember.id) : false;
-      }).map((a) => (
-        <div
-          key={a.id}
-          className="card flex items-center gap-3 cursor-pointer"
-          onClick={() => openAddressModal(a)}
-          style={{ borderLeft: `3px solid ${a.address ? "var(--green)" : "var(--red)"}` }}
-        >
-          <div className="text-xl">{a.emoji}</div>
-          <div className="flex-1">
-            <p className="font-bold text-sm">
-              {a.name}
-              {a.visible_to && a.visible_to.length > 0 && <span className="text-[10px] ml-1.5" style={{ color: "var(--faint)" }}>🔒</span>}
-            </p>
-            <p className="text-xs" style={{ color: a.address ? "var(--dim)" : "var(--red)" }}>
-              {a.address || "⚠️ Adresse manquante"}
-            </p>
-            {(() => {
-              const arr = Array.isArray(a.members) ? a.members : [];
-              const names = arr.map((mid) => { const mem = members.find((m) => m.id === mid); return mem ? `${mem.emoji} ${mem.name}` : ""; }).filter(Boolean);
-              return names.length > 0 ? <p className="text-[10px] mt-0.5" style={{ color: "var(--faint)" }}>De {names.join(", ")}</p> : null;
-            })()}
-          </div>
-          {a.lat && a.lng && (
-            <button
-              className="w-9 h-9 flex items-center justify-center rounded-full shrink-0 active:scale-90 transition-transform"
-              style={{ background: "var(--accent-soft)" }}
-              onClick={(e) => { e.stopPropagation(); setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}
-              title="Voir sur la carte"
-            >📍</button>
-          )}
-        </div>
-      ))}
+      </div>
 
       {/* CARTE PLEIN ECRAN */}
       {mapFull && (
