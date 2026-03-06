@@ -564,9 +564,9 @@ export default function HomePage() {
   const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
   const viewEvents = viewMode === "perso" && myMember
-    ? events.filter((e) => e.member_id === myMember.id)
+    ? events.filter((e) => e.member_id === myMember.id || e.member_id === null)
     : viewMode === "perso" && !myMember
-      ? []
+      ? events.filter((e) => e.member_id === null)
       : events.filter((e) => e.shared === true || (myMember && e.member_id === myMember.id));
 
   const dayEvents = viewEvents.filter((e) => e.date === currentDate);
@@ -677,9 +677,9 @@ export default function HomePage() {
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
 
-    // In perso mode, show confirmation dialog for new events
-    if (viewMode === "perso" && (action.type === "add_event" || action.type === "edit_event" || action.type === "add_recurring")) {
-      setFlowPending({ action, shared: false });
+    // Always show confirmation dialog for new/edit events
+    if (action.type === "add_event" || action.type === "edit_event" || action.type === "add_recurring") {
+      setFlowPending({ action, shared: viewMode === "famille" });
       return;
     }
 
