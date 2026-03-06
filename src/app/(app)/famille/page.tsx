@@ -767,13 +767,16 @@ export default function FamillePage() {
                   {a.address || "⚠️ Adresse manquante"}
                 </p>
               </div>
-              {a.lat && a.lng && (
+              {a.lat && a.lng ? (
                 <button
-                  className="w-9 h-9 flex items-center justify-center rounded-full shrink-0 active:scale-90 transition-transform"
+                  type="button"
+                  className="w-9 h-9 flex items-center justify-center rounded-full shrink-0 active:scale-90 transition-transform relative z-10"
                   style={{ background: "var(--accent-soft)" }}
-                  onClick={(e) => { e.stopPropagation(); setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}
                 >📍</button>
-              )}
+              ) : !a.address ? (
+                <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ background: "var(--red)" }} />
+              ) : null}
             </div>
           ))}
         </div>
