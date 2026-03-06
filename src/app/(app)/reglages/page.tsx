@@ -9,6 +9,42 @@ import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 import { QRCodeSVG } from "qrcode.react";
 
+const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
+  { key: "papa", label: "Papa", defaultEmoji: "👨" },
+  { key: "maman", label: "Maman", defaultEmoji: "👩" },
+  { key: "conjoint", label: "Conjoint", defaultEmoji: "👨" },
+  { key: "conjointe", label: "Conjointe", defaultEmoji: "👩" },
+  { key: "fils", label: "Fils", defaultEmoji: "👦" },
+  { key: "fille", label: "Fille", defaultEmoji: "👧" },
+  { key: "ado_garcon", label: "Ado (garçon)", defaultEmoji: "🧑" },
+  { key: "ado_fille", label: "Ado (fille)", defaultEmoji: "👩" },
+  { key: "bebe", label: "Bébé", defaultEmoji: "👶" },
+  { key: "frere", label: "Frère", defaultEmoji: "👦" },
+  { key: "soeur", label: "Sœur", defaultEmoji: "👧" },
+  { key: "grand-pere", label: "Grand-père", defaultEmoji: "👴" },
+  { key: "grand-mere", label: "Grand-mère", defaultEmoji: "👵" },
+  { key: "autre", label: "Autre", defaultEmoji: "🧑" },
+];
+
+const ROLE_EMOJIS: Record<string, string[]> = {
+  papa: ["👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🤴","💪"],
+  maman: ["👩","👱‍♀️","👩‍🦰","👩‍🦱","👩‍🦳","👸","💃","🌸"],
+  conjoint: ["👨","🧔","👱‍♂️","👨‍🦰","🤵","💍","💪"],
+  conjointe: ["👩","👱‍♀️","👩‍🦰","👰","💍","💃","🌸"],
+  fils: ["👦","🧒","⚽","🎮","🏀","🎸","🤖","🦸‍♂️","🐶"],
+  fille: ["👧","🧒","🎨","🩰","🦋","🌸","📚","🧸","🦄","🐱"],
+  ado_garcon: ["🧑","👦","🎮","⚽","🎸","🎧","📱","🛹","💻"],
+  ado_fille: ["👩","👧","🎧","📱","🎨","💃","📚","🌟","💅"],
+  bebe: ["👶","🧒","🍼","🧸","🐣","🌈","⭐","👣","😴"],
+  frere: ["👦","🧑","⚽","🎮","🏀","🎸","💪","🛹"],
+  soeur: ["👧","👩","🎨","🩰","🦋","🌸","📚","🌟"],
+  "grand-pere": ["👴","🧓","👨‍🦳","🎩","☕","🎣","🌳"],
+  "grand-mere": ["👵","🧓","👩‍🦳","🧶","🌺","☕","🍰"],
+  autre: ["🧑","👤","😊","🌟","💫","🎭","🙂","✨"],
+};
+
+const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
+
 const PROFILE_EMOJIS = [
   // Hommes
   "👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🧑‍🦲","🤴",
@@ -104,6 +140,27 @@ export default function ReglagesPage() {
   const [joinError, setJoinError] = useState("");
   const [joinSuccess, setJoinSuccess] = useState("");
   const [codeCopied, setCodeCopied] = useState(false);
+
+  const [memberModal, setMemberModal] = useState(false);
+  const [memberForm, setMemberForm] = useState({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
+
+  async function addMember() {
+    if (!profile?.family_id || !memberForm.name.trim()) return;
+    const { data: inserted } = await supabase.from("members").insert({
+      family_id: profile.family_id,
+      name: memberForm.name,
+      role: memberForm.role,
+      emoji: memberForm.emoji,
+      color: memberForm.color,
+      birth_date: memberForm.birth_date || null,
+      phone: memberForm.phone || null,
+    }).select("id").single();
+    if (inserted && memberForm.birth_date) {
+      await supabase.from("birthdays").insert({ family_id: profile.family_id, name: memberForm.name, date: memberForm.birth_date, emoji: memberForm.emoji, member_id: inserted.id });
+    }
+    setMemberModal(false);
+    setMemberForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
+  }
 
   async function saveProfile() {
     if (!profile) return;
@@ -457,9 +514,10 @@ export default function ReglagesPage() {
           </div>
         )}
 
-        <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>
-          Rejoindre une autre famille
-        </button>
+        <div className="flex flex-col gap-2 mt-3">
+          <button className="btn btn-primary text-xs" onClick={() => setMemberModal(true)}>＋ Ajouter un membre</button>
+          <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>Rejoindre une autre famille</button>
+        </div>
       </div>
 
       {/* Sécurité */}
@@ -865,6 +923,45 @@ export default function ReglagesPage() {
         <button className="btn btn-danger mt-3" onClick={deleteAccount} disabled={deleteConfirm !== "SUPPRIMER"}>
           Confirmer la suppression
         </button>
+      </Modal>
+
+      {/* MODAL AJOUT MEMBRE */}
+      <Modal open={memberModal} onClose={() => setMemberModal(false)} title="Nouveau membre">
+        <div className="flex flex-col gap-3">
+          <input placeholder="Prénom" value={memberForm.name} onChange={(e) => setMemberForm({ ...memberForm, name: e.target.value })} />
+          <input placeholder="Téléphone (optionnel)" type="tel" value={memberForm.phone} onChange={(e) => setMemberForm({ ...memberForm, phone: e.target.value })} />
+          <p className="label">Date de naissance</p>
+          <input type="date" value={memberForm.birth_date} onChange={(e) => setMemberForm({ ...memberForm, birth_date: e.target.value })} />
+          <p className="label">Rôle</p>
+          <div className="flex flex-wrap gap-2">
+            {ROLES.map((r) => (
+              <button
+                key={r.key}
+                className="px-3 py-2 rounded-xl text-xs font-bold transition-colors"
+                style={{
+                  background: memberForm.role === r.key ? "var(--accent)" : "var(--surface2)",
+                  color: memberForm.role === r.key ? "#fff" : "var(--text)",
+                }}
+                onClick={() => setMemberForm({ ...memberForm, role: r.key, emoji: r.defaultEmoji })}
+              >
+                {r.defaultEmoji} {r.label}
+              </button>
+            ))}
+          </div>
+          <p className="label mt-2">Emoji</p>
+          <div className="flex flex-wrap gap-2">
+            {(ROLE_EMOJIS[memberForm.role] || ROLE_EMOJIS.autre).map((e) => (
+              <button key={e} className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: memberForm.emoji === e ? "var(--accent)" : "var(--surface2)" }} onClick={() => setMemberForm({ ...memberForm, emoji: e })}>{e}</button>
+            ))}
+          </div>
+          <p className="label mt-2">Couleur</p>
+          <div className="flex gap-2">
+            {MEMBER_COLORS.map((c) => (
+              <button key={c} className="w-8 h-8 rounded-full" style={{ background: c, outline: memberForm.color === c ? "2px solid var(--text)" : "none", outlineOffset: 2 }} onClick={() => setMemberForm({ ...memberForm, color: c })} />
+            ))}
+          </div>
+          <button className="btn btn-primary mt-3" onClick={addMember} disabled={!memberForm.name.trim()}>Ajouter</button>
+        </div>
       </Modal>
     </div>
   );

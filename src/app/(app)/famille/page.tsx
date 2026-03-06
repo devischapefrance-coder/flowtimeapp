@@ -585,7 +585,6 @@ export default function FamillePage() {
         );
       });
       })()}
-      <button className="btn btn-secondary mt-1 mb-4" onClick={() => openMemberModal("new")}>＋ Ajouter un membre</button>
       </div>
 
       {/* STATS */}
