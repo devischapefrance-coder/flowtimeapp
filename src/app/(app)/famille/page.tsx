@@ -650,11 +650,15 @@ export default function FamillePage() {
                 {CONTACT_EMOJIS[cat] || "📌"} {cat}
               </p>
               {catContacts.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => openContactModal(c)}>
-                  <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0" style={{ background: "var(--surface2)" }}>
+                <div key={c.id} className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2">
+                  <div
+                    className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0 cursor-pointer active:scale-90 transition-transform"
+                    style={{ background: "var(--surface2)" }}
+                    onClick={() => openContactModal(c)}
+                  >
                     {CONTACT_EMOJIS[c.relation] || c.emoji}
                   </div>
-                  <div className="flex-1 min-w-0">
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openContactModal(c)}>
                     <p className="font-bold text-sm">{c.name}</p>
                     <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
                       {c.relation}
@@ -696,9 +700,13 @@ export default function FamillePage() {
             <div>
               <p className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "var(--dim)" }}>📌 Autres</p>
               {otherContacts.map((c) => (
-                <div key={c.id} className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 active:scale-[0.98] transition-transform cursor-pointer" onClick={() => openContactModal(c)}>
-                  <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0" style={{ background: "var(--surface2)" }}>{c.emoji}</div>
-                  <div className="flex-1 min-w-0">
+                <div key={c.id} className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2">
+                  <div
+                    className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0 cursor-pointer active:scale-90 transition-transform"
+                    style={{ background: "var(--surface2)" }}
+                    onClick={() => openContactModal(c)}
+                  >{c.emoji}</div>
+                  <div className="flex-1 min-w-0 cursor-pointer" onClick={() => openContactModal(c)}>
                     <p className="font-bold text-sm">{c.name}</p>
                     <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
                       {c.relation}{c.phone ? ` · ${c.phone}` : ""}
