@@ -33,26 +33,16 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
   const [text, setText] = useState("");
   const [unread, setUnread] = useState(0);
   const [loaded, setLoaded] = useState(false);
-  const [avatarMap, setAvatarMap] = useState<Record<string, string | null>>({});
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
   const scrollRef = useRef<HTMLDivElement>(null);
   const openRef = useRef(open);
   openRef.current = open;
 
-  // Load family member avatars
-  useEffect(() => {
-    if (!familyId) return;
-    supabase
-      .from("profiles")
-      .select("id, avatar_url")
-      .eq("family_id", familyId)
-      .then(({ data }) => {
-        if (data) {
-          const map: Record<string, string | null> = {};
-          for (const p of data) map[p.id] = p.avatar_url;
-          setAvatarMap(map);
-        }
-      });
-  }, [familyId]);
+  // Build public avatar URL directly from Storage (no DB query needed)
+  function getAvatarSrc(senderId: string): string {
+    const { data } = supabase.storage.from("avatars").getPublicUrl(`${senderId}/avatar.webp`);
+    return data.publicUrl;
+  }
 
   // Load messages from DB
   const loadMessages = useCallback(async () => {
@@ -105,11 +95,12 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
     };
   }, [familyId, userId]);
 
-  // Reset unread when opening + reload fresh data
+  // Reset unread when opening + reload fresh data + avatars
   useEffect(() => {
     if (open) {
       setUnread(0);
       loadMessages();
+      setFailedAvatars(new Set());
     }
   }, [open, loadMessages]);
 
@@ -190,13 +181,20 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
           )}
           {messages.map((msg) => {
             const isMe = msg.sender_id === userId;
-            const avatarUrl = isMe ? userAvatarUrl : avatarMap[msg.sender_id];
+            const showAvatar = !failedAvatars.has(msg.sender_id);
             return (
               <div key={msg.id} className={`flex gap-2 ${isMe ? "flex-row-reverse" : "flex-row"}`}>
                 {/* Avatar */}
                 <div className="w-7 h-7 rounded-full shrink-0 flex items-center justify-center text-xs overflow-hidden mt-auto" style={{ background: "var(--surface2)" }}>
-                  {avatarUrl ? (
-                    <img src={avatarUrl} alt="" className="w-full h-full object-cover" />
+                  {showAvatar ? (
+                    <img
+                      src={isMe ? (userAvatarUrl || getAvatarSrc(userId)) : getAvatarSrc(msg.sender_id)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={() => {
+                        setFailedAvatars((prev) => new Set(prev).add(msg.sender_id));
+                      }}
+                    />
                   ) : (
                     <span>{msg.sender_emoji || "👤"}</span>
                   )}
