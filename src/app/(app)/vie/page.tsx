@@ -1690,23 +1690,35 @@ export default function ViePage() {
       {/* Fullscreen image viewer */}
       {previewImage && (
         <div
-          className="fixed inset-0 z-[200] flex items-center justify-center"
-          style={{ background: "rgba(0,0,0,0.92)" }}
+          className="fixed inset-0 z-[800] flex flex-col"
+          style={{ background: "rgba(0,0,0,0.95)", maxWidth: 430, margin: "0 auto" }}
           onClick={() => setPreviewImage(null)}
         >
-          <button
-            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold"
-            style={{ background: "rgba(255,255,255,0.15)" }}
-            onClick={() => setPreviewImage(null)}
-          >
-            ✕
-          </button>
-          <img
-            src={previewImage}
-            alt="Preview"
-            className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
-            onClick={(e) => e.stopPropagation()}
-          />
+          <div className="flex justify-end" style={{ padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 8px 16px" }}>
+            <button
+              className="w-9 h-9 flex items-center justify-center rounded-full text-white text-lg"
+              style={{ background: "rgba(255,255,255,0.15)" }}
+              onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            >
+              ✕
+            </button>
+          </div>
+          <div className="flex-1 flex items-center justify-center p-4" onClick={(e) => e.stopPropagation()}>
+            <img
+              src={previewImage}
+              alt="Preview"
+              className="max-w-full max-h-[70vh] object-contain rounded-xl"
+            />
+          </div>
+          <div className="p-4 flex justify-center">
+            <button
+              className="px-6 py-2.5 rounded-xl text-sm font-bold"
+              style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}
+              onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
+            >
+              Fermer
+            </button>
+          </div>
         </div>
       )}
     </div>
