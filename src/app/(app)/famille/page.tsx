@@ -722,7 +722,7 @@ export default function FamillePage() {
 
       {/* ADRESSES */}
       <p className="label">Mes adresses</p>
-      {addresses.length > 0 && (
+      {addresses.length > 0 && filledAddresses < addresses.length && (
         <div className="mb-3">
           <p className="text-xs mb-1" style={{ color: "var(--dim)" }}>{filledAddresses}/{addresses.length} adresses remplies</p>
           <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
