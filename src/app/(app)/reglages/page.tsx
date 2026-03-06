@@ -45,6 +45,26 @@ const ROLE_EMOJIS: Record<string, string[]> = {
 
 const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
 
+const CONTACT_CATEGORIES: Record<string, string[]> = {
+  "Famille": ["Conjoint(e)", "Pere", "Mere", "Fils", "Fille", "Frere", "Soeur", "Grand-pere", "Grand-mere"],
+  "Medical": ["Medecin", "Dentiste", "Pediatre", "Kine", "Ophtalmo", "Pharmacie"],
+  "Scolaire": ["Professeur", "Directeur", "Nounou", "Baby-sitter", "Creche"],
+  "Professionnel": ["Employeur", "Collegue", "Avocat", "Comptable", "Banque"],
+  "Social": ["Voisin(e)", "Ami(e)", "Coach"],
+  "Urgences": ["Pompiers", "Police", "SAMU", "SOS Medecins"],
+};
+const CONTACT_EMOJIS: Record<string, string> = {
+  "Famille": "👨‍👩‍👧‍👦", "Medical": "🏥", "Scolaire": "🏫", "Professionnel": "💼", "Social": "🤝", "Urgences": "🚨",
+  "Conjoint(e)": "💑", "Pere": "👨", "Mere": "👩", "Fils": "👦", "Fille": "👧", "Frere": "👦", "Soeur": "👧",
+  "Grand-pere": "👴", "Grand-mere": "👵",
+  "Medecin": "🧑‍⚕️", "Dentiste": "🦷", "Pediatre": "👶", "Kine": "💆", "Ophtalmo": "👁️", "Pharmacie": "💊",
+  "Professeur": "👨‍🏫", "Directeur": "🎓", "Nounou": "🧑‍🍼", "Baby-sitter": "🧑‍🍼", "Creche": "🏠",
+  "Employeur": "💼", "Collegue": "🤝", "Avocat": "⚖️", "Comptable": "📊", "Banque": "🏦",
+  "Voisin(e)": "🏡", "Ami(e)": "🫂", "Coach": "🏋️",
+  "Pompiers": "🚒", "Police": "🚔", "SAMU": "🚑", "SOS Medecins": "🏥",
+};
+const ADDRESS_EMOJIS = ["🏠","🏫","💼","⚽","🏥","👶","👴","🏪","🎭","🏖️"];
+
 const PROFILE_EMOJIS = [
   // Hommes
   "👨","🧔","👱‍♂️","👨‍🦰","👨‍🦱","👨‍🦳","🧑‍🦲","🤴",
@@ -143,6 +163,55 @@ export default function ReglagesPage() {
 
   const [memberModal, setMemberModal] = useState(false);
   const [memberForm, setMemberForm] = useState({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
+
+  const [contactModal, setContactModal] = useState(false);
+  const [contactForm, setContactForm] = useState({ name: "", phone: "", relation: "Ami(e)" });
+
+  const [addressModal, setAddressModal] = useState(false);
+  const [addressForm, setAddressForm] = useState({ name: "", emoji: "🏠", address: "" });
+  const [searchQuery, setSearchQuery] = useState("");
+  const [nominatimResults, setNominatimResults] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
+
+  useEffect(() => {
+    if (searchQuery.length < 3) { setNominatimResults([]); return; }
+    const t = setTimeout(async () => {
+      try {
+        const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchQuery)}&countrycodes=fr&limit=5`, { headers: { "User-Agent": "FlowTime/1.0" } });
+        setNominatimResults(await res.json());
+      } catch { setNominatimResults([]); }
+    }, 500);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  async function addContact() {
+    if (!profile?.family_id || !contactForm.name.trim()) return;
+    await supabase.from("contacts").insert({
+      family_id: profile.family_id,
+      name: contactForm.name,
+      phone: contactForm.phone,
+      relation: contactForm.relation,
+      emoji: CONTACT_EMOJIS[contactForm.relation] || "🫂",
+    });
+    setContactModal(false);
+    setContactForm({ name: "", phone: "", relation: "Ami(e)" });
+  }
+
+  async function addAddress() {
+    if (!profile?.family_id || !addressForm.name.trim()) return;
+    const selected = nominatimResults.find((r) => r.display_name === addressForm.address);
+    await supabase.from("addresses").insert({
+      family_id: profile.family_id,
+      name: addressForm.name,
+      emoji: addressForm.emoji,
+      address: addressForm.address,
+      lat: selected ? parseFloat(selected.lat) : null,
+      lng: selected ? parseFloat(selected.lon) : null,
+    });
+    setAddressModal(false);
+    setAddressForm({ name: "", emoji: "🏠", address: "" });
+    setSearchQuery("");
+    setNominatimResults([]);
+  }
 
   async function addMember() {
     if (!profile?.family_id || !memberForm.name.trim()) return;
@@ -516,6 +585,8 @@ export default function ReglagesPage() {
 
         <div className="flex flex-col gap-2 mt-3">
           <button className="btn btn-primary text-xs" onClick={() => setMemberModal(true)}>＋ Ajouter un membre</button>
+          <button className="btn btn-secondary text-xs" onClick={() => setContactModal(true)}>＋ Ajouter un contact</button>
+          <button className="btn btn-secondary text-xs" onClick={() => setAddressModal(true)}>＋ Ajouter une adresse</button>
           <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>Rejoindre une autre famille</button>
         </div>
       </div>
@@ -961,6 +1032,60 @@ export default function ReglagesPage() {
             ))}
           </div>
           <button className="btn btn-primary mt-3" onClick={addMember} disabled={!memberForm.name.trim()}>Ajouter</button>
+        </div>
+      </Modal>
+
+      {/* MODAL AJOUT CONTACT */}
+      <Modal open={contactModal} onClose={() => setContactModal(false)} title="Nouveau contact">
+        <div className="flex flex-col gap-3">
+          <input placeholder="Nom" value={contactForm.name} onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })} />
+          <input placeholder="Téléphone" type="tel" value={contactForm.phone} onChange={(e) => setContactForm({ ...contactForm, phone: e.target.value })} />
+          <p className="label">Catégorie</p>
+          <select value={contactForm.relation} onChange={(e) => setContactForm({ ...contactForm, relation: e.target.value })}>
+            {Object.entries(CONTACT_CATEGORIES).map(([cat, relations]) => (
+              <optgroup key={cat} label={`${CONTACT_EMOJIS[cat] || ""} ${cat}`}>
+                {relations.map((r) => <option key={r} value={r}>{CONTACT_EMOJIS[r] || ""} {r}</option>)}
+              </optgroup>
+            ))}
+          </select>
+          <button className="btn btn-primary mt-3" onClick={addContact} disabled={!contactForm.name.trim()}>Ajouter</button>
+        </div>
+      </Modal>
+
+      {/* MODAL AJOUT ADRESSE */}
+      <Modal open={addressModal} onClose={() => setAddressModal(false)} title="Nouvelle adresse">
+        <div className="flex flex-col gap-3">
+          <input placeholder="Nom de l'adresse" value={addressForm.name} onChange={(e) => setAddressForm({ ...addressForm, name: e.target.value })} />
+          <p className="label">Emoji</p>
+          <div className="flex flex-wrap gap-2">
+            {ADDRESS_EMOJIS.map((e) => (
+              <button key={e} className="w-9 h-9 rounded-lg flex items-center justify-center text-lg" style={{ background: addressForm.emoji === e ? "var(--accent)" : "var(--surface2)" }} onClick={() => setAddressForm({ ...addressForm, emoji: e })}>{e}</button>
+            ))}
+          </div>
+          <p className="label mt-2">Rechercher une adresse</p>
+          <input placeholder="Rechercher une adresse..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} />
+          {nominatimResults.length > 0 && (
+            <div className="max-h-40 overflow-y-auto rounded-xl" style={{ background: "var(--surface2)" }}>
+              {nominatimResults.map((r, i) => (
+                <button
+                  key={i}
+                  className="w-full text-left text-xs p-3 hover:opacity-80 transition-opacity"
+                  style={{ borderBottom: "1px solid var(--glass-border)" }}
+                  onClick={() => {
+                    setAddressForm({ ...addressForm, address: r.display_name });
+                    setSearchQuery("");
+                    setNominatimResults([]);
+                  }}
+                >
+                  {r.display_name}
+                </button>
+              ))}
+            </div>
+          )}
+          {addressForm.address && (
+            <p className="text-xs px-1" style={{ color: "var(--green)" }}>📍 {addressForm.address}</p>
+          )}
+          <button className="btn btn-primary mt-3" onClick={addAddress} disabled={!addressForm.name.trim()}>Ajouter</button>
         </div>
       </Modal>
     </div>

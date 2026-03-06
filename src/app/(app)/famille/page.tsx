@@ -769,7 +769,6 @@ export default function FamillePage() {
         </div>
         );
       })()}
-      <button className="btn btn-secondary mt-1 mb-6" onClick={() => openContactModal("new")}>＋ Ajouter un contact</button>
 
       {/* ADRESSES */}
       <p className="label">Mes adresses</p>
@@ -828,7 +827,6 @@ export default function FamillePage() {
           )}
         </div>
       ))}
-      <button className="btn btn-secondary mt-1 mb-6" onClick={() => openAddressModal("new")}>＋ Ajouter une adresse</button>
 
       {/* LOCALISATION */}
       <p className="label">Localisation famille</p>
