@@ -541,26 +541,6 @@ export default function FamillePage() {
         </div>
       )}
       <div className="card">
-        {/* Location sharing toggle */}
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm font-bold">Partager ma position</p>
-            <p className="text-[11px]" style={{ color: "var(--dim)" }}>
-              {sharingLocation ? "Position partagée en temps réel" : "Désactivé"}
-            </p>
-          </div>
-          <button
-            className="w-12 h-7 rounded-full relative transition-colors"
-            style={{ background: sharingLocation ? "var(--teal)" : "var(--surface2)" }}
-            onClick={toggleLocationSharing}
-          >
-            <span
-              className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
-              style={{ left: sharingLocation ? 26 : 4 }}
-            />
-          </button>
-        </div>
-
         {/* Member list */}
         <div className="flex flex-col gap-2">
           {members.filter((m) => m.user_id !== profile?.id).map((m) => {
@@ -729,7 +709,24 @@ export default function FamillePage() {
 
       {/* MINI CARTE */}
       <div className="mb-4 mt-4" data-tutorial="famille-map" style={{ position: "relative", zIndex: 0 }}>
-        <p className="label">Carte</p>
+        <div className="flex items-center justify-between mb-2">
+          <p className="label !mb-0">Carte</p>
+          <div className="flex items-center gap-2">
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+              {sharingLocation ? "Position partagée" : "Position désactivée"}
+            </p>
+            <button
+              className="w-10 h-6 rounded-full relative transition-colors"
+              style={{ background: sharingLocation ? "var(--teal)" : "var(--surface2)" }}
+              onClick={toggleLocationSharing}
+            >
+              <span
+                className="absolute w-4 h-4 rounded-full bg-white top-1 transition-all"
+                style={{ left: sharingLocation ? 22 : 3 }}
+              />
+            </button>
+          </div>
+        </div>
         <MapViewDynamic
           markers={[...mapMarkers, ...deviceMapMarkers]}
           center={mapCenter}
