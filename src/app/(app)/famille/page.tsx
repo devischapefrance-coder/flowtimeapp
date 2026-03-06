@@ -156,7 +156,6 @@ export default function FamillePage() {
   const [mapFull, setMapFull] = useState(false);
   const [mapFocusCenter, setMapFocusCenter] = useState<[number, number] | null>(null);
   const [sharingLocation, setSharingLocation] = useState(false);
-  const [showFamilyCode, setShowFamilyCode] = useState(false);
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
 
   function getAvatarUrl(userId: string): string {
@@ -479,13 +478,6 @@ export default function FamillePage() {
     }
   }, [profile, devices]);
 
-  function copyFamilyCode() {
-    if (!familyId) return;
-    const code = familyId.slice(0, 8).toUpperCase();
-    navigator.clipboard.writeText(code);
-    setShowFamilyCode(true);
-    setTimeout(() => setShowFamilyCode(false), 3000);
-  }
 
   // Map markers
   const mapMarkers = addresses
@@ -548,49 +540,82 @@ export default function FamillePage() {
           </div>
         </div>
       )}
-      {(() => {
-        return members.filter((m) => m.user_id !== profile?.id).map((m) => {
-        const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
-        return (
-          <div key={m.id} className="card flex items-center gap-3 active:scale-[0.98] transition-transform">
-            <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl cursor-pointer overflow-hidden" style={{ background: "var(--surface2)" }} onClick={() => openMemberModal(m)}>
-              {m.user_id && !failedAvatars.has(m.user_id) ? (
-                <img
-                  src={getAvatarUrl(m.user_id)}
-                  alt=""
-                  className="w-full h-full object-cover"
-                  onError={() => setFailedAvatars((prev) => new Set(prev).add(m.user_id!))}
-                />
-              ) : (
-                <span>{m.emoji}</span>
-              )}
-            </div>
-            <div className="flex-1 cursor-pointer" onClick={() => openMemberModal(m)}>
-              <p className="font-bold text-sm flex items-center gap-1.5">
-                {m.name}
-              </p>
-              <p className="text-xs" style={{ color: "var(--dim)" }}>
-                {ROLES.find((r) => r.key === getLocalRole(m.id, m.role))?.label || getLocalRole(m.id, m.role)}
-                {age !== null && ` · ${age} ans`}
-                {m.phone && ` · ${m.phone}`}
-              </p>
-            </div>
-            {m.phone && (
-              <a
-                href={`tel:${m.phone}`}
-                className="w-10 h-10 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
-                style={{ background: "rgba(94,200,158,0.12)" }}
-                onClick={(e) => e.stopPropagation()}
-                aria-label={`Appeler ${m.name}`}
-              >
-                📞
-              </a>
-            )}
-            <span className="w-2 h-2 rounded-full shrink-0" style={{ background: m.color }} />
+      <div className="card">
+        {/* Location sharing toggle */}
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-bold">Partager ma position</p>
+            <p className="text-[11px]" style={{ color: "var(--dim)" }}>
+              {sharingLocation ? "Position partagée en temps réel" : "Désactivé"}
+            </p>
           </div>
-        );
-      });
-      })()}
+          <button
+            className="w-12 h-7 rounded-full relative transition-colors"
+            style={{ background: sharingLocation ? "var(--teal)" : "var(--surface2)" }}
+            onClick={toggleLocationSharing}
+          >
+            <span
+              className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
+              style={{ left: sharingLocation ? 26 : 4 }}
+            />
+          </button>
+        </div>
+
+        {/* Member list */}
+        <div className="flex flex-col gap-2">
+          {members.filter((m) => m.user_id !== profile?.id).map((m) => {
+            const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+            const device = devices.find((d) => d.user_id === m.user_id);
+            const ago = device ? Math.round((Date.now() - new Date(device.updated_at).getTime()) / 60000) : null;
+            return (
+              <div
+                key={m.id}
+                className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 active:scale-[0.98] transition-transform cursor-pointer"
+                onClick={() => device ? (setMapFocusCenter([device.lat, device.lng]), setMapFull(true)) : openMemberModal(m)}
+              >
+                <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl overflow-hidden relative" style={{ background: "var(--surface2)" }}>
+                  {m.user_id && !failedAvatars.has(m.user_id) ? (
+                    <img
+                      src={getAvatarUrl(m.user_id)}
+                      alt=""
+                      className="w-full h-full object-cover"
+                      onError={() => setFailedAvatars((prev) => new Set(prev).add(m.user_id!))}
+                    />
+                  ) : (
+                    <span>{m.emoji}</span>
+                  )}
+                  {ago !== null && (
+                    <span
+                      className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                      style={{ background: ago < 5 ? "var(--green)" : ago < 30 ? "var(--warm)" : "var(--red)", borderColor: "var(--bg)" }}
+                    />
+                  )}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm">{m.name}</p>
+                  <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
+                    {ROLES.find((r) => r.key === getLocalRole(m.id, m.role))?.label || getLocalRole(m.id, m.role)}
+                    {age !== null && ` · ${age} ans`}
+                    {ago !== null && ` · ${ago < 1 ? "En ligne" : `il y a ${ago} min`}`}
+                  </p>
+                </div>
+                {m.phone && (
+                  <a
+                    href={`tel:${m.phone}`}
+                    className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
+                    style={{ background: "rgba(94,200,158,0.12)" }}
+                    onClick={(e) => e.stopPropagation()}
+                    aria-label={`Appeler ${m.name}`}
+                  >
+                    📞
+                  </a>
+                )}
+                {device && <span className="text-sm shrink-0" style={{ color: "var(--faint)" }}>›</span>}
+              </div>
+            );
+          })}
+        </div>
+      </div>
       </div>
 
       {/* CONTACTS */}
@@ -739,76 +764,6 @@ export default function FamillePage() {
         </div>
       ))}
 
-      {/* LOCALISATION */}
-      <p className="label">Localisation famille</p>
-      <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <div>
-            <p className="text-sm font-bold">Partager ma position</p>
-            <p className="text-[11px]" style={{ color: "var(--dim)" }}>
-              {sharingLocation ? "Position partagée en temps réel" : "Désactivé"}
-            </p>
-          </div>
-          <button
-            className="w-12 h-7 rounded-full relative transition-colors"
-            style={{ background: sharingLocation ? "var(--teal)" : "var(--surface2)" }}
-            onClick={toggleLocationSharing}
-          >
-            <span
-              className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
-              style={{ left: sharingLocation ? 26 : 4 }}
-            />
-          </button>
-        </div>
-
-        {devices.length > 0 && (
-          <div className="flex flex-col gap-2 mb-3">
-            {devices.map((d) => {
-              const ago = Math.round((Date.now() - new Date(d.updated_at).getTime()) / 60000);
-              const showAvatar = !failedAvatars.has(d.user_id);
-              return (
-                <div
-                  key={d.id}
-                  className="flex items-center gap-3 text-xs cursor-pointer active:scale-[0.98] transition-transform rounded-xl px-2 py-2 -mx-2"
-                  style={{ background: "transparent" }}
-                  onClick={() => { setMapFocusCenter([d.lat, d.lng]); setMapFull(true); }}
-                >
-                  <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm overflow-hidden relative" style={{ background: "var(--surface2)" }}>
-                    {showAvatar ? (
-                      <img
-                        src={getAvatarUrl(d.user_id)}
-                        alt=""
-                        className="w-full h-full object-cover"
-                        onError={() => setFailedAvatars((prev) => new Set(prev).add(d.user_id))}
-                      />
-                    ) : (
-                      <span className="text-lg">{d.emoji}</span>
-                    )}
-                    <span
-                      className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
-                      style={{ background: ago < 5 ? "var(--green)" : ago < 30 ? "var(--warm)" : "var(--red)", borderColor: "var(--bg)" }}
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <p className="font-bold text-xs">{d.device_name}</p>
-                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>{ago < 1 ? "En ligne" : `il y a ${ago} min`}</p>
-                  </div>
-                  <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
-                </div>
-              );
-            })}
-          </div>
-        )}
-
-        <button className="btn btn-secondary text-xs !py-2" onClick={copyFamilyCode}>
-          {showFamilyCode
-            ? `✓ Code copié : ${familyId?.slice(0, 8).toUpperCase()}`
-            : "📋 Copier le code famille"}
-        </button>
-        <p className="text-[10px] mt-2" style={{ color: "var(--faint)" }}>
-          Partagez ce code pour que vos proches rejoignent votre famille
-        </p>
-      </div>
 
       {/* MINI CARTE */}
       <div className="mb-4 mt-4" data-tutorial="famille-map" style={{ position: "relative", zIndex: 0 }}>
