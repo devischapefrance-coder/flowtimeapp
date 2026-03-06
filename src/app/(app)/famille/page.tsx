@@ -553,7 +553,18 @@ export default function FamillePage() {
         const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
         return (
           <div key={m.id} className="card flex items-center gap-3 active:scale-[0.98] transition-transform">
-            <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl cursor-pointer" style={{ background: "var(--surface2)" }} onClick={() => openMemberModal(m)}>{m.emoji}</div>
+            <div className="w-10 h-10 rounded-full shrink-0 flex items-center justify-center text-xl cursor-pointer overflow-hidden" style={{ background: "var(--surface2)" }} onClick={() => openMemberModal(m)}>
+              {m.user_id && !failedAvatars.has(m.user_id) ? (
+                <img
+                  src={getAvatarUrl(m.user_id)}
+                  alt=""
+                  className="w-full h-full object-cover"
+                  onError={() => setFailedAvatars((prev) => new Set(prev).add(m.user_id!))}
+                />
+              ) : (
+                <span>{m.emoji}</span>
+              )}
+            </div>
             <div className="flex-1 cursor-pointer" onClick={() => openMemberModal(m)}>
               <p className="font-bold text-sm flex items-center gap-1.5">
                 {m.name}
