@@ -715,6 +715,7 @@ export default function FamillePage() {
           markers={[...mapMarkers, ...deviceMapMarkers]}
           center={mapCenter}
           height="220px"
+          mapStyle="dark"
           onMapClick={() => setMapFull(true)}
         />
         <p className="text-[10px] text-center mt-2" style={{ color: "var(--faint)" }}>
