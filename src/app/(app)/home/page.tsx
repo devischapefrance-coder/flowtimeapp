@@ -211,6 +211,47 @@ export default function HomePage() {
   const [mealType, setMealType] = useState<string>("dejeuner");
   const [mealEmoji, setMealEmoji] = useState("🍽️");
 
+  function suggestMealEmoji(text: string): string | null {
+    const t = text.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+    const map: [string[], string][] = [
+      [["pizza"], "🍕"],
+      [["burger", "hamburger"], "🍔"],
+      [["frite", "frites"], "🍟"],
+      [["poulet", "chicken", "nugget"], "🍗"],
+      [["steak", "boeuf", "viande", "entrecote", "bavette"], "🥩"],
+      [["poisson", "saumon", "thon", "cabillaud", "sardine", "truite"], "🐟"],
+      [["crevette", "gambas", "fruit de mer", "moule", "huitre"], "🦐"],
+      [["sushi", "maki", "sashimi", "japonais"], "🍣"],
+      [["pate", "pasta", "spaghetti", "tagliatelle", "bolognaise", "carbonara", "lasagne"], "🍝"],
+      [["riz", "risotto", "wok", "asiatique", "chinois", "thai"], "🍚"],
+      [["soupe", "potage", "bouillon", "veloute"], "🍲"],
+      [["salade", "crudite", "bowl"], "🥗"],
+      [["sandwich", "panini", "wrap", "croque"], "🥪"],
+      [["taco", "burrito", "mexicain", "fajita"], "🌮"],
+      [["kebab", "grec", "shawarma"], "🥙"],
+      [["oeuf", "omelette", "oeuf brouille"], "🥚"],
+      [["crepe", "galette", "pancake", "gaufre"], "🥞"],
+      [["croissant", "viennoiserie", "pain au chocolat", "brioche"], "🥐"],
+      [["pain", "tartine", "toast", "baguette"], "🍞"],
+      [["fromage", "raclette", "fondue", "tartiflette"], "🧀"],
+      [["gateau", "dessert", "fondant", "mousse", "tiramisu", "tarte"], "🍰"],
+      [["glace", "sorbet", "sundae"], "🍨"],
+      [["fruit", "pomme", "banane", "fraise", "compote"], "🍎"],
+      [["legume", "haricot", "brocoli", "courgette", "carotte", "ratatouille"], "🥦"],
+      [["quiche", "tourte", "feuillete"], "🥧"],
+      [["couscous", "tajine"], "🫕"],
+      [["hot dog"], "🌭"],
+      [["curry", "indien", "naan"], "🍛"],
+      [["roti", "rotisserie", "grille", "bbq", "barbecue", "brochette"], "🔥"],
+      [["jambon", "charcuterie"], "🥓"],
+      [["cereale", "muesli", "granola"], "🥣"],
+    ];
+    for (const [keywords, emoji] of map) {
+      if (keywords.some((k) => t.includes(k))) return emoji;
+    }
+    return null;
+  }
+
   // Quick event creation state
   const [quickEventModal, setQuickEventModal] = useState(false);
   const [qeTitle, setQeTitle] = useState("");
@@ -1721,7 +1762,7 @@ export default function HomePage() {
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Plat</label>
             <input className="w-full px-3 py-2.5 rounded-xl text-sm"
               style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
-              value={mealName} onChange={(e) => setMealName(e.target.value)} placeholder="Ex: Poulet roti, Pates bolognaise..." />
+              value={mealName} onChange={(e) => { setMealName(e.target.value); const s = suggestMealEmoji(e.target.value); if (s) setMealEmoji(s); }} placeholder="Ex: Poulet roti, Pates bolognaise..." />
           </div>
           <div>
             <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Emoji</label>
