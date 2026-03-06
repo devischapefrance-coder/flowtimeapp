@@ -2,8 +2,6 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
-import SearchOverlay from "./SearchOverlay";
 import { useProfile } from "@/app/(app)/layout";
 
 const tabs = [
@@ -15,7 +13,6 @@ const tabs = [
 
 export default function Navbar() {
   const pathname = usePathname();
-  const [searchOpen, setSearchOpen] = useState(false);
   const { profile, chatUnread, vieUnread } = useProfile();
 
   return (
@@ -69,23 +66,7 @@ export default function Navbar() {
             </Link>
           );
         })}
-        {/* Search button */}
-        <button
-          className="flex flex-col items-center gap-0.5 py-1 px-3"
-          data-tutorial="navbar-search"
-          onClick={() => setSearchOpen(true)}
-          aria-label="Rechercher"
-        >
-          <span className="text-[20px]">🔍</span>
-          <span className="text-[9px] font-bold" style={{ color: "var(--dim)" }}>Chercher</span>
-        </button>
       </nav>
-
-      <SearchOverlay
-        open={searchOpen}
-        onClose={() => setSearchOpen(false)}
-        familyId={profile?.family_id}
-      />
     </>
   );
 }
