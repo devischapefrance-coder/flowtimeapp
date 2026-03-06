@@ -3,6 +3,10 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
+
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 import { useProfile } from "../layout";
 import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores, useRealtimeBirthdays } from "@/lib/realtime";
 import PhotoAlbum from "@/components/PhotoAlbum";
@@ -113,7 +117,7 @@ export default function ViePage() {
   const [expDesc, setExpDesc] = useState("");
   const [expCategory, setExpCategory] = useState("autre");
   const [expMember, setExpMember] = useState("");
-  const [expDate, setExpDate] = useState(() => new Date().toISOString().split("T")[0]);
+  const [expDate, setExpDate] = useState(() => localDateStr(new Date()));
 
   // Chores state
   const [chores, setChores] = useState<Chore[]>([]);
@@ -1141,7 +1145,7 @@ export default function ViePage() {
             frequency: choreFreq,
             assigned_members: choreMembers,
             current_index: 0,
-            last_rotated: new Date().toISOString().split("T")[0],
+            last_rotated: localDateStr(new Date()),
           });
           notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`);
           setChoreModal(false);
@@ -1160,7 +1164,7 @@ export default function ViePage() {
           const nextIndex = (chore.current_index + 1) % (chore.assigned_members.length || 1);
           await supabase.from("chores").update({
             current_index: nextIndex,
-            last_rotated: new Date().toISOString().split("T")[0],
+            last_rotated: localDateStr(new Date()),
           }).eq("id", chore.id);
           loadData();
         }
@@ -1274,7 +1278,7 @@ export default function ViePage() {
               </div>
             </div>
           )}
-          <button className="btn btn-primary" onClick={() => { const addChore = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: new Date().toISOString().split("T")[0] }); notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; addChore(); }}>
+          <button className="btn btn-primary" onClick={() => { const addChore = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: localDateStr(new Date()) }); notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; addChore(); }}>
             Ajouter
           </button>
         </div>

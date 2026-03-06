@@ -3,6 +3,10 @@
 import { useEffect, useRef, useCallback } from "react";
 import type { Event, Birthday } from "@/lib/types";
 
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const BDAY_STORAGE_KEY = "flowtime_bday_notified";
 
 interface NotificationManagerProps {
@@ -16,7 +20,7 @@ function getBdayNotifiedToday(): Set<string> {
     const raw = localStorage.getItem(BDAY_STORAGE_KEY);
     if (!raw) return new Set();
     const parsed = JSON.parse(raw);
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateStr(new Date());
     if (parsed.date !== today) return new Set();
     return new Set(parsed.keys || []);
   } catch {
@@ -25,7 +29,7 @@ function getBdayNotifiedToday(): Set<string> {
 }
 
 function setBdayNotified(key: string) {
-  const today = new Date().toISOString().split("T")[0];
+  const today = localDateStr(new Date());
   const current = getBdayNotifiedToday();
   current.add(key);
   localStorage.setItem(BDAY_STORAGE_KEY, JSON.stringify({ date: today, keys: Array.from(current) }));
@@ -83,7 +87,7 @@ export default function NotificationManager({ events, birthdays, enabled }: Noti
       if (Notification.permission !== "granted") return;
 
       const now = new Date();
-      const today = now.toISOString().split("T")[0];
+      const today = localDateStr(now);
 
       for (const ev of events) {
         if (ev.date !== today) continue;

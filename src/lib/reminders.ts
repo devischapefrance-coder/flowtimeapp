@@ -1,5 +1,9 @@
 "use client";
 
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 const STORAGE_KEY = "flowtime_reminder_last";
 
 interface ReminderState {
@@ -25,7 +29,7 @@ export function checkReminders(
 ): { title: string; body: string } | null {
   const now = new Date();
   const h = now.getHours();
-  const today = now.toISOString().split("T")[0];
+  const today = localDateStr(now);
   const state = getState();
 
   const todayEvents = events
@@ -58,7 +62,7 @@ export function checkReminders(
     setState({ ...state, evening: today });
     const tomorrow = new Date(now);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const tomorrowStr = tomorrow.toISOString().split("T")[0];
+    const tomorrowStr = localDateStr(tomorrow);
     const tomorrowEvents = events
       .filter((e) => e.date === tomorrowStr)
       .sort((a, b) => a.time.localeCompare(b.time));
@@ -106,7 +110,7 @@ export function checkEventReminders(
   events: { id: string; title: string; time: string; date: string; reminder_minutes: number | null }[]
 ): { title: string; body: string } | null {
   const now = new Date();
-  const today = now.toISOString().split("T")[0];
+  const today = localDateStr(now);
   const nowMinutes = now.getHours() * 60 + now.getMinutes();
   const sent = getSentReminders();
 

@@ -12,7 +12,10 @@ export async function GET(req: NextRequest) {
 
   try {
     const push = getWebPush();
-    const today = new Date().toISOString().split("T")[0];
+    // Use Paris timezone (server may be UTC)
+    const now = new Date();
+    const parisNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+    const today = `${parisNow.getFullYear()}-${String(parisNow.getMonth() + 1).padStart(2, "0")}-${String(parisNow.getDate()).padStart(2, "0")}`;
 
     // Get all families with push subscriptions
     const { data: subs } = await supabaseAdmin.from("push_subscriptions").select("user_id, endpoint, keys");
@@ -83,7 +86,11 @@ export async function GET(req: NextRequest) {
         const reminders = eventList
           .map((e: Record<string, unknown>) => {
             const [h, m] = (e.time as string).split(":").map(Number);
-            const eventDate = new Date(`${today}T${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:00`);
+            // Calculate Paris-local event time in UTC millis
+            const parisMidnight = new Date(parisNow);
+            parisMidnight.setHours(0, 0, 0, 0);
+            const offsetMs = now.getTime() - parisNow.getTime(); // UTC - Paris offset
+            const eventDate = new Date(parisMidnight.getTime() + h * 3600000 + m * 60000 + offsetMs);
             const reminderTime = eventDate.getTime() - 15 * 60 * 1000;
             const memberName = (e.members as { name: string } | null)?.name;
             const cat = (e.category as string) || "general";

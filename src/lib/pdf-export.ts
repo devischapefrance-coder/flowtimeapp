@@ -10,7 +10,7 @@ export function exportPDF(events: Event[], startDate: string, endDate: string) {
   for (let i = 0; i < 7; i++) {
     const d = new Date(start);
     d.setDate(start.getDate() + i);
-    const dateStr = d.toISOString().split("T")[0];
+    const dateStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
     const dayNum = d.getDate();
     const dayName = dayNames[d.getDay()];
     days.push({

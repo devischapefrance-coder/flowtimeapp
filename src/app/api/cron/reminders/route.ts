@@ -11,10 +11,12 @@ export async function GET(req: NextRequest) {
   try {
     const push = getWebPush();
     const now = new Date();
-    const today = now.toISOString().split("T")[0];
+    // Use Paris timezone (server may be UTC)
+    const parisNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
+    const today = `${parisNow.getFullYear()}-${String(parisNow.getMonth() + 1).padStart(2, "0")}-${String(parisNow.getDate()).padStart(2, "0")}`;
 
     // Current time + 15 min window
-    const currentMinutes = now.getHours() * 60 + now.getMinutes();
+    const currentMinutes = parisNow.getHours() * 60 + parisNow.getMinutes();
     const reminderStart = currentMinutes + 10; // events in 10-20 min
     const reminderEnd = currentMinutes + 20;
 

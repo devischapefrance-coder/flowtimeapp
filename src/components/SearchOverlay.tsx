@@ -4,6 +4,10 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
 import { useRouter } from "next/navigation";
 
+function localDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 interface SearchResult {
   type: "event" | "member" | "contact" | "address" | "note" | "meal" | "chore";
   title: string;
@@ -91,7 +95,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
 
   async function fetchUpcomingEvents() {
     if (!familyId) return;
-    const today = new Date().toISOString().split("T")[0];
+    const today = localDateStr(new Date());
     const { data } = await supabase
       .from("events")
       .select("title, date, time, category")
