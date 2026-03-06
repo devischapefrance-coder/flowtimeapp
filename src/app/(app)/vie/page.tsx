@@ -81,6 +81,7 @@ export default function ViePage() {
   const [noteVisibleTo, setNoteVisibleTo] = useState<string[] | null>(null);
   const [newCheckItem, setNewCheckItem] = useState("");
   const [uploading, setUploading] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // Search / filter
   const [search, setSearch] = useState("");
@@ -1342,15 +1343,17 @@ export default function ViePage() {
                 <p className="text-xs font-bold mb-2" style={{ color: "var(--dim)" }}>Pieces jointes</p>
                 <div className="grid grid-cols-3 gap-2">
                   {detailNote.attachments.map((att) => (
-                    <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" className="block">
-                      {att.type === "image" ? (
+                    att.type === "image" ? (
+                      <button key={att.id} className="block w-full" onClick={() => setPreviewImage(att.url)}>
                         <img src={att.url} alt={att.name} className="w-full h-20 object-cover rounded-lg" />
-                      ) : (
+                      </button>
+                    ) : (
+                      <a key={att.id} href={att.url} target="_blank" rel="noopener noreferrer" className="block">
                         <div className="w-full h-20 rounded-lg flex items-center justify-center text-xs" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
                           📄 {att.name.length > 12 ? att.name.slice(0, 12) + "..." : att.name}
                         </div>
-                      )}
-                    </a>
+                      </a>
+                    )
                   ))}
                 </div>
               </div>
@@ -1683,6 +1686,29 @@ export default function ViePage() {
           </button>
         </div>
       </Modal>
+
+      {/* Fullscreen image viewer */}
+      {previewImage && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center"
+          style={{ background: "rgba(0,0,0,0.92)" }}
+          onClick={() => setPreviewImage(null)}
+        >
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-xl font-bold"
+            style={{ background: "rgba(255,255,255,0.15)" }}
+            onClick={() => setPreviewImage(null)}
+          >
+            ✕
+          </button>
+          <img
+            src={previewImage}
+            alt="Preview"
+            className="max-w-[95vw] max-h-[85vh] object-contain rounded-xl"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      )}
     </div>
   );
 }
