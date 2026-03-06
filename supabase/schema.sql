@@ -227,8 +227,11 @@ ALTER TABLE chores ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE family_messages ENABLE ROW LEVEL SECURITY;
 
--- Profiles : lecture/modif de son propre profil uniquement
+-- Profiles : lecture par famille, modif de son propre profil uniquement
 CREATE POLICY "Own profile" ON profiles FOR SELECT USING (auth.uid() = id);
+CREATE POLICY "Read family profiles" ON profiles FOR SELECT USING (
+  family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
 CREATE POLICY "Update own profile" ON profiles FOR UPDATE USING (auth.uid() = id);
 CREATE POLICY "Insert profile" ON profiles FOR INSERT WITH CHECK (id = auth.uid());
 
