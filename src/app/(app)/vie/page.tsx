@@ -1710,15 +1710,6 @@ export default function ViePage() {
               className="max-w-full max-h-[70vh] object-contain rounded-xl"
             />
           </div>
-          <div className="p-4 flex justify-center">
-            <button
-              className="px-6 py-2.5 rounded-xl text-sm font-bold"
-              style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}
-              onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
-            >
-              Fermer
-            </button>
-          </div>
         </div>
       )}
     </div>
