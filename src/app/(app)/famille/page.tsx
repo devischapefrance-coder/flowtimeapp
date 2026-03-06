@@ -753,13 +753,19 @@ export default function FamillePage() {
           }).map((a) => (
             <div
               key={a.id}
-              className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2 cursor-pointer active:scale-[0.98] transition-transform"
-              onClick={() => { if (a.lat && a.lng) { setMapFocusCenter([a.lat, a.lng]); setMapFull(true); } }}
+              className="flex items-center gap-3 rounded-xl px-2 py-2 -mx-2"
             >
-              <div className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0 active:scale-90 transition-transform" style={{ background: "var(--surface2)" }} onClick={(e) => { e.stopPropagation(); openAddressModal(a); }}>
+              <div
+                className="w-10 h-10 flex items-center justify-center rounded-full text-xl shrink-0 cursor-pointer active:scale-90 transition-transform"
+                style={{ background: "var(--surface2)" }}
+                onClick={() => openAddressModal(a)}
+              >
                 {a.emoji}
               </div>
-              <div className="flex-1 min-w-0">
+              <div
+                className="flex-1 min-w-0 cursor-pointer"
+                onClick={() => { if (a.lat && a.lng) { setMapFocusCenter([a.lat, a.lng]); setMapFull(true); } }}
+              >
                 <p className="font-bold text-sm">
                   {a.name}
                   {a.visible_to && a.visible_to.length > 0 && <span className="text-[10px] ml-1.5" style={{ color: "var(--faint)" }}>🔒</span>}
@@ -768,7 +774,7 @@ export default function FamillePage() {
                   {a.address || "⚠️ Adresse manquante"}
                 </p>
               </div>
-              {a.lat && a.lng && <span className="text-sm shrink-0" style={{ color: "var(--faint)" }}>›</span>}
+              {a.lat && a.lng && <span className="text-sm shrink-0 cursor-pointer" style={{ color: "var(--faint)" }} onClick={() => { setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}>›</span>}
             </div>
           ))}
         </div>
@@ -779,6 +785,7 @@ export default function FamillePage() {
         <MapFullDynamic
           markers={mapMarkers}
           center={mapFocusCenter || mapCenter}
+          initialZoom={mapFocusCenter ? 17 : undefined}
           onClose={() => { setMapFull(false); setMapFocusCenter(null); }}
           deviceMarkers={deviceMapMarkers}
           onAddressMoved={handleAddressMoved}

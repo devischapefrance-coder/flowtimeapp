@@ -39,11 +39,12 @@ interface MapFullProps {
   deviceMarkers?: MapMarker[];
   onAddressMoved?: (id: string, lat: number, lng: number, address: string) => void;
   familyId?: string;
+  initialZoom?: number;
 }
 
 type SideTab = "lieux" | "recherche" | null;
 
-export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers: initialDeviceMarkers = [], onAddressMoved, familyId }: MapFullProps) {
+export default function MapFull({ markers, center = [46.2044, 5.226], onClose, deviceMarkers: initialDeviceMarkers = [], onAddressMoved, familyId, initialZoom }: MapFullProps) {
   const [searchQuery, setSearchQuery] = useState("");
   const [liveDevices, setLiveDevices] = useState<MapMarker[]>(initialDeviceMarkers);
   const [searchResults, setSearchResults] = useState<MapMarker[]>([]);
@@ -88,7 +89,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
 
   const [myLocation, setMyLocation] = useState<[number, number] | null>(null);
   const [mapCenter, setMapCenter] = useState<[number, number]>(center);
-  const [mapZoom, setMapZoom] = useState(14);
+  const [mapZoom, setMapZoom] = useState(initialZoom || 14);
   const watchRef = useRef<number | null>(null);
 
 
