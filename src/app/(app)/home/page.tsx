@@ -893,18 +893,26 @@ export default function HomePage() {
 
   function getProactiveMessage(): { main: string; sub?: string } {
     const nowMins = now.getHours() * 60 + now.getMinutes();
+    const hour = now.getHours();
+    const name = profile?.first_name || "";
+    const pick = (...opts: string[]) => opts[Math.floor((now.getMinutes() / 10)) % opts.length];
 
-    // 1. Event imminent (< 30 min)
+    // 1. Event imminent (< 10 min) — URGENT
     if (nextEvent?.time) {
       const [h, m] = nextEvent.time.split(":").map(Number);
-      const evMins = h * 60 + m;
-      const diff = evMins - nowMins;
-      if (diff > 0 && diff <= 30) {
-        return { main: `🔔 ${nextEvent.title} dans ${diff} min`, sub: `À ${nextEvent.time.replace(":", "h")}` };
+      const diff = h * 60 + m - nowMins;
+      if (diff > 0 && diff <= 10) {
+        return { main: `⚡ ${name}, c'est maintenant !`, sub: `${nextEvent.title} dans ${diff} min — fonce !` };
+      }
+      // Event proche (10-30 min) — alerte amicale
+      if (diff > 10 && diff <= 30) {
+        const sub = `${nextEvent.title} à ${nextEvent.time.replace(":", "h")}`;
+        if (diff <= 15) return { main: pick(`🏃 Prépare-toi, ça arrive vite`, `⏰ Plus que ${diff} min, on y va !`), sub };
+        return { main: pick(`📢 Hey ! ${nextEvent.title} dans ${diff} min`, `🔔 Pense à te préparer ${name}`), sub };
       }
     }
 
-    // 2. Event en cours (started < 1h ago, no time-based end)
+    // 2. Event en cours — encouragement
     const currentEvent = dayEvents.find((e) => {
       if (!e.time) return false;
       const [h, m] = e.time.split(":").map(Number);
@@ -912,47 +920,110 @@ export default function HomePage() {
       return nowMins >= evMins && nowMins - evMins < 60;
     });
     if (currentEvent) {
-      return { main: `📍 ${currentEvent.title} en cours`, sub: `Depuis ${currentEvent.time.replace(":", "h")}` };
+      return {
+        main: pick(`💪 ${currentEvent.title} en cours, tu gères !`, `🎯 Concentre-toi sur ${currentEvent.title}`),
+        sub: `Commencé à ${currentEvent.time.replace(":", "h")}`
+      };
     }
 
-    // 3. Prochain event du jour
-    if (nextEvent?.time) {
-      return { main: `📅 Prochain : ${nextEvent.title}`, sub: `À ${nextEvent.time.replace(":", "h")}` };
-    }
-
-    // 4. Journée chargée (5+ events)
-    if (dayEvents.length >= 5) {
-      return { main: `💪 Journée bien remplie`, sub: `${dayEvents.length} événements aujourd'hui` };
-    }
-
-    // 5. Anniversaire aujourd'hui
+    // 3. Anniversaire aujourd'hui
     const todayMMDD = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
     const bdayToday = birthdays.find((b) => b.date.slice(5) === todayMMDD);
     if (bdayToday) {
-      return { main: `🎂 C'est l'anniversaire de ${bdayToday.name} !` };
+      return {
+        main: pick(`🎂 C'est l'anniversaire de ${bdayToday.name} !`, `🎉 N'oublie pas de souhaiter un bon anniv' à ${bdayToday.name} !`),
+        sub: `Un petit message lui ferait plaisir`
+      };
     }
 
-    // 6. Anniversaire dans 1-3 jours
+    // 4. Prochain event du jour — conseil contextuel
+    if (nextEvent?.time) {
+      const [h, m] = nextEvent.time.split(":").map(Number);
+      const diff = h * 60 + m - nowMins;
+      const timeStr = nextEvent.time.replace(":", "h");
+      if (diff <= 60) {
+        return { main: pick(`📍 ${nextEvent.title} à ${timeStr}`, `⏳ Dans moins d'1h : ${nextEvent.title}`), sub: `Prépare-toi tranquillement` };
+      }
+      if (diff <= 120) {
+        return { main: `📅 ${nextEvent.title} à ${timeStr}`, sub: pick(`Tu as encore un peu de temps devant toi`, `Profite du créneau libre avant`) };
+      }
+      // Event lointain — on mentionne + conseil
+      const remaining = dayEvents.filter((e) => {
+        if (!e.time) return false;
+        const [eh, em] = e.time.split(":").map(Number);
+        return eh * 60 + em > nowMins;
+      }).length;
+      if (remaining > 1) {
+        return { main: `📋 Encore ${remaining} événements aujourd'hui`, sub: `Prochain : ${nextEvent.title} à ${timeStr}` };
+      }
+      return { main: `📅 Plus qu'un truc : ${nextEvent.title}`, sub: `À ${timeStr} — la journée se termine bien` };
+    }
+
+    // 5. Journée chargée (5+ events, tous passés = bravo)
+    if (dayEvents.length >= 5) {
+      const remaining = dayEvents.filter((e) => {
+        if (!e.time) return true;
+        const [h, m] = e.time.split(":").map(Number);
+        return h * 60 + m > nowMins;
+      }).length;
+      if (remaining === 0) {
+        return { main: pick(`🏆 ${dayEvents.length} événements abattus, bravo ${name} !`, `✨ Journée marathon terminée, bien joué !`), sub: `Tu peux souffler maintenant` };
+      }
+      return { main: `💪 Journée chargée — encore ${remaining} à venir`, sub: `${dayEvents.length} événements au total, tu assures !` };
+    }
+
+    // 6. Tous les events du jour sont passés
+    if (dayEvents.length > 0 && !nextEvent) {
+      return {
+        main: pick(`✅ C'est fini pour aujourd'hui !`, `🌙 Plus rien au programme`),
+        sub: pick(`Repose-toi bien ${name}`, `Tu as bien mérité ta soirée`)
+      };
+    }
+
+    // 7. Anniversaire dans 1-3 jours
     for (let d = 1; d <= 3; d++) {
       const future = new Date(now);
       future.setDate(future.getDate() + d);
       const futureMMDD = `${String(future.getMonth() + 1).padStart(2, "0")}-${String(future.getDate()).padStart(2, "0")}`;
       const bdaySoon = birthdays.find((b) => b.date.slice(5) === futureMMDD);
       if (bdaySoon) {
-        return { main: `🎂 Anniversaire de ${bdaySoon.name} dans ${d} jour${d > 1 ? "s" : ""}` };
+        return {
+          main: `🎂 Anniversaire de ${bdaySoon.name} ${d === 1 ? "demain" : `dans ${d} jours`}`,
+          sub: pick(`Pense à préparer quelque chose !`, `Un cadeau ou un message ?`)
+        };
       }
     }
 
-    // 7. Journée libre (0 events today)
-    if (todayEvents.length === 0) {
-      return { main: `☀️ Rien de prévu aujourd'hui`, sub: `Profitez-en !` };
+    // 8. Météo + conseil
+    if (weather) {
+      const t = weather.temperature;
+      if (t >= 30) {
+        return { main: `🥵 ${t}°C — pensez à bien vous hydrater`, sub: `Il fait chaud, restez au frais` };
+      }
+      if (t <= 2) {
+        return { main: `🥶 ${t}°C — couvrez-vous bien !`, sub: `Attention au froid dehors` };
+      }
+      if (weather.weatherCode >= 61 && weather.weatherCode <= 67) {
+        return { main: `🌧️ Il pleut — prenez un parapluie`, sub: `${t}°C, ${weather.description}` };
+      }
     }
 
-    // 8. Fallback
-    const hour = now.getHours();
-    const greeting = hour < 12 ? "matin" : hour < 18 ? "après-midi" : "soirée";
-    const firstName = profile?.first_name || "tous";
-    return { main: `👋 Bon${greeting === "après-midi" ? "ne" : ""} ${greeting}, ${firstName} !` };
+    // 9. Journée libre — encouragement selon moment
+    if (todayEvents.length === 0) {
+      if (hour < 10) return { main: pick(`☀️ Journée libre ${name} !`, `🌅 Rien de prévu, profite de ta matinée`), sub: `C'est le moment de faire ce qui te plaît` };
+      if (hour < 14) return { main: pick(`😌 Pas de stress aujourd'hui`, `🍃 Journée relax, apprécie`), sub: `Pas d'événements prévus` };
+      if (hour < 19) return { main: pick(`☕ Après-midi tranquille`, `🌿 Rien au programme, repose-toi`), sub: `Profite de ce moment de calme` };
+      return { main: pick(`🌙 Bonne soirée ${name}`, `✨ Soirée libre, détends-toi`), sub: `Journée calme, c'est bien aussi` };
+    }
+
+    // 10. Fallback contextuel selon l'heure
+    if (hour < 6) return { main: `🌙 Debout si tôt ${name} ?`, sub: `Prends soin de toi, le sommeil c'est important` };
+    if (hour < 9) return { main: pick(`☀️ C'est parti ${name} !`, `💫 Nouvelle journée, nouvelles opportunités`), sub: `${todayEvents.length} événement${todayEvents.length > 1 ? "s" : ""} aujourd'hui` };
+    if (hour < 12) return { main: pick(`🚀 La matinée avance bien`, `💪 Tiens bon ${name} !`), sub: `Continue comme ça` };
+    if (hour < 14) return { main: pick(`🍽️ Bon appétit ${name} !`, `😋 C'est l'heure de la pause`), sub: `Fais une vraie coupure` };
+    if (hour < 18) return { main: pick(`⚡ L'après-midi est à toi`, `🎯 Encore quelques heures, tu gères`), sub: `Reste focus` };
+    if (hour < 21) return { main: pick(`🌅 Bientôt la fin de journée`, `🏠 La soirée approche, bravo`), sub: `Tu as bien bossé aujourd'hui` };
+    return { main: pick(`🌙 Bonne nuit ${name}`, `😴 Il se fait tard, repose-toi`), sub: `Demain est un autre jour` };
   }
 
   function renderFlow() {
