@@ -46,7 +46,6 @@ const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
   { id: "family_map", label: "Carte famille", icon: "🗺️" },
   { id: "chores", label: "Tâches", icon: "🧹" },
-  { id: "activity", label: "Activité", icon: "📋" },
 ];
 
 const DEFAULT_WIDGETS: WidgetConfig[] = WIDGET_DEFS.map((w) => ({ id: w.id, visible: true }));
@@ -234,7 +233,6 @@ export default function HomePage() {
 
   // Widget expanded modal states
   const [weatherOpen, setWeatherOpen] = useState(false);
-  const [activityOpen, setActivityOpen] = useState(false);
   const [expensesOpen, setExpensesOpen] = useState(false);
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
 
@@ -874,7 +872,6 @@ export default function HomePage() {
       case "birthdays": return renderBirthdays();
       case "family_map": return renderFamilyMap();
       case "chores": return renderChores();
-      case "activity": return renderActivity();
       default: return null;
     }
   }
@@ -1407,84 +1404,6 @@ export default function HomePage() {
     );
   }
 
-  function renderActivity() {
-    // Build grouped activity sections
-    const dayEvents = events.filter((e) => e.date === currentDate);
-    const doneChores = chores.filter((c) => c.last_rotated === todayStr);
-    const recentExpenses = expenses.slice(0, 3);
-    const totalCount = dayEvents.length + doneChores.length + recentExpenses.length;
-
-    const renderSection = (emoji: string, title: string, items: React.ReactNode[], limit?: number) => {
-      if (items.length === 0) return null;
-      const display = limit ? items.slice(0, limit) : items;
-      return (
-        <div>
-          <p className="text-[10px] font-bold uppercase mb-1.5 flex items-center gap-1" style={{ color: "var(--dim)" }}>
-            <span>{emoji}</span> {title}
-          </p>
-          <div className="flex flex-col gap-1">{display}</div>
-        </div>
-      );
-    };
-
-    const eventItems = dayEvents.map((ev) => {
-      const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
-      return (
-        <div key={`ev-${ev.id}`} className="flex items-center gap-2 text-xs">
-          {ev.time && <span className="text-[10px] font-mono shrink-0" style={{ color: "var(--accent)" }}>{ev.time}</span>}
-          <span className="truncate flex-1">{ev.title}</span>
-          {mem && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem.emoji} {mem.name}</span>}
-        </div>
-      );
-    });
-
-    const choreItems = doneChores.map((ch) => {
-      const mem = ch.assigned_members.length > 0
-        ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
-        : null;
-      return (
-        <div key={`ch-${ch.id}`} className="flex items-center gap-2 text-xs">
-          <span>{ch.emoji || "🧹"}</span>
-          <span className="truncate flex-1">{ch.name}</span>
-          <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem?.name || "—"}</span>
-        </div>
-      );
-    });
-
-    const expenseItems = recentExpenses.map((exp) => {
-      const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
-      const daysAgo = Math.round((Date.now() - new Date(exp.date).getTime()) / 86400000);
-      const relative = daysAgo === 0 ? "Aujourd'hui" : daysAgo === 1 ? "Hier" : `Il y a ${daysAgo}j`;
-      return (
-        <div key={`exp-${exp.id}`} className="flex items-center gap-2 text-xs">
-          <span className="font-bold shrink-0" style={{ color: "var(--warm)" }}>{Number(exp.amount).toFixed(0)}€</span>
-          <span className="truncate flex-1">{exp.description}</span>
-          <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{relative}</span>
-        </div>
-      );
-    });
-
-    return (
-      <div className="card !mb-0 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setActivityOpen(true)}>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Activité récente</p>
-          <div className="flex items-center gap-2">
-            {totalCount > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>{totalCount} activités</span>}
-            <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
-          </div>
-        </div>
-        {totalCount > 0 ? (
-          <div className="flex flex-col gap-3">
-            {renderSection("📅", "Événements", eventItems, 2)}
-            {renderSection("✅", "Tâches faites", choreItems, 2)}
-            {renderSection("💰", "Dépenses", expenseItems, 3)}
-          </div>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Rien à afficher pour le moment</p>
-        )}
-      </div>
-    );
-  }
 
   return (
     <div
@@ -1968,69 +1887,6 @@ export default function HomePage() {
         );
       })()}
 
-      {(() => {
-        const allDayEvents = events.filter((e) => e.date === currentDate);
-        const allDoneChores = chores.filter((c) => c.last_rotated === todayStr);
-        const allExpenses = expenses;
-        const hasAny = allDayEvents.length + allDoneChores.length + allExpenses.length > 0;
-
-        const renderModalSection = (emoji: string, title: string, items: React.ReactNode[]) => {
-          if (items.length === 0) return null;
-          return (
-            <div>
-              <p className="text-[11px] font-bold uppercase mb-2 flex items-center gap-1.5" style={{ color: "var(--dim)" }}>
-                <span>{emoji}</span> {title} <span className="text-[10px] font-normal">({items.length})</span>
-              </p>
-              <div className="flex flex-col gap-1.5">{items}</div>
-            </div>
-          );
-        };
-
-        return (
-          <Modal open={activityOpen} onClose={() => setActivityOpen(false)} title="Activité complète">
-            {hasAny ? (
-              <div className="flex flex-col gap-4">
-                {renderModalSection("📅", "Événements du jour", allDayEvents.map((ev) => {
-                  const mem = ev.member_id ? members.find((m) => m.id === ev.member_id) : null;
-                  return (
-                    <div key={`ev-${ev.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
-                      {ev.time && <span className="text-[11px] font-mono shrink-0" style={{ color: "var(--accent)" }}>{ev.time}</span>}
-                      <span className="text-xs flex-1">{ev.title}</span>
-                      {mem && <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem.emoji} {mem.name}</span>}
-                    </div>
-                  );
-                }))}
-                {renderModalSection("✅", "Tâches faites", allDoneChores.map((ch) => {
-                  const mem = ch.assigned_members.length > 0
-                    ? members.find((m) => m.id === ch.assigned_members[(ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length])
-                    : null;
-                  return (
-                    <div key={`ch-${ch.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
-                      <span>{ch.emoji || "🧹"}</span>
-                      <span className="text-xs flex-1">{ch.name}</span>
-                      <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{mem?.name || "—"}</span>
-                    </div>
-                  );
-                }))}
-                {renderModalSection("💰", "Dépenses du mois", allExpenses.map((exp) => {
-                  const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
-                  const daysAgo = Math.round((Date.now() - new Date(exp.date).getTime()) / 86400000);
-                  const relative = daysAgo === 0 ? "Aujourd'hui" : daysAgo === 1 ? "Hier" : `Il y a ${daysAgo}j`;
-                  return (
-                    <div key={`exp-${exp.id}`} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
-                      <span className="text-xs font-bold shrink-0" style={{ color: "var(--warm)" }}>{Number(exp.amount).toFixed(0)}€</span>
-                      <span className="text-xs flex-1">{exp.description}</span>
-                      <span className="text-[10px] shrink-0" style={{ color: "var(--dim)" }}>{relative}</span>
-                    </div>
-                  );
-                }))}
-              </div>
-            ) : (
-              <p className="text-xs text-center py-4" style={{ color: "var(--faint)" }}>Aucune activité pour le moment</p>
-            )}
-          </Modal>
-        );
-      })()}
 
       {/* Full-screen map (portal-level to avoid stacking context issues) */}
       {mapFullOpen && (() => {
