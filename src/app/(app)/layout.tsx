@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useCallback, createContext, useContext } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useState, useCallback, createContext, useContext, useRef } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import type { Profile } from "@/lib/types";
 import Navbar from "@/components/Navbar";
@@ -56,14 +56,32 @@ export function useTutorial() {
   return useContext(TutorialContext);
 }
 
+const TAB_ORDER = ["/home", "/famille", "/vie", "/reglages"];
+
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
+  const pathname = usePathname();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [ready, setReady] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
   const [chatUnread, setChatUnread] = useState(0);
   const handleUnread = useCallback((n: number) => setChatUnread(n), []);
   const [vieUnread, setVieUnread] = useState(0);
+
+  // Page transition direction
+  const prevPathRef = useRef(pathname);
+  const [slideDir, setSlideDir] = useState<"none" | "left" | "right">("none");
+  const [transitionKey, setTransitionKey] = useState(0);
+
+  useEffect(() => {
+    const prevIdx = TAB_ORDER.indexOf(prevPathRef.current);
+    const newIdx = TAB_ORDER.indexOf(pathname);
+    if (prevIdx !== -1 && newIdx !== -1 && prevIdx !== newIdx) {
+      setSlideDir(newIdx > prevIdx ? "left" : "right");
+      setTransitionKey((k) => k + 1);
+    }
+    prevPathRef.current = pathname;
+  }, [pathname]);
 
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
@@ -201,7 +219,11 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread }}>
         <TutorialContext.Provider value={{ tutorialActive, tutorialStep, startTutorial, stopTutorial, nextStep, prevStep }}>
           <ToastProvider>
-            <div className="pb-[80px] page-transition" style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}>
+            <div
+              key={transitionKey}
+              className={`pb-[80px] ${slideDir === "left" ? "slide-from-right" : slideDir === "right" ? "slide-from-left" : "page-transition"}`}
+              style={{ paddingTop: "env(safe-area-inset-top, 0px)" }}
+            >
               {children}
             </div>
 
