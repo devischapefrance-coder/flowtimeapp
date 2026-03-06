@@ -262,8 +262,47 @@ function FitRoute({ route }: { route: RouteInfo }) {
   return null;
 }
 
+// Spread overlapping markers in a circle so they don't stack
+function spreadOverlapping(markers: MapMarker[]): MapMarker[] {
+  const THRESHOLD = 0.0003; // ~30m — considered "same spot"
+  const OFFSET = 0.00015; // ~15m spread radius
+  const groups = new Map<string, number[]>();
+
+  // Group markers that are very close together
+  markers.forEach((m, i) => {
+    let foundKey: string | null = null;
+    for (const [key] of groups) {
+      const [refLat, refLng] = key.split(",").map(Number);
+      if (Math.abs(m.lat - refLat) < THRESHOLD && Math.abs(m.lng - refLng) < THRESHOLD) {
+        foundKey = key;
+        break;
+      }
+    }
+    if (foundKey) {
+      groups.get(foundKey)!.push(i);
+    } else {
+      groups.set(`${m.lat},${m.lng}`, [i]);
+    }
+  });
+
+  const result = [...markers];
+  for (const indices of groups.values()) {
+    if (indices.length < 2) continue;
+    const n = indices.length;
+    indices.forEach((idx, j) => {
+      const angle = (2 * Math.PI * j) / n - Math.PI / 2;
+      result[idx] = {
+        ...result[idx],
+        lat: result[idx].lat + OFFSET * Math.sin(angle),
+        lng: result[idx].lng + OFFSET * Math.cos(angle),
+      };
+    });
+  }
+  return result;
+}
+
 export default function MapView({
-  markers,
+  markers: rawMarkers,
   center = [46.2044, 5.226],
   interactive = false,
   height = "200px",
@@ -274,6 +313,7 @@ export default function MapView({
   onMarkerDragEnd,
 }: MapViewProps) {
   const tile = MAP_TILES[mapStyle];
+  const markers = useMemo(() => spreadOverlapping(rawMarkers), [rawMarkers]);
 
   return (
     <div
