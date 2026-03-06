@@ -83,6 +83,80 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     prevPathRef.current = pathname;
   }, [pathname]);
 
+  // Persistent location tracking (runs on all pages, not just /famille)
+  const locationWatchRef = useRef<number | null>(null);
+  const lastUploadRef = useRef<number>(0);
+
+  useEffect(() => {
+    if (!profile?.family_id || !profile?.id) return;
+
+    // Check if user has location sharing enabled (has an entry in device_locations)
+    let cancelled = false;
+    supabase
+      .from("device_locations")
+      .select("id")
+      .eq("user_id", profile.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled || !data) return;
+        startLocationWatch();
+      });
+
+    function startLocationWatch() {
+      if (locationWatchRef.current !== null) return;
+      if (!("geolocation" in navigator)) return;
+
+      // Immediate position update on start / app resume
+      navigator.geolocation.getCurrentPosition(
+        (pos) => uploadPosition(pos),
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
+      );
+
+      // Continuous tracking
+      locationWatchRef.current = navigator.geolocation.watchPosition(
+        (pos) => {
+          const now = Date.now();
+          if (now - lastUploadRef.current < 30000) return; // throttle to 30s
+          uploadPosition(pos);
+        },
+        () => {},
+        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+      );
+    }
+
+    function uploadPosition(pos: GeolocationPosition) {
+      lastUploadRef.current = Date.now();
+      supabase.from("device_locations").update({
+        lat: pos.coords.latitude,
+        lng: pos.coords.longitude,
+        accuracy: pos.coords.accuracy,
+        updated_at: new Date().toISOString(),
+      }).eq("user_id", profile!.id);
+    }
+
+    // Re-sync position when app comes back to foreground
+    function onVisibilityChange() {
+      if (document.visibilityState === "visible") {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => uploadPosition(pos),
+          () => {},
+          { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+        );
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibilityChange);
+
+    return () => {
+      cancelled = true;
+      document.removeEventListener("visibilitychange", onVisibilityChange);
+      if (locationWatchRef.current !== null) {
+        navigator.geolocation.clearWatch(locationWatchRef.current);
+        locationWatchRef.current = null;
+      }
+    };
+  }, [profile?.family_id, profile?.id]);
+
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
   const startTutorial = useCallback(() => { setTutorialStep(0); setTutorialActive(true); }, []);
