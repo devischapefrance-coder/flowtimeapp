@@ -585,7 +585,7 @@ export default function ReglagesPage() {
 
         <div className="flex flex-col gap-2 mt-3">
           <button className="btn btn-primary text-xs" onClick={() => setMemberModal(true)}>＋ Ajouter un membre</button>
-          <button className="btn btn-secondary text-xs" onClick={() => setContactModal(true)}>＋ Ajouter un contact</button>
+          <button className="btn btn-secondary text-xs" onClick={() => setContactModal(true)}>＋ Ajouter un contact de confiance</button>
           <button className="btn btn-secondary text-xs" onClick={() => setAddressModal(true)}>＋ Ajouter une adresse</button>
           <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>Rejoindre une autre famille</button>
         </div>
