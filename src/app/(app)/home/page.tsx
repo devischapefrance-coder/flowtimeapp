@@ -158,6 +158,11 @@ function getGreeting(date: Date): string {
 
 export default function HomePage() {
   const { profile, chatUnread, openChat } = useProfile();
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
+  function getAvatarUrl(userId: string): string {
+    const { data } = supabase.storage.from("avatars").getPublicUrl(`${userId}/avatar.webp`);
+    return data.publicUrl;
+  }
   const [events, setEvents] = useState<Event[]>([]);
   const [members, setMembers] = useState<Member[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
@@ -1212,8 +1217,12 @@ export default function HomePage() {
               const active = filter === m.id;
               return (
                 <button key={m.id} className="flex flex-col items-center gap-1 shrink-0" style={{ opacity: active ? 1 : 0.4 }} onClick={() => setFilter(active ? null : m.id)}>
-                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg"
-                    style={{ background: "var(--surface2)", outline: active ? `2px solid ${m.color}` : "none", outlineOffset: 2 }}>{m.emoji}</div>
+                  <div className="w-10 h-10 rounded-full flex items-center justify-center text-lg overflow-hidden"
+                    style={{ background: "var(--surface2)", outline: active ? `2px solid ${m.color}` : "none", outlineOffset: 2 }}>
+                    {m.user_id && !failedAvatars.has(m.user_id) ? (
+                      <img src={getAvatarUrl(m.user_id)} alt="" className="w-full h-full object-cover" onError={() => setFailedAvatars((prev) => new Set(prev).add(m.user_id!))} />
+                    ) : m.emoji}
+                  </div>
                   <span className="text-[9px] font-bold truncate max-w-[48px]" style={{ color: active ? m.color : "var(--dim)" }}>{m.name.split(" ")[0]}</span>
                 </button>
               );
