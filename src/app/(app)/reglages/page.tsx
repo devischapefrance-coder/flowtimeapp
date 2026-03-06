@@ -30,7 +30,6 @@ export default function ReglagesPage() {
   const [firstName, setFirstName] = useState(profile?.first_name || "");
   const [lastName, setLastName] = useState(profile?.last_name || "");
   const [phone, setPhone] = useState(profile?.phone || "");
-  const [address, setAddress] = useState(profile?.address || "");
   const [emoji, setEmoji] = useState(profile?.emoji || "👤");
   const [saving, setSaving] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(!!(profile?.lat && profile?.lng));
@@ -113,7 +112,6 @@ export default function ReglagesPage() {
       first_name: firstName,
       last_name: lastName,
       phone,
-      address,
       emoji,
     }).eq("id", profile.id);
     await refreshProfile();
@@ -232,7 +230,6 @@ export default function ReglagesPage() {
           <input placeholder="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} />
           <input value={profile?.email || ""} readOnly style={{ opacity: 0.5, cursor: "not-allowed" }} />
           <input placeholder="Téléphone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
-          <input placeholder="Adresse" value={address} onChange={(e) => setAddress(e.target.value)} />
           <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
             {saving ? "Sauvegarde..." : "Sauvegarder les modifications"}
           </button>
