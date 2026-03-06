@@ -157,6 +157,12 @@ export default function FamillePage() {
   const [mapFocusCenter, setMapFocusCenter] = useState<[number, number] | null>(null);
   const [sharingLocation, setSharingLocation] = useState(false);
   const [showFamilyCode, setShowFamilyCode] = useState(false);
+  const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
+
+  function getAvatarUrl(userId: string): string {
+    const { data } = supabase.storage.from("avatars").getPublicUrl(`${userId}/avatar.webp`);
+    return data.publicUrl;
+  }
 
   // Modal states
   const [memberModal, setMemberModal] = useState<Member | null | "new">(null);
@@ -748,18 +754,35 @@ export default function FamillePage() {
           <div className="flex flex-col gap-2 mb-3">
             {devices.map((d) => {
               const ago = Math.round((Date.now() - new Date(d.updated_at).getTime()) / 60000);
+              const showAvatar = !failedAvatars.has(d.user_id);
               return (
                 <div
                   key={d.id}
-                  className="flex items-center gap-2 text-xs cursor-pointer active:scale-[0.98] transition-transform rounded-xl px-2 py-1.5 -mx-2"
+                  className="flex items-center gap-3 text-xs cursor-pointer active:scale-[0.98] transition-transform rounded-xl px-2 py-2 -mx-2"
                   style={{ background: "transparent" }}
                   onClick={() => { setMapFocusCenter([d.lat, d.lng]); setMapFull(true); }}
                 >
-                  <span className="text-base">{d.emoji}</span>
-                  <span className="font-bold">{d.device_name}</span>
-                  <span style={{ color: "var(--dim)" }}>· {ago < 1 ? "à l'instant" : `il y a ${ago} min`}</span>
-                  <span className="w-1.5 h-1.5 rounded-full" style={{ background: ago < 5 ? "var(--green)" : ago < 30 ? "var(--warm)" : "var(--red)" }} />
-                  <span className="ml-auto text-sm" style={{ color: "var(--faint)" }}>›</span>
+                  <div className="w-9 h-9 rounded-full shrink-0 flex items-center justify-center text-sm overflow-hidden relative" style={{ background: "var(--surface2)" }}>
+                    {showAvatar ? (
+                      <img
+                        src={getAvatarUrl(d.user_id)}
+                        alt=""
+                        className="w-full h-full object-cover"
+                        onError={() => setFailedAvatars((prev) => new Set(prev).add(d.user_id))}
+                      />
+                    ) : (
+                      <span className="text-lg">{d.emoji}</span>
+                    )}
+                    <span
+                      className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full border-2"
+                      style={{ background: ago < 5 ? "var(--green)" : ago < 30 ? "var(--warm)" : "var(--red)", borderColor: "var(--bg)" }}
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-bold text-xs">{d.device_name}</p>
+                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>{ago < 1 ? "En ligne" : `il y a ${ago} min`}</p>
+                  </div>
+                  <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
                 </div>
               );
             })}
