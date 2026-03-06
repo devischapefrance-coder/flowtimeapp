@@ -706,6 +706,20 @@ export default function FamillePage() {
         );
       })()}
 
+      {/* MINI CARTE */}
+      <div className="mb-4 mt-4" data-tutorial="famille-map" style={{ position: "relative", zIndex: 0 }}>
+        <p className="label">Carte</p>
+        <MapViewDynamic
+          markers={[...mapMarkers, ...deviceMapMarkers]}
+          center={mapCenter}
+          height="220px"
+          onMapClick={() => setMapFull(true)}
+        />
+        <p className="text-[10px] text-center mt-2" style={{ color: "var(--faint)" }}>
+          Appuie pour ouvrir en plein écran
+        </p>
+      </div>
+
       {/* ADRESSES */}
       <p className="label">Mes adresses</p>
       {addresses.length > 0 && (
@@ -763,21 +777,6 @@ export default function FamillePage() {
           )}
         </div>
       ))}
-
-
-      {/* MINI CARTE */}
-      <div className="mb-4 mt-4" data-tutorial="famille-map" style={{ position: "relative", zIndex: 0 }}>
-        <p className="label">Carte</p>
-        <MapViewDynamic
-          markers={[...mapMarkers, ...deviceMapMarkers]}
-          center={mapCenter}
-          height="220px"
-          onMapClick={() => setMapFull(true)}
-        />
-        <p className="text-[10px] text-center mt-2" style={{ color: "var(--faint)" }}>
-          Appuie pour ouvrir en plein écran
-        </p>
-      </div>
 
       {/* CARTE PLEIN ECRAN */}
       {mapFull && (
