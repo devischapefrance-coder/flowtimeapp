@@ -9,7 +9,12 @@ import Timeline from "@/components/Timeline";
 import DayAgenda from "@/components/DayAgenda";
 import QuickVoice from "@/components/QuickVoice";
 import NotificationManager from "@/components/NotificationManager";
-import type { Event, Member, Address, Contact, Meal, Birthday, Expense, Chore } from "@/lib/types";
+import type { Event, Member, Address, Contact, Meal, Birthday, Expense, Chore, DeviceLocation } from "@/lib/types";
+import dynamic from "next/dynamic";
+import type { MapMarker } from "@/components/MapView";
+import { useThemeMapStyle } from "@/components/MapView";
+
+const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 import { notifyFamily } from "@/lib/push";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
@@ -40,7 +45,7 @@ const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "meals", label: "Repas", icon: "🍽️" },
   { id: "expenses", label: "Dépenses", icon: "💰" },
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
-
+  { id: "family_map", label: "Carte famille", icon: "🗺️" },
   { id: "chores", label: "Tâches", icon: "🧹" },
 ];
 
@@ -168,7 +173,8 @@ export default function HomePage() {
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [chores, setChores] = useState<Chore[]>([]);
-
+  const [devices, setDevices] = useState<DeviceLocation[]>([]);
+  const themeMapStyle = useThemeMapStyle();
   const [chatOpen, setChatOpen] = useState(false);
 
   const [dataLoaded, setDataLoaded] = useState(false);
@@ -426,7 +432,7 @@ export default function HomePage() {
     const monthStart = localDateStr(new Date(nowLocal.getFullYear(), nowLocal.getMonth(), 1));
     const monthEnd = localDateStr(new Date(nowLocal.getFullYear(), nowLocal.getMonth() + 1, 0));
 
-    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, expRes, choreRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, expRes, choreRes, devRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -444,6 +450,7 @@ export default function HomePage() {
         .gte("date", monthStart)
         .lte("date", monthEnd),
       supabase.from("chores").select("*").eq("family_id", profile.family_id),
+      supabase.from("device_locations").select("*").eq("family_id", profile.family_id),
     ]);
     if (evRes.data) {
       setEvents(evRes.data as Event[]);
@@ -459,6 +466,7 @@ export default function HomePage() {
     if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
     if (expRes.data) setExpenses(expRes.data as Expense[]);
     if (choreRes.data) setChores(choreRes.data as Chore[]);
+    if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
     setDataLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id, selectedDate]);
@@ -936,6 +944,7 @@ export default function HomePage() {
       case "expenses": return renderExpenses();
       case "birthdays": return renderBirthdays();
 
+      case "family_map": return renderFamilyMap();
       case "chores": return renderChores();
       default: return null;
     }
@@ -1437,6 +1446,53 @@ export default function HomePage() {
     );
   }
 
+
+  function renderFamilyMap() {
+    const addressMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
+      id: a.id, lat: a.lat!, lng: a.lng!, emoji: a.emoji || "📍", name: a.name, type: "address" as const,
+    }));
+    const uniqueDevs = Object.values(
+      devices.reduce<Record<string, typeof devices[0]>>((acc, d) => {
+        if (!acc[d.user_id] || new Date(d.updated_at) > new Date(acc[d.user_id].updated_at)) acc[d.user_id] = d;
+        return acc;
+      }, {})
+    );
+    const deviceMarkers: MapMarker[] = uniqueDevs.map((d) => {
+      const member = members.find((m) => m.user_id === d.user_id);
+      return {
+        id: d.id, lat: d.lat, lng: d.lng,
+        emoji: member?.emoji || d.emoji || "📱", name: member?.name || d.device_name,
+        color: "#3DD6C8", type: "device" as const,
+        avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
+      };
+    });
+    const allMarkers = [...addressMarkers, ...deviceMarkers];
+    const center: [number, number] = devices.length > 0
+      ? [devices[0].lat, devices[0].lng]
+      : profile?.lat && profile?.lng
+        ? [profile.lat, profile.lng]
+        : allMarkers.length > 0 ? [allMarkers[0].lat, allMarkers[0].lng] : [46.6, 2.5];
+    return (
+      <Link href="/snap" className="card !mb-0 block cursor-pointer">
+        <div className="flex items-center justify-between mb-2">
+          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+            Voir →
+          </span>
+        </div>
+        <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
+          <MapView
+            markers={allMarkers}
+            center={center}
+            zoom={allMarkers.length > 0 ? 12 : 6}
+            height="180px"
+            mapStyle={themeMapStyle}
+            interactive={false}
+          />
+        </div>
+      </Link>
+    );
+  }
 
   async function completeChore(choreId: string, currentIndex: number) {
     await supabase.from("chores").update({ current_index: currentIndex + 1, last_rotated: localDateStr(new Date()) }).eq("id", choreId);

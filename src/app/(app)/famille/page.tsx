@@ -9,6 +9,11 @@ import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
 import { useRealtimeMembers, useRealtimeContacts, useRealtimeAddresses } from "@/lib/realtime";
 import { useToast } from "@/components/Toast";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
+import Link from "next/link";
+import type { MapMarker } from "@/components/MapView";
+import { useThemeMapStyle } from "@/components/MapView";
+
+const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const AddressPickerMap = dynamic(() => import("@/components/AddressPickerMap"), { ssr: false });
 
 const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
@@ -468,6 +473,32 @@ export default function FamillePage() {
   }, [profile, devices]);
 
 
+  const themeMapStyle = useThemeMapStyle();
+  const mapMarkers: MapMarker[] = [
+    ...addresses.filter((a) => a.lat && a.lng).map((a) => ({
+      id: a.id, lat: a.lat!, lng: a.lng!, emoji: a.emoji, name: a.name, type: "address" as const,
+    })),
+    ...Object.values(
+      devices.reduce<Record<string, typeof devices[0]>>((acc, d) => {
+        if (!acc[d.user_id] || new Date(d.updated_at) > new Date(acc[d.user_id].updated_at)) acc[d.user_id] = d;
+        return acc;
+      }, {})
+    ).map((d) => {
+      const member = members.find((m) => m.user_id === d.user_id);
+      return {
+        id: d.id, lat: d.lat, lng: d.lng,
+        emoji: member?.emoji || d.emoji, name: member?.name || d.device_name,
+        color: "#3DD6C8", type: "device" as const,
+        avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
+      };
+    }),
+  ];
+  const mapCenter: [number, number] = devices.length > 0
+    ? [devices[0].lat, devices[0].lng]
+    : profile?.lat && profile?.lng
+      ? [profile.lat, profile.lng]
+      : mapMarkers.length > 0 ? [mapMarkers[0].lat, mapMarkers[0].lng] : [46.2044, 5.226];
+
   const filledAddresses = addresses.filter((a) => a.address).length;
 
   return (
@@ -690,6 +721,20 @@ export default function FamillePage() {
             </button>
           </div>
         </div>
+        <Link href="/snap" className="block cursor-pointer mt-2">
+          <div className="rounded-xl overflow-hidden" style={{ height: 200, pointerEvents: "none" }}>
+            <MapViewDynamic
+              markers={mapMarkers}
+              center={mapCenter}
+              height="200px"
+              mapStyle={themeMapStyle}
+              interactive={false}
+            />
+          </div>
+          <p className="text-[10px] text-center mt-1.5" style={{ color: "var(--faint)" }}>
+            Appuie pour ouvrir la Snap Map
+          </p>
+        </Link>
       </div>
 
       {/* ADRESSES */}
