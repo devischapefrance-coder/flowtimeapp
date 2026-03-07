@@ -24,6 +24,7 @@ export default function TutorialOverlay({
   const pathnameRef = useRef(pathname);
   const [mounted, setMounted] = useState(false);
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
+  const [isLight, setIsLight] = useState(false);
 
   // Visual states
   const [spotRect, setSpotRect] = useState<DOMRect | null>(null);
@@ -39,6 +40,15 @@ export default function TutorialOverlay({
 
   // Keep pathname ref in sync without triggering effects
   useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
+
+  // Detect light/dark theme
+  useEffect(() => {
+    const check = () => setIsLight(document.documentElement.classList.contains("light"));
+    check();
+    const obs = new MutationObserver(check);
+    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
 
   const targetStep = TUTORIAL_STEPS[step] as TutorialStep | undefined;
   const shownStep = TUTORIAL_STEPS[displayStep] as TutorialStep | undefined;
@@ -125,7 +135,8 @@ export default function TutorialOverlay({
     // Black fill behind everything for iOS
     const fill = document.createElement("div");
     fill.id = "tuto-ios-fill";
-    fill.style.cssText = "position:fixed;inset:0;background:#000;z-index:799;pointer-events:none";
+    const fillBg = document.documentElement.classList.contains("light") ? "#F5F5F7" : "#000";
+    fill.style.cssText = `position:fixed;inset:0;background:${fillBg};z-index:799;pointer-events:none`;
     document.body.appendChild(fill);
 
     return () => {
@@ -220,6 +231,20 @@ export default function TutorialOverlay({
 
   if (!active || !shownStep || !mounted) return null;
 
+  // Theme-aware colors
+  const overlayDim = isLight ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.55)";
+  const cardBg = isLight ? "rgba(255,255,255,0.92)" : "rgba(30,30,45,0.92)";
+  const cardBorder = isLight ? "rgba(124,107,240,0.15)" : "rgba(124,107,240,0.2)";
+  const titleColor = isLight ? "#1D1D1F" : "#fff";
+  const descColor = isLight ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
+  const quitBg = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)";
+  const quitColor = isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)";
+  const skipColor = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
+  const dotBg = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)";
+  const sectionInactiveBg = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)";
+  const sectionInactiveColor = isLight ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
+  const transitionBg = isLight ? "#F5F5F7" : "#000";
+
   const padding = 12;
 
   // Progress dots
@@ -277,9 +302,9 @@ export default function TutorialOverlay({
 
   const overlay = (
     <div style={{ position: "fixed", inset: 0, zIndex: 800 }}>
-      {/* Cross-page black overlay */}
+      {/* Cross-page transition overlay */}
       <div style={{
-        position: "fixed", inset: 0, background: "#000", zIndex: 850,
+        position: "fixed", inset: 0, background: transitionBg, zIndex: 850,
         opacity: overlayBlack ? 1 : 0,
         transition: "opacity 0.3s ease",
         pointerEvents: overlayBlack ? "auto" : "none",
@@ -287,7 +312,7 @@ export default function TutorialOverlay({
 
       {/* Dark overlay with spotlight */}
       {!hasSpot ? (
-        <div style={{ position: "fixed", inset: 0, zIndex: 800, background: "rgba(0,0,0,0.82)" }} />
+        <div style={{ position: "fixed", inset: 0, zIndex: 800, background: overlayDim }} />
       ) : (
         <>
           <svg style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 800, pointerEvents: "none" }}>
@@ -298,7 +323,7 @@ export default function TutorialOverlay({
                   style={{ transition: "all 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
               </mask>
             </defs>
-            <rect width="100%" height="100%" fill="rgba(0,0,0,0.82)" mask="url(#tuto-mask)" />
+            <rect width="100%" height="100%" fill={overlayDim} mask="url(#tuto-mask)" />
             <rect x={sx - 2} y={sy - 2} width={sw + 4} height={sh + 4} rx={sr + 2} ry={sr + 2}
               fill="none" stroke="var(--accent)" strokeWidth="1.5" className="tuto-glow-ring"
               style={{ transition: "all 0.5s cubic-bezier(0.4,0,0.2,1)" }} />
@@ -337,19 +362,20 @@ export default function TutorialOverlay({
             width: 0, height: 0,
             borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
             ...(arrowIsTop
-              ? { top: -8, borderBottom: "8px solid rgba(30,30,45,0.95)" }
-              : { bottom: -8, borderTop: "8px solid rgba(30,30,45,0.95)" }),
+              ? { top: -8, borderBottom: `8px solid ${cardBg}` }
+              : { bottom: -8, borderTop: `8px solid ${cardBg}` }),
           }} />
         )}
 
         <div style={{
-          background: "rgba(30,30,45,0.95)",
-          border: "1px solid rgba(124,107,240,0.2)",
+          background: cardBg,
+          border: `1px solid ${cardBorder}`,
           borderLeft: "4px solid transparent",
           borderImage: "linear-gradient(180deg, #7C6BF0, #9B8BFF) 1",
           borderImageSlice: "0 0 0 1",
           backdropFilter: "blur(24px)",
           borderRadius: 16, overflow: "hidden",
+          boxShadow: isLight ? "0 8px 32px rgba(0,0,0,0.12)" : "0 8px 32px rgba(0,0,0,0.4)",
         }}>
           <div className="p-4">
             {/* Section pill + quit */}
@@ -369,7 +395,7 @@ export default function TutorialOverlay({
               </button>
               <button
                 className="text-[10px] font-bold px-2.5 py-1 rounded-full"
-                style={{ color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)" }}
+                style={{ color: quitColor, background: quitBg }}
                 onClick={onStop}
               >
                 Quitter
@@ -383,8 +409,8 @@ export default function TutorialOverlay({
                   <button key={sec.id}
                     className="text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
                     style={{
-                      background: sec.id === section?.id ? "var(--accent)" : "rgba(255,255,255,0.08)",
-                      color: sec.id === section?.id ? "#fff" : "rgba(255,255,255,0.5)",
+                      background: sec.id === section?.id ? "var(--accent)" : sectionInactiveBg,
+                      color: sec.id === section?.id ? "#fff" : sectionInactiveColor,
                     }}
                     onClick={() => { setSectionPickerOpen(false); onJumpToSection(sec.id); }}
                   >
@@ -395,10 +421,10 @@ export default function TutorialOverlay({
             )}
 
             {/* Title & description */}
-            <p className="font-bold text-[15px] mb-1.5" style={{ fontFamily: "var(--font-title)", color: "#fff" }}>
+            <p className="font-bold text-[15px] mb-1.5" style={{ fontFamily: "var(--font-title)", color: titleColor }}>
               {shownStep.title}
             </p>
-            <p className="text-xs leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-xs leading-relaxed mb-4" style={{ color: descColor }}>
               {shownStep.description}
             </p>
 
@@ -410,7 +436,7 @@ export default function TutorialOverlay({
                     <div key={s.idx} className="rounded-full" style={{
                       width: s.current ? 16 : 6, height: 6,
                       transition: "all 0.4s ease",
-                      background: s.current ? "var(--accent)" : s.done ? "rgba(124,107,240,0.6)" : "rgba(255,255,255,0.12)",
+                      background: s.current ? "var(--accent)" : s.done ? "rgba(124,107,240,0.6)" : dotBg,
                     }} />
                   ))}
                 </div>
@@ -420,7 +446,7 @@ export default function TutorialOverlay({
             {/* Buttons */}
             <div className="flex items-center gap-2">
               <button className="text-[11px] font-bold px-3 py-2 rounded-xl active:scale-95 transition-transform"
-                style={{ color: "rgba(255,255,255,0.35)" }} onClick={onSkipSection}>
+                style={{ color: skipColor }} onClick={onSkipSection}>
                 Passer la section
               </button>
               <div className="flex-1" />
