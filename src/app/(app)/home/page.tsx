@@ -918,8 +918,13 @@ export default function HomePage() {
 
   const monthDays = calendarView === "month" ? getMonthDays(monthYear, monthMonth) : [];
 
+  const flowMe = members.find((m) => m.user_id === profile?.id);
   const flowContext = {
     userName: profile?.first_name,
+    userRole: flowMe?.role || "",
+    userEmoji: flowMe?.emoji || profile?.emoji || "",
+    userBirthDate: profile?.birth_date || flowMe?.birth_date || "",
+    userMemberName: flowMe?.name || profile?.first_name || "",
     members: members.map((m) => ({ name: m.name, role: m.role, emoji: m.emoji, birth_date: m.birth_date })),
     birthdays: birthdays.map((b) => ({ name: b.name, date: b.date, emoji: b.emoji })),
     todayEvents: dayEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name, category: e.category })),

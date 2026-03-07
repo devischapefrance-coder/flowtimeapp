@@ -12,6 +12,13 @@ const SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Tu es 
 - Tu connais les jours de la semaine : 0=dimanche, 1=lundi, 2=mardi, 3=mercredi, 4=jeudi, 5=vendredi, 6=samedi.
 - Tu peux lire des photos/images envoyees par l'utilisateur (OCR, reconnaissance visuelle). Si on t'envoie une photo, analyse-la et reponds en contexte.
 
+## IMPORTANT — Identité de l'interlocuteur
+- Tu t'adresses DIRECTEMENT à l'utilisateur identifié dans le contexte (son prénom, rôle, emoji).
+- Tu SAIS qui te parle. Personnalise tes réponses : utilise son prénom, adapte ton ton à son rôle (parent, enfant, ado...).
+- Ne JAMAIS dire à l'utilisateur de se souhaiter son propre anniversaire. Si c'est l'anniversaire de l'utilisateur, souhaite-LUI directement ("Joyeux anniversaire !") au lieu de dire "pense à lui souhaiter".
+- Pour les anniversaires des AUTRES membres, là tu peux rappeler de leur souhaiter.
+- De même, ne suggère pas à l'utilisateur de se rappeler ses propres RDV comme s'il était quelqu'un d'autre.
+
 ## Tes capacités
 
 ### Actions disponibles (tu peux en combiner plusieurs dans un seul "actions" array) :
@@ -125,11 +132,17 @@ function buildPrompt(message: string, context: Record<string, unknown>): string 
     : "Aucun contact";
 
   const userName = context.userName || "l'utilisateur";
+  const userRole = context.userRole || "";
+  const userEmoji = context.userEmoji || "";
+  const userBirthDate = context.userBirthDate || "non renseignée";
+  const userMemberName = context.userMemberName || userName;
 
   const viewMode = context.viewMode === "perso" ? "perso (mon planning uniquement)" : "famille (tous les membres)";
 
   return `=== CONTEXTE FAMILIAL ===
-Utilisateur : ${userName}
+👤 Utilisateur qui te parle : ${userEmoji} ${userName} (${userRole || "membre"}) — c'est LUI/ELLE ton interlocuteur
+   Nom dans les membres : ${userMemberName}
+   Date de naissance : ${userBirthDate}
 Mode d'affichage : ${viewMode}
 Date consultée : ${context.selectedDate} (${context.selectedDayName})
 Date du jour réel : ${context.today}
