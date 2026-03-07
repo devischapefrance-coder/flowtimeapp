@@ -132,18 +132,15 @@ export default function TutorialOverlay({
     const navbar = document.querySelector("nav") as HTMLElement | null;
     if (navbar) navbar.style.pointerEvents = "none";
 
-    // Black fill behind everything for iOS
-    const fill = document.createElement("div");
-    fill.id = "tuto-ios-fill";
-    const fillBg = document.documentElement.classList.contains("light") ? "#F5F5F7" : "#000";
-    fill.style.cssText = `position:fixed;inset:0;background:${fillBg};z-index:799;pointer-events:none`;
-    document.body.appendChild(fill);
+    // Set body background for iOS gap fix (no opaque overlay blocking view)
+    const prevBodyBg = document.body.style.background;
+    document.body.style.background = document.documentElement.classList.contains("light") ? "#F5F5F7" : "#0F1117";
 
     return () => {
       unlockScroll();
       document.removeEventListener("touchmove", preventScroll);
       if (navbar) navbar.style.pointerEvents = "";
-      document.getElementById("tuto-ios-fill")?.remove();
+      document.body.style.background = prevBodyBg;
     };
   }, [active, lockScroll, unlockScroll]);
 
