@@ -176,7 +176,7 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
           icon="🌅"
           title="Aucune routine"
           subtitle={childMembers.length === 0
-            ? "Ajoute d'abord un membre enfant dans Famille"
+            ? "Ajoute d'abord un membre (fils, fille, ado...) dans Famille"
             : "Crée une routine matin ou soir pour tes enfants"}
         />
       )}
@@ -306,7 +306,7 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
           <div>
             <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Enfant</label>
             {childMembers.length === 0 ? (
-              <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun membre enfant/ado trouvé. Ajoute un membre avec le rôle &quot;Enfant&quot; dans Famille.</p>
+              <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun membre enfant trouvé. Ajoute un membre avec le rôle Fils, Fille ou Ado dans Famille.</p>
             ) : (
               <div className="flex flex-wrap gap-2">
                 {childMembers.map((m) => (
@@ -1256,7 +1256,7 @@ export default function ViePage() {
         ];
 
         const childMembers = members.filter((m) =>
-          ["enfant", "ado", "bébé"].includes((m.role || "").toLowerCase())
+          ["fils", "fille", "ado_garcon", "ado_fille", "petit-fils", "petite-fille", "bebe"].includes((m.role || "").toLowerCase())
         );
 
         return (
