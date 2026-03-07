@@ -54,8 +54,8 @@ export default function SignupPage() {
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))
       return setError("Email invalide");
     if (!phone.trim()) return setError("Le téléphone est requis");
-    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password))
-      return setError("Le mot de passe doit contenir au moins 8 caractères, 1 majuscule et 1 chiffre");
+    if (password.length < 8 || !/[A-Z]/.test(password) || !/[0-9]/.test(password) || !/[^A-Za-z0-9]/.test(password))
+      return setError("Le mot de passe doit contenir au moins 8 caractères, 1 majuscule, 1 chiffre et 1 caractère spécial");
     if (password !== confirm)
       return setError("Les mots de passe ne correspondent pas");
 
@@ -184,6 +184,9 @@ export default function SignupPage() {
                 </span>
                 <span className="text-[10px]" style={{ color: /[0-9]/.test(password) ? "var(--green)" : "var(--dim)" }}>
                   {/[0-9]/.test(password) ? "✓" : "○"} 1 chiffre
+                </span>
+                <span className="text-[10px]" style={{ color: /[^A-Za-z0-9]/.test(password) ? "var(--green)" : "var(--dim)" }}>
+                  {/[^A-Za-z0-9]/.test(password) ? "✓" : "○"} 1 caractère spécial (!@#$...)
                 </span>
               </div>
             </div>
