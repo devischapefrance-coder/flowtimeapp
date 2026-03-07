@@ -89,22 +89,28 @@ export default function TutorialOverlay({
     window.scrollTo(0, savedScrollRef.current);
   }, []);
 
-  // Find element, scroll to it, measure
-  const findElement = useCallback((attr: string): Promise<DOMRect | null> => {
+  // Find element and measure — uses scrollIntoView only after page change (needsScroll=true)
+  const findElement = useCallback((attr: string, needsScroll = false): Promise<DOMRect | null> => {
     return new Promise((resolve) => {
       let attempts = 0;
       function tryFind() {
         const el = document.querySelector(`[data-tutorial="${attr}"]`) as HTMLElement | null;
         if (el) {
-          // Unlock scroll, scroll to element, re-lock, measure
-          unlockScroll();
-          el.scrollIntoView({ behavior: "smooth", block: "center" });
-          const t = setTimeout(() => {
+          if (needsScroll) {
+            // After page change: unlock, scroll, re-lock, measure
+            unlockScroll();
+            el.scrollIntoView({ behavior: "smooth", block: "center" });
+            const t = setTimeout(() => {
+              const rect = el.getBoundingClientRect();
+              lockScroll();
+              resolve(rect);
+            }, 400);
+            seqRef.current.push(t);
+          } else {
+            // Same page: body is fixed, just measure directly
             const rect = el.getBoundingClientRect();
-            lockScroll();
             resolve(rect);
-          }, 400);
-          seqRef.current.push(t);
+          }
         } else if (attempts < 15) {
           attempts++;
           retryRef.current = setTimeout(tryFind, 200);
@@ -185,9 +191,9 @@ export default function TutorialOverlay({
         setDisplayStep(step);
         setSectionPickerOpen(false);
 
-        // Phase 3a: Find element on new page
+        // Phase 3a: Find element on new page (needs scroll)
         if (targetStep!.targetAttr) {
-          const rect = await findElement(targetStep!.targetAttr);
+          const rect = await findElement(targetStep!.targetAttr, true);
           setSpotRect(rect);
         } else {
           lockScroll();
