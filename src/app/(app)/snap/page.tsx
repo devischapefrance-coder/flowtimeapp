@@ -40,6 +40,7 @@ export default function SnapPage() {
   const [routeLoading, setRouteLoading] = useState(false);
   const [mapCenter, setMapCenter] = useState<[number, number]>([46.2044, 5.226]);
   const [mapZoom, setMapZoom] = useState(13);
+  const [dataReady, setDataReady] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   function getAvatarUrl(userId: string): string {
@@ -96,7 +97,9 @@ export default function SnapPage() {
       const avgLat = enriched.reduce((s, d) => s + d.lat, 0) / enriched.length;
       const avgLng = enriched.reduce((s, d) => s + d.lng, 0) / enriched.length;
       setMapCenter([avgLat, avgLng]);
+      if (enriched.length === 1) setMapZoom(15);
     }
+    setDataReady(true);
   }, [familyId]);
 
   useEffect(() => { load(); }, [load]);
@@ -203,17 +206,20 @@ export default function SnapPage() {
 
   return (
     <div className="fixed inset-0" style={{ zIndex: 10, width: "100vw", height: "100dvh" }}>
-      {/* Full-screen map */}
-      <MapView
-        markers={mapMarkers}
-        center={mapCenter}
-        zoom={mapZoom}
-        interactive
-        height="100dvh"
-        mapStyle={mapStyle}
-        route={route}
-        skipFitBounds={!!selectedUserId}
-      />
+      {/* Full-screen map — key forces re-mount once data is ready so Leaflet gets correct center */}
+      {dataReady && (
+        <MapView
+          key={`snap-${mapMarkers.length}`}
+          markers={mapMarkers}
+          center={mapCenter}
+          zoom={mapZoom}
+          interactive
+          height="100dvh"
+          mapStyle={mapStyle}
+          route={route}
+          skipFitBounds={!!selectedUserId}
+        />
+      )}
 
       {/* Back button */}
       <button
