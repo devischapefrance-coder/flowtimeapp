@@ -1,15 +1,18 @@
 import { getAuthUser } from "@/lib/server-auth";
 
-const PROACTIVE_SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Génère UN message proactif court et personnalisé pour l'utilisateur.
+const PROACTIVE_SYSTEM_PROMPT = `Tu es Flow, l'assistant familial de FlowTime. Génère UN message proactif COURT.
 
 Règles :
-- Tutoie, utilise son prénom, sois chaleureux et naturel
-- Analyse le contexte (events du jour, heure, anniversaires) et choisis LE plus pertinent
+- Tutoie, utilise son prénom, sois chaleureux
+- Choisis LE sujet le plus pertinent selon le contexte
 - Ne dis JAMAIS "c'est l'anniversaire de X" quand X est l'utilisateur — souhaite-lui directement
 - Priorité : event imminent > event en cours > anniversaire > résumé journée > salutation
 - 1-2 emojis max
+- "main" : max 80 caractères, "sub" : max 50 caractères
 
-Réponds UNIQUEMENT en JSON valide : { "main": "message (max 120 chars)", "sub": "sous-texte optionnel (max 80 chars)" }`;
+IMPORTANT : Réponds UNIQUEMENT avec ce JSON, rien d'autre :
+{"main":"ton message court","sub":"sous-texte"}
+Pas de markdown, pas de backticks, juste le JSON brut.`;
 
 function buildProactivePrompt(context: Record<string, unknown>): string {
   const members = context.members
@@ -72,7 +75,7 @@ export async function POST(req: Request) {
         },
         body: JSON.stringify({
           model: "claude-haiku-4-5-20251001",
-          max_tokens: 256,
+          max_tokens: 128,
           system: PROACTIVE_SYSTEM_PROMPT,
           messages: [
             { role: "user", content: buildProactivePrompt(context || {}) },
@@ -90,14 +93,36 @@ export async function POST(req: Request) {
         return Response.json({ error: "API error" }, { status: 500 });
       }
 
-      const text = data.content[0].text;
+      const text = (data.content[0].text || "").trim();
 
+      // Try direct parse
       try {
         const parsed = JSON.parse(text);
-        return Response.json(parsed);
+        if (parsed.main) {
+          return Response.json({
+            main: String(parsed.main).slice(0, 120),
+            ...(parsed.sub ? { sub: String(parsed.sub).slice(0, 80) } : {}),
+          });
+        }
       } catch {
-        return Response.json({ main: text.slice(0, 120) });
+        // Try to extract JSON from text (model may wrap in backticks)
+        const match = text.match(/\{[^}]*"main"\s*:\s*"([^"]*)"[^}]*\}/);
+        if (match) {
+          try {
+            const extracted = JSON.parse(match[0]);
+            return Response.json({
+              main: String(extracted.main).slice(0, 120),
+              ...(extracted.sub ? { sub: String(extracted.sub).slice(0, 80) } : {}),
+            });
+          } catch { /* fall through */ }
+        }
       }
+
+      // Last resort: use raw text
+      if (text.length > 0) {
+        return Response.json({ main: text.replace(/[`{}"\n]/g, "").slice(0, 120) });
+      }
+      return Response.json({ error: "Empty response" }, { status: 500 });
     } catch (err) {
       clearTimeout(timeout);
       if (err instanceof DOMException && err.name === "AbortError") {
