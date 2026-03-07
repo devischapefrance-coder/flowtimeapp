@@ -485,41 +485,50 @@ export default function ReglagesPage() {
         </div>
         <p className="text-sm font-bold mb-3 mt-4">Couleur d&apos;accent</p>
         {(() => {
-          const hasPlanThemes = profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro");
+          const plan = profile?.subscription_status === "active" ? profile?.subscription_plan : "free";
+          // Free: dark only (index 0), Plus: 10 first themes, Pro: all 30
+          const allPalettes: [string, string, boolean][] = [
+            ["dark", "#7C6BF0", false],
+            ["p1", "#4A9EF0", false], ["p2", "#4CAF50", false], ["p3", "#F07C4A", false], ["p4", "#E04069", false],
+            ["p5", "#A182E0", false], ["p6", "#3860B0", false], ["p7", "#DAA532", false], ["p8", "#88A8C2", false],
+            ["p9", "#DB8EB0", false],
+            ["p10", "#40CEC4", false], ["p11", "#F06262", false], ["p12", "#9CCC3C", false],
+            ["p13", "#5C4ECC", false], ["p14", "#C48248", false], ["p15", "#C83CC8", false], ["p16", "#60B4F0", false],
+            ["p17", "#34C484", false], ["p18", "#94A3B8", false], ["p19", "#A03048", false],
+            ["p21", "#1A1A2E", true], ["p22", "#FF6B6B", true], ["p23", "#4ECDC4", true], ["p24", "#2D1B69", true],
+            ["p25", "#F8B500", true], ["p26", "#0D7377", true], ["p27", "#FC5185", true], ["p28", "#3A0CA3", true],
+            ["p29", "#B8D12A", true], ["p30", "#E63946", true],
+          ];
+          const maxThemes = plan === "pro" ? 30 : plan === "plus" ? 10 : 1;
           return (
             <div className="relative">
               <div className="flex flex-wrap gap-2.5 justify-center">
-                {([
-                  ["dark", "#7C6BF0"],
-                  ["p1", "#4A9EF0"], ["p2", "#4CAF50"], ["p3", "#F07C4A"], ["p4", "#E04069"],
-                  ["p5", "#A182E0"], ["p6", "#3860B0"], ["p7", "#DAA532"], ["p8", "#88A8C2"],
-                  ["p9", "#DB8EB0"], ["p10", "#40CEC4"], ["p11", "#F06262"], ["p12", "#9CCC3C"],
-                  ["p13", "#5C4ECC"], ["p14", "#C48248"], ["p15", "#C83CC8"], ["p16", "#60B4F0"],
-                  ["p17", "#34C484"], ["p18", "#94A3B8"], ["p19", "#A03048"], ["p20", "#8C3CF0"],
-                ]).map(([key, color]) => (
-                  <button
-                    key={key}
-                    className="w-8 h-8 rounded-full transition-all relative"
-                    style={{
-                      background: color,
-                      boxShadow: theme === key ? `0 0 0 3px var(--bg), 0 0 0 5px ${color}` : "none",
-                      transform: theme === key ? "scale(1.15)" : "scale(1)",
-                      opacity: !hasPlanThemes && key !== "dark" ? 0.4 : 1,
-                    }}
-                    onClick={() => {
-                      if (!hasPlanThemes && key !== "dark") {
-                        router.push("/abonnement");
-                        return;
-                      }
-                      changeTheme(key);
-                    }}
-                    aria-label={`Palette ${key}`}
-                  />
-                ))}
+                {allPalettes.map(([key, color, exclusive], i) => {
+                  const locked = i >= maxThemes;
+                  return (
+                    <button
+                      key={key}
+                      className="w-8 h-8 rounded-full transition-all relative"
+                      style={{
+                        background: color,
+                        boxShadow: theme === key ? `0 0 0 3px var(--bg), 0 0 0 5px ${color}` : "none",
+                        transform: theme === key ? "scale(1.15)" : "scale(1)",
+                        opacity: locked ? 0.3 : 1,
+                      }}
+                      onClick={() => {
+                        if (locked) { router.push("/abonnement"); return; }
+                        changeTheme(key);
+                      }}
+                      aria-label={`Palette ${key}${exclusive ? " (exclusif)" : ""}`}
+                    >
+                      {exclusive && !locked && <span className="absolute -top-1 -right-1 text-[8px]">✦</span>}
+                    </button>
+                  );
+                })}
               </div>
-              {!hasPlanThemes && (
+              {maxThemes < 30 && (
                 <p className="text-center text-[10px] mt-2" style={{ color: "var(--dim)" }}>
-                  🔒 Thèmes supplémentaires disponibles avec FlowTime+
+                  🔒 {maxThemes === 1 ? "Thèmes disponibles avec FlowTime+" : "Plus de thèmes avec FlowTime Pro"}
                 </p>
               )}
             </div>

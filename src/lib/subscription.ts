@@ -4,13 +4,13 @@ export interface PlanLimits {
   maxMembers: number;
   maxFlowMessages: number;
   maxRoutines: number;
+  maxThemes: number;
   hasProactive: boolean;
   hasDocuments: boolean;
   hasSnapMap: boolean;
-  hasThemes: boolean;
   hasExport: boolean;
-  hasWeeklyDigest: boolean;
   hasExternalShare: boolean;
+  hasWeeklyDigest: boolean;
 }
 
 export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
@@ -18,37 +18,37 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxMembers: 4,
     maxFlowMessages: 3,
     maxRoutines: 1,
+    maxThemes: 1,
     hasProactive: false,
-    hasDocuments: false,
+    hasDocuments: true,
     hasSnapMap: false,
-    hasThemes: false,
-    hasExport: false,
+    hasExport: true,
+    hasExternalShare: true,
     hasWeeklyDigest: false,
-    hasExternalShare: false,
   },
   plus: {
     maxMembers: Infinity,
     maxFlowMessages: Infinity,
-    maxRoutines: Infinity,
+    maxRoutines: 5,
+    maxThemes: 10,
     hasProactive: true,
     hasDocuments: true,
     hasSnapMap: true,
-    hasThemes: true,
     hasExport: true,
+    hasExternalShare: true,
     hasWeeklyDigest: false,
-    hasExternalShare: false,
   },
   pro: {
     maxMembers: Infinity,
     maxFlowMessages: Infinity,
     maxRoutines: Infinity,
+    maxThemes: 30,
     hasProactive: true,
     hasDocuments: true,
     hasSnapMap: true,
-    hasThemes: true,
     hasExport: true,
-    hasWeeklyDigest: true,
     hasExternalShare: true,
+    hasWeeklyDigest: true,
   },
 };
 

@@ -1579,23 +1579,15 @@ export default function ViePage() {
             loadDone={loadDone}
             saveDone={saveDone}
             genId={genId}
-            maxRoutines={profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro") ? Infinity : 1}
+            maxRoutines={profile?.subscription_status === "active" ? (profile?.subscription_plan === "pro" ? Infinity : profile?.subscription_plan === "plus" ? 5 : 1) : 1}
           />
         );
       })()}
 
       {/* Documents tab */}
-      {tab === "documents" && (() => {
-        const hasPlan = profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro");
-        if (!hasPlan) {
-          return (
-            <div className="mt-4">
-              <UpgradeNudge feature="Documents familiaux" />
-            </div>
-          );
-        }
-        return <DocumentsTab members={members} familyId={profile?.family_id || ""} />;
-      })()}
+      {tab === "documents" && (
+        <DocumentsTab members={members} familyId={profile?.family_id || ""} />
+      )}
 
       {/* Note Detail Modal */}
       <Modal open={!!detailNote} onClose={() => setDetailNote(null)} title={detailNote?.title || ""}>
