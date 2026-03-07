@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import ReactDOM from "react-dom";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
@@ -34,7 +33,6 @@ export default function SnapPage() {
   const mapStyle = useThemeMapStyle();
 
   const [devices, setDevices] = useState<DeviceWithMember[]>([]);
-  const [members, setMembers] = useState<Member[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [route, setRoute] = useState<RouteInfo | null>(null);
@@ -43,13 +41,13 @@ export default function SnapPage() {
   const [mapZoom, setMapZoom] = useState(13);
   const [dataReady, setDataReady] = useState(false);
   const refreshTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
 
   function getAvatarUrl(userId: string): string {
     const { data } = supabase.storage.from("avatars").getPublicUrl(`${userId}/avatar.webp`);
     return data.publicUrl;
   }
 
-  /** Find the "home" address */
   const findHomeAddress = useCallback((): Address | null => {
     const home = addresses.find((a) =>
       a.lat && a.lng && /maison|domicile/i.test(a.name)
@@ -58,7 +56,6 @@ export default function SnapPage() {
     return addresses.find((a) => a.lat && a.lng) || null;
   }, [addresses]);
 
-  /** Load all data */
   const load = useCallback(async () => {
     if (!familyId) return;
     const [devRes, memRes, addrRes] = await Promise.all([
@@ -68,10 +65,8 @@ export default function SnapPage() {
     ]);
 
     const mems = (memRes.data || []) as Member[];
-    setMembers(mems);
     setAddresses((addrRes.data || []) as Address[]);
 
-    // Deduplicate devices per user_id
     const raw = (devRes.data || []) as DeviceLocation[];
     const unique = Object.values(
       raw.reduce<Record<string, DeviceLocation>>((acc, d) => {
@@ -93,7 +88,6 @@ export default function SnapPage() {
     });
     setDevices(enriched);
 
-    // Center on devices if any
     if (enriched.length > 0) {
       const avgLat = enriched.reduce((s, d) => s + d.lat, 0) / enriched.length;
       const avgLng = enriched.reduce((s, d) => s + d.lng, 0) / enriched.length;
@@ -105,7 +99,6 @@ export default function SnapPage() {
 
   useEffect(() => { load(); }, [load]);
 
-  // Realtime subscription
   useEffect(() => {
     if (!familyId) return;
     const channel = supabase
@@ -120,11 +113,9 @@ export default function SnapPage() {
     return () => { supabase.removeChannel(channel); };
   }, [familyId, load]);
 
-  /** Calculate route from selected member to home */
   const calcRoute = useCallback(async (device: DeviceWithMember) => {
     const home = findHomeAddress();
     if (!home?.lat || !home?.lng) return;
-
     setRouteLoading(true);
     const result = await fetchRoute(
       [device.lat, device.lng],
@@ -135,10 +126,8 @@ export default function SnapPage() {
     setRouteLoading(false);
   }, [findHomeAddress]);
 
-  /** Select a member */
   const selectMember = useCallback((userId: string) => {
     if (selectedUserId === userId) {
-      // Deselect
       setSelectedUserId(null);
       setRoute(null);
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
@@ -151,8 +140,6 @@ export default function SnapPage() {
       setMapCenter([device.lat, device.lng]);
       setMapZoom(15);
       calcRoute(device);
-
-      // Refresh ETA every 60s
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
       refreshTimerRef.current = setInterval(() => {
         const current = devices.find((d) => d.user_id === userId);
@@ -161,14 +148,12 @@ export default function SnapPage() {
     }
   }, [selectedUserId, devices, calcRoute]);
 
-  // Cleanup timer
   useEffect(() => {
     return () => {
       if (refreshTimerRef.current) clearInterval(refreshTimerRef.current);
     };
   }, []);
 
-  // Recalculate route when devices update and someone is selected
   useEffect(() => {
     if (!selectedUserId) return;
     const device = devices.find((d) => d.user_id === selectedUserId);
@@ -176,9 +161,8 @@ export default function SnapPage() {
   }, [devices, selectedUserId, calcRoute]);
 
   const selectedDevice = devices.find((d) => d.user_id === selectedUserId);
-
-  // Build map markers
   const homeAddr = findHomeAddress();
+
   const mapMarkers: MapMarker[] = [
     ...devices.map((d) => ({
       id: d.id,
@@ -205,34 +189,33 @@ export default function SnapPage() {
 
   const hasDevices = devices.length > 0;
 
-  // Use a portal to escape the layout wrapper (which has CSS transforms that break position:fixed)
-  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
-  useEffect(() => {
-    const el = document.createElement("div");
-    el.id = "snap-portal";
-    document.body.appendChild(el);
-    setPortalRoot(el);
-    return () => { document.body.removeChild(el); };
-  }, []);
+  // Compute map container height: viewport minus navbar (80px)
+  const mapHeight = "calc(100dvh - 80px)";
 
-  const content = (
-    <div style={{ position: "fixed", inset: 0, zIndex: 50, width: "100vw", height: "100dvh" }}>
-      {/* Map — takes full screen minus navbar */}
-      <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 80 }}>
-        {dataReady && (
-          <MapView
-            key={`snap-${mapMarkers.length}`}
-            markers={mapMarkers}
-            center={mapCenter}
-            zoom={mapZoom}
-            interactive
-            height="100%"
-            mapStyle={mapStyle}
-            route={route}
-            skipFitBounds={!!selectedUserId}
-          />
-        )}
-      </div>
+  return (
+    <div
+      ref={mapContainerRef}
+      style={{
+        /* Escape layout wrapper padding: negative margins for safe-area-top and pb-80 */
+        marginTop: "calc(-1 * env(safe-area-inset-top, 0px))",
+        marginBottom: -80,
+        height: mapHeight,
+        position: "relative",
+      }}
+    >
+      {/* Map fills this container */}
+      {dataReady && (
+        <MapView
+          markers={mapMarkers}
+          center={mapCenter}
+          zoom={mapZoom}
+          interactive
+          height={mapHeight}
+          mapStyle={mapStyle}
+          route={route}
+          skipFitBounds={!!selectedUserId}
+        />
+      )}
 
       {/* Back button */}
       <button
@@ -242,7 +225,7 @@ export default function SnapPage() {
           position: "absolute",
           top: 12,
           left: 12,
-          zIndex: 20,
+          zIndex: 1000,
           width: 40,
           height: 40,
           borderRadius: 20,
@@ -257,9 +240,9 @@ export default function SnapPage() {
       </button>
 
       {/* Empty state */}
-      {!hasDevices && (
+      {!hasDevices && dataReady && (
         <div
-          style={{ position: "absolute", bottom: 100, left: 0, right: 0, zIndex: 20, padding: "0 24px" }}
+          style={{ position: "absolute", bottom: 24, left: 0, right: 0, zIndex: 1000, padding: "0 24px" }}
           className="flex flex-col items-center"
         >
           <div className="glass p-6 rounded-2xl text-center w-full" style={{ maxWidth: 380 }}>
@@ -279,16 +262,16 @@ export default function SnapPage() {
         </div>
       )}
 
-      {/* Bottom member chips — above navbar */}
+      {/* Bottom member chips */}
       {hasDevices && !selectedDevice && (
         <div
           className="flex gap-2 overflow-x-auto"
           style={{
             position: "absolute",
-            bottom: 88,
+            bottom: 8,
             left: 0,
             right: 0,
-            zIndex: 20,
+            zIndex: 1000,
             padding: "8px 12px",
             scrollbarWidth: "none",
           }}
@@ -342,10 +325,10 @@ export default function SnapPage() {
           className="glass rounded-2xl p-4 animate-in"
           style={{
             position: "absolute",
-            bottom: 88,
+            bottom: 8,
             left: 12,
             right: 12,
-            zIndex: 25,
+            zIndex: 1000,
             maxWidth: 410,
             margin: "0 auto",
           }}
@@ -401,10 +384,10 @@ export default function SnapPage() {
           className="glass rounded-2xl p-4 text-center animate-in"
           style={{
             position: "absolute",
-            bottom: 88,
+            bottom: 8,
             left: 12,
             right: 12,
-            zIndex: 25,
+            zIndex: 1000,
             maxWidth: 410,
             margin: "0 auto",
           }}
@@ -419,10 +402,10 @@ export default function SnapPage() {
           className="glass rounded-2xl p-4 text-center animate-in"
           style={{
             position: "absolute",
-            bottom: 88,
+            bottom: 8,
             left: 12,
             right: 12,
-            zIndex: 25,
+            zIndex: 1000,
             maxWidth: 410,
             margin: "0 auto",
           }}
@@ -436,8 +419,4 @@ export default function SnapPage() {
       )}
     </div>
   );
-
-  // Render via portal to escape layout transform wrapper
-  if (!portalRoot) return null;
-  return ReactDOM.createPortal(content, portalRoot);
 }
