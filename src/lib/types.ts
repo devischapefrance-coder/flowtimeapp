@@ -11,6 +11,10 @@ export interface Profile {
   family_id: string;
   avatar_url: string | null;
   birth_date: string | null;
+  subscription_plan: "free" | "plus" | "pro";
+  subscription_status: "active" | "inactive" | "past_due" | "canceled";
+  subscription_period_end: string | null;
+  stripe_customer_id: string | null;
   created_at: string;
 }
 

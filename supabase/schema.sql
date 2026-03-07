@@ -19,6 +19,11 @@ CREATE TABLE profiles (
   lat DOUBLE PRECISION,
   lng DOUBLE PRECISION,
   family_id UUID DEFAULT gen_random_uuid(),
+  birth_date DATE,
+  subscription_plan TEXT DEFAULT 'free' CHECK (subscription_plan IN ('free', 'plus', 'pro')),
+  subscription_status TEXT DEFAULT 'inactive' CHECK (subscription_status IN ('active', 'inactive', 'past_due', 'canceled')),
+  subscription_period_end TIMESTAMPTZ,
+  stripe_customer_id TEXT,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

@@ -204,7 +204,18 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
           "Content-Type": "application/json",
           ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
         },
-        body: JSON.stringify({ message: userMsg, context, history, image: imgBase64 || undefined }),
+        body: JSON.stringify({
+          message: userMsg,
+          context,
+          history,
+          image: imgBase64 || undefined,
+          dailyFlowCount: (() => {
+            const key = `flow_count_${new Date().toISOString().slice(0, 10)}`;
+            const count = parseInt(localStorage.getItem(key) || "0", 10);
+            localStorage.setItem(key, String(count + 1));
+            return count;
+          })(),
+        }),
       });
       const data = await res.json();
 

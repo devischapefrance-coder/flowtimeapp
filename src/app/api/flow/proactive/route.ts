@@ -1,4 +1,6 @@
 import { getAuthUser } from "@/lib/server-auth";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getPlanLimits } from "@/lib/subscription";
 
 const PROACTIVE_SYSTEM_PROMPT = `Tu es Flow, l'assistant familial de FlowTime. Génère UN message proactif COURT.
 
@@ -64,6 +66,20 @@ export async function POST(req: Request) {
   }
 
   try {
+    // Check if user has proactive access
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("subscription_plan, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const plan = (profile?.subscription_status === "active" ? profile?.subscription_plan : "free") || "free";
+    const limits = getPlanLimits(plan);
+
+    if (!limits.hasProactive) {
+      return Response.json({ blocked: true, main: "Passez à FlowTime+ pour les messages proactifs" });
+    }
+
     const body = await req.json();
     const { context } = body;
 

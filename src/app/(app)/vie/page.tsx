@@ -8,6 +8,7 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 import { useProfile } from "../layout";
+import UpgradeNudge from "@/components/UpgradeNudge";
 import { useRealtimeNotes, useRealtimeShopping, useRealtimeChores, useRealtimeBirthdays } from "@/lib/realtime";
 import Modal from "@/components/Modal";
 import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
@@ -353,9 +354,10 @@ interface RoutineTabProps {
   loadDone: () => Record<string, string[]>;
   saveDone: (d: Record<string, string[]>) => void;
   genId: () => string;
+  maxRoutines: number;
 }
 
-function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loadRoutines, saveRoutines, loadDone, saveDone, genId }: RoutineTabProps) {
+function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loadRoutines, saveRoutines, loadDone, saveDone, genId, maxRoutines }: RoutineTabProps) {
   const [routines, setRoutines] = useState<Routine[]>(() => loadRoutines());
   const [doneMap, setDoneMap] = useState<Record<string, string[]>>(() => loadDone());
   const [activeTimer, setActiveTimer] = useState<{ routineId: string; stepId: string; endTime: number } | null>(null);
@@ -406,6 +408,10 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
 
   function addRoutine() {
     if (!setupMember) return;
+    if (maxRoutines !== Infinity && routines.length >= maxRoutines) {
+      setSetupOpen(false);
+      return;
+    }
     const member = members.find((m) => m.id === setupMember);
     if (!member) return;
     const steps = setupType === "matin"
@@ -461,8 +467,12 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
         )}
         <button
           className="btn btn-primary text-sm shrink-0"
-          onClick={() => setSetupOpen(true)}
-        >+ Routine</button>
+          style={{ opacity: maxRoutines !== Infinity && routines.length >= maxRoutines ? 0.5 : 1 }}
+          onClick={() => {
+            if (maxRoutines !== Infinity && routines.length >= maxRoutines) return;
+            setSetupOpen(true);
+          }}
+        >{maxRoutines !== Infinity && routines.length >= maxRoutines ? "🔒 Limité" : "+ Routine"}</button>
       </div>
 
       {filtered.length === 0 && (
@@ -1569,14 +1579,23 @@ export default function ViePage() {
             loadDone={loadDone}
             saveDone={saveDone}
             genId={genId}
+            maxRoutines={profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro") ? Infinity : 1}
           />
         );
       })()}
 
       {/* Documents tab */}
-      {tab === "documents" && (
-        <DocumentsTab members={members} familyId={profile?.family_id || ""} />
-      )}
+      {tab === "documents" && (() => {
+        const hasPlan = profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro");
+        if (!hasPlan) {
+          return (
+            <div className="mt-4">
+              <UpgradeNudge feature="Documents familiaux" />
+            </div>
+          );
+        }
+        return <DocumentsTab members={members} familyId={profile?.family_id || ""} />;
+      })()}
 
       {/* Note Detail Modal */}
       <Modal open={!!detailNote} onClose={() => setDetailNote(null)} title={detailNote?.title || ""}>

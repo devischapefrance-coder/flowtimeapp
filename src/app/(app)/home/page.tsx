@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
 import FlowChat from "@/components/FlowChat";
@@ -157,6 +158,7 @@ function getGreeting(date: Date): string {
 
 export default function HomePage() {
   const { profile, chatUnread, openChat } = useProfile();
+  const router = useRouter();
 
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
   function getAvatarUrl(userId: string): string {
@@ -551,6 +553,11 @@ export default function HomePage() {
   }, [events, profile?.first_name]);
 
   function handleExport() {
+    const hasPlan = profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro");
+    if (!hasPlan) {
+      router.push("/abonnement");
+      return;
+    }
     if (typeof navigator !== "undefined" && "canShare" in navigator) {
       shareICS(events);
     } else {
@@ -1224,8 +1231,14 @@ export default function HomePage() {
           </div>
           <div className="flex items-center gap-1.5">
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-sm mb-2"
-              style={{ background: "var(--surface2)", color: "var(--dim)" }}
-              onClick={() => { exportPDF(viewEvents, days[0].date, days[6].date); }}
+              style={{ background: "var(--surface2)", color: "var(--dim)", opacity: profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro") ? 1 : 0.4 }}
+              onClick={() => {
+                if (profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro")) {
+                  exportPDF(viewEvents, days[0].date, days[6].date);
+                } else {
+                  router.push("/abonnement");
+                }
+              }}
               title="Exporter PDF">📄</button>
             <button className="w-8 h-8 rounded-full flex items-center justify-center text-lg mb-2"
               data-tutorial="add-event-btn"

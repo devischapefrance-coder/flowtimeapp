@@ -484,28 +484,47 @@ export default function ReglagesPage() {
           ))}
         </div>
         <p className="text-sm font-bold mb-3 mt-4">Couleur d&apos;accent</p>
-        <div className="flex flex-wrap gap-2.5 justify-center">
-          {([
-            ["dark", "#7C6BF0"],
-            ["p1", "#4A9EF0"], ["p2", "#4CAF50"], ["p3", "#F07C4A"], ["p4", "#E04069"],
-            ["p5", "#A182E0"], ["p6", "#3860B0"], ["p7", "#DAA532"], ["p8", "#88A8C2"],
-            ["p9", "#DB8EB0"], ["p10", "#40CEC4"], ["p11", "#F06262"], ["p12", "#9CCC3C"],
-            ["p13", "#5C4ECC"], ["p14", "#C48248"], ["p15", "#C83CC8"], ["p16", "#60B4F0"],
-            ["p17", "#34C484"], ["p18", "#94A3B8"], ["p19", "#A03048"], ["p20", "#8C3CF0"],
-          ]).map(([key, color]) => (
-            <button
-              key={key}
-              className="w-8 h-8 rounded-full transition-all"
-              style={{
-                background: color,
-                boxShadow: theme === key ? `0 0 0 3px var(--bg), 0 0 0 5px ${color}` : "none",
-                transform: theme === key ? "scale(1.15)" : "scale(1)",
-              }}
-              onClick={() => changeTheme(key)}
-              aria-label={`Palette ${key}`}
-            />
-          ))}
-        </div>
+        {(() => {
+          const hasPlanThemes = profile?.subscription_status === "active" && (profile?.subscription_plan === "plus" || profile?.subscription_plan === "pro");
+          return (
+            <div className="relative">
+              <div className="flex flex-wrap gap-2.5 justify-center">
+                {([
+                  ["dark", "#7C6BF0"],
+                  ["p1", "#4A9EF0"], ["p2", "#4CAF50"], ["p3", "#F07C4A"], ["p4", "#E04069"],
+                  ["p5", "#A182E0"], ["p6", "#3860B0"], ["p7", "#DAA532"], ["p8", "#88A8C2"],
+                  ["p9", "#DB8EB0"], ["p10", "#40CEC4"], ["p11", "#F06262"], ["p12", "#9CCC3C"],
+                  ["p13", "#5C4ECC"], ["p14", "#C48248"], ["p15", "#C83CC8"], ["p16", "#60B4F0"],
+                  ["p17", "#34C484"], ["p18", "#94A3B8"], ["p19", "#A03048"], ["p20", "#8C3CF0"],
+                ]).map(([key, color]) => (
+                  <button
+                    key={key}
+                    className="w-8 h-8 rounded-full transition-all relative"
+                    style={{
+                      background: color,
+                      boxShadow: theme === key ? `0 0 0 3px var(--bg), 0 0 0 5px ${color}` : "none",
+                      transform: theme === key ? "scale(1.15)" : "scale(1)",
+                      opacity: !hasPlanThemes && key !== "dark" ? 0.4 : 1,
+                    }}
+                    onClick={() => {
+                      if (!hasPlanThemes && key !== "dark") {
+                        router.push("/abonnement");
+                        return;
+                      }
+                      changeTheme(key);
+                    }}
+                    aria-label={`Palette ${key}`}
+                  />
+                ))}
+              </div>
+              {!hasPlanThemes && (
+                <p className="text-center text-[10px] mt-2" style={{ color: "var(--dim)" }}>
+                  🔒 Thèmes supplémentaires disponibles avec FlowTime+
+                </p>
+              )}
+            </div>
+          );
+        })()}
       </div>
 
       {/* Langue */}
@@ -704,21 +723,30 @@ export default function ReglagesPage() {
       {/* Abonnement */}
       <Section title="Abonnement" emoji="💎">
       <div className="flex flex-col gap-2">
-        <div className="card" style={{ border: "1.5px solid var(--green)" }}>
-          <div className="flex items-center justify-between mb-1">
-            <p className="font-bold text-sm">Gratuit</p>
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--green)", color: "#fff" }}>Actuel</span>
-          </div>
-          <p className="text-xs" style={{ color: "var(--dim)" }}>1 famille · 3 membres · 5 événements/jour</p>
-        </div>
-        <div className="card">
-          <p className="font-bold text-sm">Premium <span style={{ color: "var(--accent)" }}>4.99€/mois</span></p>
-          <p className="text-xs" style={{ color: "var(--dim)" }}>Illimité · Flow IA avancé · Sons ambiants</p>
-        </div>
-        <div className="card">
-          <p className="font-bold text-sm">Famille <span style={{ color: "var(--accent)" }}>9.99€/mois</span></p>
-          <p className="text-xs" style={{ color: "var(--dim)" }}>Multi-famille · Partage · Alertes proactives</p>
-        </div>
+        {(() => {
+          const currentPlan = profile?.subscription_plan || "free";
+          const isActive = profile?.subscription_status === "active";
+          const planLabel = currentPlan === "pro" ? "👑 FlowTime Pro" : currentPlan === "plus" ? "⚡ FlowTime+" : "🌱 Gratuit";
+          const periodEnd = profile?.subscription_period_end
+            ? new Date(profile.subscription_period_end).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+            : null;
+          return (
+            <div className="card" style={{ border: `1.5px solid ${isActive && currentPlan !== "free" ? "var(--accent)" : "var(--green)"}` }}>
+              <div className="flex items-center justify-between mb-1">
+                <p className="font-bold text-sm">{planLabel}</p>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: isActive && currentPlan !== "free" ? "var(--accent)" : "var(--green)", color: "#fff" }}>Actuel</span>
+              </div>
+              {periodEnd && isActive && <p className="text-[10px] mb-1" style={{ color: "var(--dim)" }}>Renouvellement le {periodEnd}</p>}
+              <button
+                className="w-full mt-2 py-2 rounded-xl text-xs font-bold transition-all"
+                style={{ background: "var(--accent)", color: "#fff" }}
+                onClick={() => router.push("/abonnement")}
+              >
+                {isActive && currentPlan !== "free" ? "Gérer mon abonnement" : "Voir les offres"}
+              </button>
+            </div>
+          );
+        })()}
       </div>
       </Section>
 

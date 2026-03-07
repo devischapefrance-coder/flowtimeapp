@@ -1,4 +1,6 @@
 import { getAuthUser } from "@/lib/server-auth";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { getPlanLimits } from "@/lib/subscription";
 
 const SYSTEM_PROMPT = `Tu es Flow 🌊, l'assistant familial de FlowTime. Tu es chaleureux, malin, un peu taquin mais toujours bienveillant. Tu tutoies l'utilisateur comme un ami proche.
 
@@ -180,6 +182,27 @@ export async function POST(req: Request) {
     // Input validation
     if (typeof message !== "string" || message.length === 0 || message.length > 2000) {
       return Response.json({ error: "Message invalide (max 2000 caractères)" }, { status: 400 });
+    }
+
+    // Check Flow message limit for free users
+    const { data: profile } = await supabaseAdmin
+      .from("profiles")
+      .select("subscription_plan, subscription_status")
+      .eq("id", user.id)
+      .single();
+
+    const plan = (profile?.subscription_status === "active" ? profile?.subscription_plan : "free") || "free";
+    const limits = getPlanLimits(plan);
+
+    if (limits.maxFlowMessages !== Infinity) {
+      // Check daily count from client-provided count (validated server-side via context)
+      const dailyCount = typeof body.dailyFlowCount === "number" ? body.dailyFlowCount : 0;
+      if (dailyCount >= limits.maxFlowMessages) {
+        return Response.json({
+          response: `Tu as atteint la limite de ${limits.maxFlowMessages} messages par jour avec le plan gratuit 🌱 Passe à FlowTime+ pour des conversations illimitées ! ⚡`,
+          upgrade: true,
+        });
+      }
     }
 
     // Build conversation history for multi-turn

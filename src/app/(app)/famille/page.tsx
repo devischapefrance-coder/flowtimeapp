@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
@@ -134,6 +135,7 @@ const DEFAULT_ADDRESSES = [
 
 export default function FamillePage() {
   const { profile } = useProfile();
+  const router = useRouter();
   const { toast } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => load());
   const familyId = profile?.family_id;
@@ -269,6 +271,12 @@ export default function FamillePage() {
   // MEMBER CRUD
   function openMemberModal(m: Member | "new") {
     if (m === "new") {
+      // Check member limit for free plan
+      const plan = profile?.subscription_status === "active" ? profile?.subscription_plan : "free";
+      if ((!plan || plan === "free") && members.length >= 4) {
+        router.push("/abonnement");
+        return;
+      }
       setForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
     } else {
       setForm({ name: m.name, role: getLocalRole(m.id, m.role), emoji: m.emoji, color: m.color, birth_date: m.birth_date || "", phone: m.phone || "" });
@@ -436,6 +444,13 @@ export default function FamillePage() {
   // Device location sharing
   async function toggleLocationSharing() {
     if (!familyId || !profile) return;
+
+    // Gate Snap Map for free users
+    const plan = profile?.subscription_status === "active" ? profile?.subscription_plan : "free";
+    if (!plan || plan === "free") {
+      router.push("/abonnement");
+      return;
+    }
 
     if (sharingLocation) {
       // Stop sharing — delete device location
