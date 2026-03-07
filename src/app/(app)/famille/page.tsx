@@ -519,27 +519,30 @@ export default function FamillePage() {
       {/* MEMBRES */}
       <div data-tutorial="famille-membres" className="stagger-in">
       <p className="label">Membres de la famille</p>
-      {/* If user has no linked member, show a picker to self-identify */}
-      {profile && !members.some((m) => m.user_id === profile.id) && members.filter((m) => !m.user_id).length > 0 && (
-        <div className="card !py-2 !px-3 mb-2" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)" }}>
-          <p className="text-xs font-bold mb-1.5" style={{ color: "var(--accent)" }}>Quel membre êtes-vous ?</p>
-          <div className="flex flex-wrap gap-1.5">
-            {members.filter((m) => !m.user_id).map((m) => (
-              <button
-                key={m.id}
-                className="px-2.5 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-transform"
-                style={{ background: "var(--surface2)", color: "var(--text)" }}
-                onClick={async () => {
-                  await supabase.from("members").update({ user_id: profile.id }).eq("id", m.id);
-                  load();
-                }}
-              >
-                {m.emoji} {m.name}
-              </button>
-            ))}
+      {/* If user has no linked member, show a picker — only show members whose name matches */}
+      {profile && !members.some((m) => m.user_id === profile.id) && (() => {
+        const matchingUnlinked = members.filter((m) => !m.user_id && m.name.toLowerCase() === profile.first_name?.toLowerCase());
+        return matchingUnlinked.length > 0 ? (
+          <div className="card !py-2 !px-3 mb-2" style={{ background: "var(--accent-soft)", border: "1px solid var(--accent)" }}>
+            <p className="text-xs font-bold mb-1.5" style={{ color: "var(--accent)" }}>Ce membre vous correspond ?</p>
+            <div className="flex flex-wrap gap-1.5">
+              {matchingUnlinked.map((m) => (
+                <button
+                  key={m.id}
+                  className="px-2.5 py-1.5 rounded-xl text-xs font-bold active:scale-95 transition-transform"
+                  style={{ background: "var(--surface2)", color: "var(--text)" }}
+                  onClick={async () => {
+                    await supabase.from("members").update({ user_id: profile.id }).eq("id", m.id);
+                    load();
+                  }}
+                >
+                  {m.emoji} {m.name}
+                </button>
+              ))}
+            </div>
           </div>
-        </div>
-      )}
+        ) : null;
+      })()}
       <div className="card no-press">
         {/* Member list */}
         <div className="flex flex-col gap-2">

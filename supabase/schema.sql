@@ -37,6 +37,9 @@ CREATE TABLE members (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Un seul membre lié par user par famille (les membres sans compte ont user_id NULL)
+CREATE UNIQUE INDEX IF NOT EXISTS members_family_user_unique ON members (family_id, user_id) WHERE user_id IS NOT NULL;
+
 -- Contacts de confiance
 CREATE TABLE contacts (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,

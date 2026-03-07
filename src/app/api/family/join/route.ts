@@ -62,28 +62,46 @@ export async function POST(req: Request) {
 
   // 4. Auto-create a member entry for this person in the family
   if (joinerProfile) {
-    // Check if a member with this name already exists to avoid duplicates
-    const { data: existingMembers } = await adminClient
+    // Check if this user already has a member entry in this family (by user_id)
+    const { data: existingByUserId } = await adminClient
       .from("members")
       .select("id")
       .eq("family_id", targetFamilyId)
-      .ilike("name", joinerProfile.first_name);
+      .eq("user_id", user.id);
 
-    if (!existingMembers || existingMembers.length === 0) {
-      // Try with phone first, fallback without if column doesn't exist
-      const memberData: Record<string, unknown> = {
-        family_id: targetFamilyId,
-        name: joinerProfile.first_name,
-        emoji: joinerProfile.emoji || "👤",
-        role: "parent",
-        user_id: user.id,
-      };
+    if (existingByUserId && existingByUserId.length > 0) {
+      // User already has a member entry — skip
+    } else {
+      // Check if a member with matching name exists without a linked account
+      const { data: matchByName } = await adminClient
+        .from("members")
+        .select("id")
+        .eq("family_id", targetFamilyId)
+        .ilike("name", joinerProfile.first_name)
+        .is("user_id", null);
 
-      const { error: insertErr } = await adminClient.from("members").insert({ ...memberData, phone: joinerProfile.phone || null });
+      if (matchByName && matchByName.length > 0) {
+        // Link the existing unlinked member to this user
+        await adminClient
+          .from("members")
+          .update({ user_id: user.id, emoji: joinerProfile.emoji || undefined })
+          .eq("id", matchByName[0].id);
+      } else {
+        // Create a new member entry
+        const memberData: Record<string, unknown> = {
+          family_id: targetFamilyId,
+          name: joinerProfile.first_name,
+          emoji: joinerProfile.emoji || "👤",
+          role: "parent",
+          user_id: user.id,
+        };
 
-      if (insertErr) {
-        // Retry without phone in case column doesn't exist yet
-        await adminClient.from("members").insert(memberData);
+        const { error: insertErr } = await adminClient.from("members").insert({ ...memberData, phone: joinerProfile.phone || null });
+
+        if (insertErr) {
+          // Retry without phone in case column doesn't exist yet
+          await adminClient.from("members").insert(memberData);
+        }
       }
     }
   }

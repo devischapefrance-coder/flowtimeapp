@@ -295,13 +295,16 @@ export default function ReglagesPage() {
     setTimeout(() => setCodeCopied(false), 3000);
   }
 
+  const [joinLoading, setJoinLoading] = useState(false);
+
   async function joinFamily() {
     setJoinError("");
     setJoinSuccess("");
-    if (!profile || !joinCode.trim()) return;
+    if (!profile || !joinCode.trim() || joinLoading) return;
+    setJoinLoading(true);
 
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return setJoinError("Session expirée, reconnecte-toi.");
+    if (!session) { setJoinLoading(false); return setJoinError("Session expirée, reconnecte-toi."); }
 
     const res = await fetch("/api/family/join", {
       method: "POST",
@@ -315,11 +318,13 @@ export default function ReglagesPage() {
     const result = await res.json();
 
     if (!res.ok) {
+      setJoinLoading(false);
       return setJoinError(result.error || "Erreur inconnue");
     }
 
     setJoinSuccess("Tu as rejoint la famille ! Tu as été ajouté comme membre.");
     setJoinCode("");
+    setJoinLoading(false);
     refreshProfile();
     // Auto-reload after 2s to refresh all data
     setTimeout(() => window.location.reload(), 2000);
@@ -977,7 +982,7 @@ export default function ReglagesPage() {
             className="!text-center !text-lg !tracking-[4px] !font-extrabold"
             style={{ fontFamily: "monospace" }}
           />
-          <button className="btn btn-primary" onClick={joinFamily} disabled={joinCode.length < 8}>
+          <button className="btn btn-primary" onClick={joinFamily} disabled={joinCode.length < 8 || joinLoading}>
             Rejoindre cette famille
           </button>
           <p className="text-[10px] text-center" style={{ color: "var(--faint)" }}>

@@ -83,6 +83,10 @@ export default function SignupPage() {
       });
     }
 
+    // Reset onboarding flags so the new user gets the full intro
+    localStorage.removeItem("flowtime_onboarded");
+    localStorage.removeItem("flowtime_tutorial_pending");
+
     router.push("/home");
   }
 
@@ -171,6 +175,17 @@ export default function SignupPage() {
                   />
                 </div>
               )}
+              <div className="mt-1.5 flex flex-col gap-0.5">
+                <span className="text-[10px]" style={{ color: password.length >= 8 ? "var(--green)" : "var(--dim)" }}>
+                  {password.length >= 8 ? "✓" : "○"} 8 caractères minimum
+                </span>
+                <span className="text-[10px]" style={{ color: /[A-Z]/.test(password) ? "var(--green)" : "var(--dim)" }}>
+                  {/[A-Z]/.test(password) ? "✓" : "○"} 1 majuscule
+                </span>
+                <span className="text-[10px]" style={{ color: /[0-9]/.test(password) ? "var(--green)" : "var(--dim)" }}>
+                  {/[0-9]/.test(password) ? "✓" : "○"} 1 chiffre
+                </span>
+              </div>
             </div>
             <input type="password" placeholder="Confirmer le mot de passe" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
           </div>
