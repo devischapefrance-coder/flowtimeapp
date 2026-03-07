@@ -323,8 +323,6 @@ function DocumentsTab({ members, familyId }: { members: Member[]; familyId: stri
           >Ajouter</button>
         </div>
       </Modal>
-
-      <input type="file" accept="image/*" className="hidden" />
     </div>
   );
 }
@@ -688,8 +686,6 @@ export default function ViePage() {
   const [newShoppingText, setNewShoppingText] = useState("");
   const [shoppingCat, setShoppingCat] = useState("all");
 
-  // Budget state removed
-
   // Chores state
   const [chores, setChores] = useState<Chore[]>([]);
   const [choreModal, setChoreModal] = useState(false);
@@ -697,8 +693,6 @@ export default function ViePage() {
   const [choreEmoji, setChoreEmoji] = useState("🧹");
   const [choreFreq, setChoreFreq] = useState<"daily" | "weekly">("weekly");
   const [choreMembers, setChoreMembers] = useState<string[]>([]);
-
-  // Photos state removed
 
   // Comment counts per note
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
@@ -833,7 +827,6 @@ export default function ViePage() {
   // Realtime subscriptions
   useRealtimeNotes(profile?.family_id, profile?.first_name || "", loadData);
   useRealtimeShopping(profile?.family_id, loadData);
-  // useRealtimeExpenses removed
   useRealtimeChores(profile?.family_id, loadData);
   useRealtimeBirthdays(profile?.family_id, loadData);
 

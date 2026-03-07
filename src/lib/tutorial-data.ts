@@ -94,7 +94,7 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/vie",
     targetAttr: "vie-tabs",
     title: "Ta vie organisée",
-    description: "Notes, courses, budget, tâches, photos — tout est organisé par onglets. Appuie sur un onglet pour changer de catégorie.",
+    description: "Notes, courses, tâches, routines et documents — tout est organisé par onglets. Appuie sur un onglet pour changer de catégorie.",
     position: "bottom",
   },
   {

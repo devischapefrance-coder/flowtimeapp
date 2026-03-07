@@ -40,10 +40,8 @@ interface WidgetConfig {
 const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "stats", label: "Stats rapides", icon: "📊" },
   { id: "flow", label: "Flow AI", icon: "🤖" },
-  // météo fusionnée dans le widget Flow
   { id: "calendar", label: "Planning", icon: "📅" },
   { id: "meals", label: "Repas", icon: "🍽️" },
-  // expenses widget removed
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
   { id: "family_map", label: "Carte famille", icon: "🗺️" },
   { id: "chores", label: "Tâches", icon: "🧹" },
@@ -171,7 +169,6 @@ export default function HomePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
-  // expenses state removed
   const [chores, setChores] = useState<Chore[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const themeMapStyle = useThemeMapStyle();
@@ -288,7 +285,6 @@ export default function HomePage() {
   const [qeShared, setQeShared] = useState(true);
   const [qeReminder, setQeReminder] = useState<number | null>(null);
 
-  // (flowPending confirmation removed — events auto-assigned based on viewMode)
   const [qeRecurrence, setQeRecurrence] = useState<"none" | "daily" | "weekly" | "monthly">("none");
   const [qeConflict, setQeConflict] = useState<string | null>(null);
   const [viewType, setViewType] = useState<"timeline" | "agenda">("timeline");
@@ -304,7 +300,6 @@ export default function HomePage() {
 
   // Widget expanded modal states
   const [weatherOpen, setWeatherOpen] = useState(false);
-  // expensesOpen state removed
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
 
   // On mount: check goto-date override from search
@@ -455,7 +450,6 @@ export default function HomePage() {
     if (contRes.data) setContacts(contRes.data as Contact[]);
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
     if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
-    // expenses loading removed
     if (choreRes.data) setChores(choreRes.data as Chore[]);
     if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
     setDataLoaded(true);
@@ -487,7 +481,6 @@ export default function HomePage() {
   useRealtimeMeals(profile?.family_id, loadData);
   useRealtimeBirthdays(profile?.family_id, loadData);
   useRealtimeMembers(profile?.family_id, loadData);
-  // useRealtimeExpenses removed
 
   // Polling fallback: refresh every 10s
   useEffect(() => {
@@ -931,10 +924,8 @@ export default function HomePage() {
     switch (widgetId) {
       case "stats": return renderStats();
       case "flow": return renderFlow();
-      // weather fusionnée dans flow
       case "calendar": return renderCalendar();
       case "meals": return renderMeals();
-      // expenses widget removed
       case "birthdays": return renderBirthdays();
 
       case "family_map": return renderFamilyMap();
@@ -1282,8 +1273,6 @@ export default function HomePage() {
       </div>
     );
   }
-
-  // renderExpenses removed
 
   function renderBirthdays() {
     return (
@@ -1732,7 +1721,7 @@ export default function HomePage() {
       {/* Chat */}
       <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={() => {}} />
 
-      {/* Flow confirmation modal removed — events auto-assigned based on viewMode */}
+
 
       {/* Family Chat */}
 
@@ -1778,7 +1767,6 @@ export default function HomePage() {
         );
       })()}
 
-      {/* Expenses modal removed */}
 
       {(() => {
         const birthdaysByMonth: Record<number, typeof allBirthdaysSorted> = {};

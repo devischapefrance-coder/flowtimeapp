@@ -823,6 +823,31 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.7.0", date: "7 mars 2026", tag: "Nouveau",
+            changes: [
+              "Documents familiaux : stockez vos cartes vitales, CNI, passeports, mutuelles, assurances scolaires... avec photos",
+              "14 types de documents proposés, filtre par membre, vue plein écran",
+            ],
+          },
+          {
+            version: "2.6.0", date: "7 mars 2026", tag: "Enfants",
+            changes: [
+              "Routines matin/soir pour enfants : étapes avec timer et validation automatique",
+              "Tap sur une étape pour lancer le compte à rebours, auto-validé à la fin",
+              "Barre de progression par routine, reset quotidien",
+            ],
+          },
+          {
+            version: "2.5.0", date: "7 mars 2026", tag: "Flow IA",
+            changes: [
+              "Flow widget : messages proactifs générés par l'IA (remplace les messages codés en dur)",
+              "Météo intégrée dans le widget Flow (widget météo séparé supprimé)",
+              "Ajout d'événements simplifié : plus de popup de confirmation, mode perso/famille automatique",
+              "Flow peut changer la visibilité d'un événement (perso ↔ famille) sur demande",
+              "Widgets budget et photos retirés de l'app",
+            ],
+          },
+          {
             version: "2.4.0", date: "5 mars 2026", tag: "UX",
             changes: [
               "Tâches ménagères : checklist cochable avec compteur, tâches faites barrées",

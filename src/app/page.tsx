@@ -134,7 +134,7 @@ export default function LandingPage() {
         </svg>
       ),
       title: "Organisation quotidienne",
-      desc: "Notes, courses, budget, tâches ménagères et photos partagées.",
+      desc: "Notes, courses, tâches ménagères, routines enfants et documents familiaux.",
       color: "var(--warm)",
     },
   ];
@@ -535,7 +535,7 @@ export default function LandingPage() {
           {[
             { num: "1", title: "Créez votre compte", desc: "Inscription gratuite en 30 secondes, avec email ou Google.", color: "var(--accent)" },
             { num: "2", title: "Invitez votre famille", desc: "Partagez un QR code ou un lien — ils rejoignent en un tap.", color: "var(--teal)" },
-            { num: "3", title: "Organisez ensemble", desc: "Planning, courses, dépenses… tout est synchronisé en temps réel.", color: "var(--green)" },
+            { num: "3", title: "Organisez ensemble", desc: "Planning, courses, documents… tout est synchronisé en temps réel.", color: "var(--green)" },
           ].map((step, i) => (
             <Reveal key={i} delay={i * 120} className="flex items-start gap-4 py-4">
               <div
