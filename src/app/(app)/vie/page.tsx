@@ -1073,10 +1073,7 @@ export default function ViePage() {
                           <p className="text-[10px] font-bold" style={{ color: "var(--accent)" }}>{currentMember.name}</p>
                         </div>
                       )}
-                      <div className="flex flex-col gap-1">
-                        <button className="text-xs p-1 rounded" style={{ background: "var(--surface2)" }} onClick={() => rotateChore(chore)} title="Rotation">🔄</button>
-                        <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteChore(chore.id)}>✕</button>
-                      </div>
+                      <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteChore(chore.id)}>✕</button>
                     </div>
                     {/* Rotation preview */}
                     {chore.assigned_members.length > 1 && (
