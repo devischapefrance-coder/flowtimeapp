@@ -202,14 +202,14 @@ export default function SnapPage() {
   const hasDevices = devices.length > 0;
 
   return (
-    <div className="fixed inset-0" style={{ zIndex: 10 }}>
+    <div className="fixed inset-0" style={{ zIndex: 10, width: "100vw", height: "100dvh" }}>
       {/* Full-screen map */}
       <MapView
         markers={mapMarkers}
         center={mapCenter}
         zoom={mapZoom}
         interactive
-        height="100%"
+        height="100dvh"
         mapStyle={mapStyle}
         route={route}
         skipFitBounds={!!selectedUserId}
