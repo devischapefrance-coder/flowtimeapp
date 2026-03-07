@@ -521,59 +521,67 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
               {routine.steps.map((step) => {
                 const isDone = done.includes(step.id);
                 const isTimerActive = activeTimer?.routineId === routine.id && activeTimer?.stepId === step.id;
+                const timerProgress = isTimerActive ? Math.max(0, 1 - timerLeft / (step.duration * 60)) : 0;
 
                 return (
-                  <div
+                  <button
                     key={step.id}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left w-full relative overflow-hidden"
                     style={{
-                      background: isDone ? "rgba(34,197,94,0.1)" : "var(--surface2)",
+                      background: isDone ? "rgba(34,197,94,0.1)" : isTimerActive ? "var(--accent-soft)" : "var(--surface2)",
                       opacity: isDone ? 0.6 : 1,
                     }}
+                    onClick={() => {
+                      if (isDone) {
+                        // Tap sur un step validé → annuler
+                        toggleStep(routine.id, step.id);
+                      } else if (isTimerActive) {
+                        // Tap pendant timer → skip, valider immédiatement
+                        setActiveTimer(null);
+                        toggleStep(routine.id, step.id);
+                      } else {
+                        // Tap sur step non fait → lancer le timer
+                        startTimer(routine.id, step);
+                      }
+                    }}
                   >
-                    {/* Check button */}
-                    <button
-                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
+                    {/* Timer progress bar background */}
+                    {isTimerActive && (
+                      <div
+                        className="absolute inset-0 transition-all"
+                        style={{
+                          background: "var(--accent)",
+                          opacity: 0.1,
+                          width: `${timerProgress * 100}%`,
+                        }}
+                      />
+                    )}
+
+                    {/* Check indicator */}
+                    <div
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 relative z-10"
                       style={{
-                        background: isDone ? "var(--green, #22c55e)" : "transparent",
-                        border: isDone ? "none" : "2px solid var(--glass-border)",
+                        background: isDone ? "var(--green, #22c55e)" : isTimerActive ? "var(--accent)" : "transparent",
+                        border: isDone || isTimerActive ? "none" : "2px solid var(--glass-border)",
                         color: "#fff",
                       }}
-                      onClick={() => {
-                        toggleStep(routine.id, step.id);
-                        if (isTimerActive) setActiveTimer(null);
+                    >
+                      {isDone ? "✓" : isTimerActive ? "⏱" : ""}
+                    </div>
+
+                    <span className="text-base relative z-10">{step.emoji}</span>
+                    <span className={`text-xs flex-1 font-medium relative z-10 ${isDone ? "line-through" : ""}`}>{step.label}</span>
+
+                    {/* Timer countdown or duration label */}
+                    <span className="text-[10px] font-bold tabular-nums relative z-10 px-2 py-1 rounded-lg"
+                      style={{
+                        background: isTimerActive ? "var(--accent)" : isDone ? "transparent" : "var(--accent-soft)",
+                        color: isTimerActive ? "#fff" : isDone ? "var(--green, #22c55e)" : "var(--accent)",
                       }}
                     >
-                      {isDone ? "✓" : ""}
-                    </button>
-
-                    <span className="text-base">{step.emoji}</span>
-                    <span className={`text-xs flex-1 font-medium ${isDone ? "line-through" : ""}`}>{step.label}</span>
-
-                    {/* Timer */}
-                    {!isDone && (
-                      isTimerActive ? (
-                        <div className="flex items-center gap-1.5">
-                          <span className="text-xs font-bold tabular-nums" style={{ color: timerLeft <= 10 ? "var(--red, #ef4444)" : "var(--accent)" }}>
-                            {formatTime(timerLeft)}
-                          </span>
-                          <button
-                            className="text-[10px] px-2 py-1 rounded-lg font-bold"
-                            style={{ background: "var(--surface2)", color: "var(--dim)" }}
-                            onClick={() => setActiveTimer(null)}
-                          >Stop</button>
-                        </div>
-                      ) : (
-                        <button
-                          className="text-[10px] px-2 py-1 rounded-lg font-bold"
-                          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-                          onClick={() => startTimer(routine.id, step)}
-                        >
-                          {step.duration} min
-                        </button>
-                      )
-                    )}
-                  </div>
+                      {isDone ? "✓" : isTimerActive ? formatTime(timerLeft) : `${step.duration} min`}
+                    </span>
+                  </button>
                 );
               })}
             </div>
