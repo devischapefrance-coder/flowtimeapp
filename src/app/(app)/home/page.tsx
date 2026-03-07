@@ -2030,9 +2030,18 @@ export default function HomePage() {
                     <div key={monthIdx}>
                       <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--accent)" }}>{MONTH_NAMES[Number(monthIdx)]}</p>
                       <div className="flex flex-col gap-2">
-                        {bdays.map((b) => (
+                        {bdays.map((b) => {
+                          const bMem = b.member_id ? members.find((m) => m.id === b.member_id) : null;
+                          const bUid = bMem?.user_id;
+                          return (
                           <div key={b.id} className="flex items-center gap-3 px-3 py-2.5 rounded-xl" style={{ background: "var(--surface2)" }}>
-                            <span className="text-xl">{b.emoji || "🎂"}</span>
+                            {bUid && !failedAvatars.has(bUid) ? (
+                              <div className="w-8 h-8 rounded-full overflow-hidden shrink-0">
+                                <img src={getAvatarUrl(bUid)} alt="" className="w-full h-full object-cover" onError={() => setFailedAvatars((prev) => new Set(prev).add(bUid))} />
+                              </div>
+                            ) : (
+                              <span className="text-xl">{b.emoji || "🎂"}</span>
+                            )}
                             <div className="flex-1">
                               <p className="text-sm font-bold">{b.name}</p>
                               <p className="text-[10px]" style={{ color: "var(--dim)" }}>
@@ -2047,7 +2056,8 @@ export default function HomePage() {
                               {b.daysUntil === 0 ? "Aujourd'hui !" : b.daysUntil === 1 ? "Demain" : `J-${b.daysUntil}`}
                             </span>
                           </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   ))}
