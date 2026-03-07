@@ -302,6 +302,24 @@
     color: var(--faint) !important;
   }
 
+  input[type="date"] {
+    color-scheme: dark;
+    min-height: 44px;
+  }
+
+  .light input[type="date"] {
+    color-scheme: light;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+  }
+
+  .light input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: none;
+  }
+
   select option {
     background: var(--surface-solid);
     color: var(--text);

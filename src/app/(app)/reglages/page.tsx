@@ -119,6 +119,7 @@ export default function ReglagesPage() {
   const [firstName, setFirstName] = useState(profile?.first_name || "");
   const [lastName, setLastName] = useState(profile?.last_name || "");
   const [phone, setPhone] = useState(profile?.phone || "");
+  const [birthDate, setBirthDate] = useState(profile?.birth_date || "");
   const [emoji, setEmoji] = useState(profile?.emoji || "👤");
   const [saving, setSaving] = useState(false);
   const [geoEnabled, setGeoEnabled] = useState(!!(profile?.lat && profile?.lng));
@@ -272,7 +273,39 @@ export default function ReglagesPage() {
       last_name: lastName,
       phone,
       emoji,
+      birth_date: birthDate || null,
     }).eq("id", profile.id);
+
+    // Sync birth_date and phone to linked member record
+    if (profile.family_id) {
+      const updates: Record<string, unknown> = { phone: phone || null, birth_date: birthDate || null };
+      await supabase.from("members").update(updates)
+        .eq("family_id", profile.family_id)
+        .eq("user_id", profile.id);
+
+      // Sync linked birthday entry
+      if (birthDate) {
+        const { data: linkedMember } = await supabase
+          .from("members")
+          .select("id")
+          .eq("family_id", profile.family_id)
+          .eq("user_id", profile.id)
+          .maybeSingle();
+        if (linkedMember) {
+          const { data: existingBday } = await supabase
+            .from("birthdays")
+            .select("id")
+            .eq("member_id", linkedMember.id)
+            .maybeSingle();
+          if (existingBday) {
+            await supabase.from("birthdays").update({ date: birthDate, name: firstName, emoji }).eq("id", existingBday.id);
+          } else {
+            await supabase.from("birthdays").insert({ family_id: profile.family_id, name: firstName, date: birthDate, emoji, member_id: linkedMember.id });
+          }
+        }
+      }
+    }
+
     await refreshProfile();
     setSaving(false);
   }
@@ -394,6 +427,16 @@ export default function ReglagesPage() {
           <input placeholder="Nom" value={lastName} onChange={(e) => setLastName(e.target.value)} />
           <input value={profile?.email || ""} readOnly style={{ opacity: 0.5, cursor: "not-allowed" }} />
           <input placeholder="Téléphone" type="tel" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          <div>
+            <p className="text-[11px] font-bold mb-1" style={{ color: "var(--dim)" }}>Date de naissance</p>
+            <input
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              style={{ colorScheme: "dark", minHeight: 44 }}
+              placeholder="JJ/MM/AAAA"
+            />
+          </div>
           <button className="btn btn-primary" onClick={saveProfile} disabled={saving}>
             {saving ? "Sauvegarde..." : "Sauvegarder les modifications"}
           </button>
