@@ -1007,8 +1007,16 @@ export default function HomePage() {
 
     // 3. Anniversaire aujourd'hui
     const todayMMDD = `${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+    const myName = (myMember?.name || profile?.first_name || "").toLowerCase();
     const bdayToday = birthdays.find((b) => b.date.slice(5) === todayMMDD);
     if (bdayToday) {
+      const isMe = bdayToday.name.toLowerCase() === myName;
+      if (isMe) {
+        return {
+          main: pick(`🎂 Joyeux anniversaire ${name} !`, `🎉 C'est ton jour ${name} !`),
+          sub: pick(`Profite bien de cette journée spéciale`, `Passe une super journée`)
+        };
+      }
       return {
         main: pick(`🎂 C'est l'anniversaire de ${bdayToday.name} !`, `🎉 N'oublie pas de souhaiter un bon anniv' à ${bdayToday.name} !`),
         sub: `Un petit message lui ferait plaisir`
@@ -1066,6 +1074,13 @@ export default function HomePage() {
       const futureMMDD = `${String(future.getMonth() + 1).padStart(2, "0")}-${String(future.getDate()).padStart(2, "0")}`;
       const bdaySoon = birthdays.find((b) => b.date.slice(5) === futureMMDD);
       if (bdaySoon) {
+        const isMe = bdaySoon.name.toLowerCase() === myName;
+        if (isMe) {
+          return {
+            main: `🎂 Ton anniversaire ${d === 1 ? "c'est demain" : `est dans ${d} jours`} !`,
+            sub: pick(`Ça arrive vite ${name} !`, `Prépare-toi à faire la fête !`)
+          };
+        }
         return {
           main: `🎂 Anniversaire de ${bdaySoon.name} ${d === 1 ? "demain" : `dans ${d} jours`}`,
           sub: pick(`Pense à préparer quelque chose !`, `Un cadeau ou un message ?`)
