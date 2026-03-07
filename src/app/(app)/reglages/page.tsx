@@ -9,6 +9,38 @@ import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 import { QRCodeSVG } from "qrcode.react";
 
+function Section({ title, emoji, children, defaultOpen = false }: { title: string; emoji: string; children: React.ReactNode; defaultOpen?: boolean }) {
+  const [open, setOpen] = useState(defaultOpen);
+  return (
+    <div className="mt-4">
+      <button
+        className="w-full flex items-center gap-2.5 py-2.5 px-1 active:opacity-70"
+        onClick={() => setOpen(!open)}
+      >
+        <span className="text-base">{emoji}</span>
+        <span className="text-sm font-bold flex-1 text-left">{title}</span>
+        <svg
+          width="12" height="12" viewBox="0 0 12 12" fill="currentColor"
+          style={{ color: "var(--dim)", transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}
+        >
+          <path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+        </svg>
+      </button>
+      <div
+        style={{
+          display: "grid",
+          gridTemplateRows: open ? "1fr" : "0fr",
+          transition: "grid-template-rows 0.3s ease",
+        }}
+      >
+        <div style={{ overflow: "hidden" }}>
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
   { key: "papa", label: "Papa", defaultEmoji: "👨" },
   { key: "maman", label: "Maman", defaultEmoji: "👩" },
@@ -340,7 +372,7 @@ export default function ReglagesPage() {
       <h1 className="text-xl font-bold mb-6">Réglages</h1>
 
       {/* Profil */}
-      <p className="label">Mon profil</p>
+      <Section title="Mon profil" emoji="👤" defaultOpen>
       <div className="card">
         <div className="flex items-center gap-4 mb-4">
           <AvatarUpload
@@ -366,9 +398,10 @@ export default function ReglagesPage() {
           </button>
         </div>
       </div>
+      </Section>
 
       {/* Apparence */}
-      <p className="label mt-4">Apparence</p>
+      <Section title="Apparence" emoji="🎨">
       <div className="card">
         <p className="text-sm font-bold mb-3">Thème</p>
         <div className="grid grid-cols-3 gap-2">
@@ -434,9 +467,10 @@ export default function ReglagesPage() {
           ))}
         </div>
       </div>
+      </Section>
 
       {/* Géolocalisation */}
-      <p className="label mt-4">Géolocalisation</p>
+      <Section title="Géolocalisation" emoji="📍">
       <div className="card flex items-center justify-between">
         <span className="text-sm">Permettre à Flow de me géolocaliser</span>
         <button
@@ -450,9 +484,10 @@ export default function ReglagesPage() {
           />
         </button>
       </div>
+      </Section>
 
       {/* Notifications push */}
-      <p className="label mt-4">Notifications</p>
+      <Section title="Notifications" emoji="🔔">
       <div className="card flex items-center justify-between">
         <div>
           <span className="text-sm">Notifications push</span>
@@ -526,9 +561,10 @@ export default function ReglagesPage() {
           Tester les notifications
         </button>
       )}
+      </Section>
 
       {/* Famille */}
-      <p className="label mt-4">Famille</p>
+      <Section title="Famille" emoji="👨‍👩‍👧‍👦">
       <div className="card" data-tutorial="family-code">
         <p className="text-sm font-bold mb-1">Mon code famille</p>
         <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
@@ -595,16 +631,18 @@ export default function ReglagesPage() {
           <button className="btn btn-secondary text-xs" onClick={() => setFamilyModal(true)}>Rejoindre une autre famille</button>
         </div>
       </div>
+      </Section>
 
       {/* Sécurité */}
-      <p className="label mt-4">Sécurité</p>
+      <Section title="Sécurité" emoji="🔒">
       <div className="flex flex-col gap-2">
         <button className="btn btn-secondary" onClick={() => setPasswordModal(true)}>Changer le mot de passe</button>
         <button className="btn btn-danger" onClick={() => setDeleteModal(true)}>Supprimer mon compte</button>
       </div>
+      </Section>
 
       {/* Abonnement */}
-      <p className="label mt-4">Abonnement</p>
+      <Section title="Abonnement" emoji="💎">
       <div className="flex flex-col gap-2">
         <div className="card" style={{ border: "1.5px solid var(--green)" }}>
           <div className="flex items-center justify-between mb-1">
@@ -622,9 +660,10 @@ export default function ReglagesPage() {
           <p className="text-xs" style={{ color: "var(--dim)" }}>Multi-famille · Partage · Alertes proactives</p>
         </div>
       </div>
+      </Section>
 
       {/* Aide */}
-      <p className="label mt-4">Aide</p>
+      <Section title="Aide" emoji="❓">
       <div className="card">
         <p className="text-sm font-bold mb-1">Tutoriel complet</p>
         <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
@@ -635,8 +674,7 @@ export default function ReglagesPage() {
         </button>
       </div>
 
-      <p className="label mt-3">Guides par section</p>
-      <div className="card !p-0 overflow-hidden">
+      <div className="card !p-0 overflow-hidden mt-2">
         {[
           { id: "accueil", emoji: "\u{1F3E0}", label: "Accueil", steps: 4 },
           { id: "famille", emoji: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}", label: "Famille", steps: 3 },
@@ -734,9 +772,10 @@ export default function ReglagesPage() {
           Envoyer un email
         </a>
       </div>
+      </Section>
 
       {/* Nouveautés */}
-      <p className="label mt-4">Nouveautés</p>
+      <Section title="Nouveautés" emoji="🆕">
       <div className="flex flex-col gap-2">
         {[
           {
@@ -942,9 +981,10 @@ export default function ReglagesPage() {
           </details>
         ))}
       </div>
+      </Section>
 
       {/* A propos */}
-      <p className="label mt-4">A propos</p>
+      <Section title="A propos" emoji="ℹ️">
       <div className="card">
         <div className="flex items-center gap-3 mb-2">
           <div className="w-10 h-10 rounded-xl flex items-center justify-center" style={{ background: "linear-gradient(135deg, var(--accent), var(--teal))" }}>
@@ -962,6 +1002,7 @@ export default function ReglagesPage() {
           Fait avec 💜 par FlowTime Team
         </p>
       </div>
+      </Section>
 
       {/* Déconnexion */}
       <button className="btn btn-danger mt-6 mb-4" onClick={signOut}>
