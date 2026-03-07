@@ -44,7 +44,7 @@ export default function OnboardingPage() {
 
   return (
     <div
-      className="min-h-dvh flex flex-col relative overflow-hidden"
+      className="h-dvh flex flex-col relative overflow-hidden"
       style={{ background: "var(--bg)" }}
       onTouchStart={(e) => setTouchStart(e.touches[0].clientX)}
       onTouchEnd={(e) => {
@@ -60,10 +60,10 @@ export default function OnboardingPage() {
       />
 
       {/* Skip button */}
-      <div className="relative flex justify-end px-6 pt-6" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 24px)" }}>
+      <div className="relative flex justify-end px-6 shrink-0" style={{ paddingTop: "calc(env(safe-area-inset-top, 0px) + 16px)" }}>
         <button
           className="text-[11px] font-medium px-3 py-1"
-          style={{ color: "rgba(255,255,255,0.35)" }}
+          style={{ color: "var(--dim)" }}
           onClick={() => finish(false)}
         >
           Passer
@@ -74,6 +74,7 @@ export default function OnboardingPage() {
       <div
         key={animKey}
         className="flex-1 flex flex-col items-center justify-center text-center px-8 relative onb-crossfade"
+        style={{ minHeight: 0 }}
       >
         {step === 0 && <Slide1 />}
         {step === 1 && <Slide2 />}
@@ -81,7 +82,7 @@ export default function OnboardingPage() {
       </div>
 
       {/* Dots */}
-      <div className="relative flex justify-center gap-2.5 mb-6">
+      <div className="relative flex justify-center gap-2.5 mb-4 shrink-0">
         {Array.from({ length: totalSlides }).map((_, i) => (
           <button
             key={i}
@@ -91,7 +92,7 @@ export default function OnboardingPage() {
               width: i === step ? 24 : 8,
               height: 8,
               background: i === step
-                ? "linear-gradient(90deg, #7C6BF0, #9B8BFF)"
+                ? "linear-gradient(90deg, var(--accent), #9B8BFF)"
                 : "rgba(255,255,255,0.12)",
             }}
           />
@@ -99,11 +100,11 @@ export default function OnboardingPage() {
       </div>
 
       {/* Buttons */}
-      <div className="relative px-6 pb-8">
+      <div className="relative px-6 shrink-0" style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 24px)" }}>
         {step < 2 ? (
           <button
             className="w-full py-3.5 rounded-2xl text-sm font-bold"
-            style={{ background: "linear-gradient(135deg, #7C6BF0, #9B8BFF)", color: "#fff" }}
+            style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)", color: "#fff" }}
             onClick={() => goTo(step + 1)}
           >
             Suivant
@@ -112,14 +113,14 @@ export default function OnboardingPage() {
           <div className="flex flex-col gap-3">
             <button
               className="w-full py-3.5 rounded-2xl text-sm font-bold"
-              style={{ background: "linear-gradient(135deg, #7C6BF0, #9B8BFF)", color: "#fff" }}
+              style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)", color: "#fff" }}
               onClick={() => finish(true)}
             >
               Découvrir FlowTime
             </button>
             <button
               className="w-full py-3 rounded-2xl text-xs font-bold"
-              style={{ background: "rgba(255,255,255,0.06)", color: "rgba(255,255,255,0.5)" }}
+              style={{ background: "var(--surface2)", color: "var(--dim)" }}
               onClick={() => finish(false)}
             >
               Je connais déjà
@@ -145,7 +146,7 @@ export default function OnboardingPage() {
 function Slide1() {
   return (
     <>
-      <div className="relative w-[160px] h-[160px] flex items-center justify-center mb-10">
+      <div className="relative w-[140px] h-[140px] flex items-center justify-center mb-8">
         {/* Rotating ring */}
         <div className="absolute inset-0 rounded-full onb-ring-spin" style={{
           background: "conic-gradient(from 0deg, #7C6BF0, #9B8BFF, #5ED4C8, #F5C563, #7C6BF0)",
@@ -154,18 +155,18 @@ function Slide1() {
           mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
         }} />
         {/* Inner circle */}
-        <div className="w-[140px] h-[140px] rounded-full flex items-center justify-center"
+        <div className="w-[122px] h-[122px] rounded-full flex items-center justify-center"
           style={{ background: "rgba(124,107,240,0.1)" }}>
           <div className="onb-logo-pop">
-            <Logo size={80} />
+            <Logo size={70} />
           </div>
         </div>
       </div>
-      <h2 className="text-2xl font-bold mb-3 onb-title-up" style={{ fontFamily: "var(--font-title)", color: "#fff" }}>
+      <h2 className="text-2xl font-bold mb-3 onb-title-up" style={{ fontFamily: "var(--font-title)", color: "var(--text)" }}>
         Bienvenue sur FlowTime
       </h2>
-      <p className="text-sm max-w-[280px] onb-desc-up" style={{ color: "rgba(255,255,255,0.5)" }}>
-        L'app qui met toute ta famille en harmonie
+      <p className="text-sm max-w-[280px] onb-desc-up" style={{ color: "var(--dim)" }}>
+        L&apos;app qui met toute ta famille en harmonie
       </p>
 
       <style jsx>{`
@@ -203,14 +204,14 @@ function Slide2() {
 
   return (
     <>
-      <div className="flex gap-3 mb-10">
+      <div className="flex gap-3 mb-8">
         {cards.map((card, i) => (
           <div
             key={card.label}
             className="onb-card-stagger flex flex-col items-center gap-2 px-5 py-4 rounded-2xl"
             style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.08)",
+              background: "var(--surface2)",
+              border: "1px solid var(--glass-border)",
               backdropFilter: "blur(12px)",
               animationDelay: `${i * 0.15}s`,
             }}
@@ -221,16 +222,16 @@ function Slide2() {
             >
               {card.icon}
             </div>
-            <span className="text-[11px] font-bold" style={{ color: "rgba(255,255,255,0.6)" }}>
+            <span className="text-[11px] font-bold" style={{ color: "var(--dim)" }}>
               {card.label}
             </span>
           </div>
         ))}
       </div>
-      <h2 className="text-2xl font-bold mb-3 onb-title-up" style={{ fontFamily: "var(--font-title)", color: "#fff" }}>
+      <h2 className="text-2xl font-bold mb-3 onb-title-up" style={{ fontFamily: "var(--font-title)", color: "var(--text)" }}>
         Tout au même endroit
       </h2>
-      <p className="text-sm max-w-[280px] onb-desc-up" style={{ color: "rgba(255,255,255,0.5)" }}>
+      <p className="text-sm max-w-[280px] onb-desc-up" style={{ color: "var(--dim)" }}>
         Planning, famille, organisation — simplifie ton quotidien
       </p>
 
@@ -255,14 +256,14 @@ function Slide2() {
 function Slide3({ showConfetti }: { showConfetti: boolean }) {
   return (
     <>
-      <div className="relative w-[120px] h-[120px] flex items-center justify-center mb-10">
+      <div className="relative w-[100px] h-[100px] flex items-center justify-center mb-8">
         {/* Animated checkmark circle */}
         <div
-          className="w-[120px] h-[120px] rounded-full flex items-center justify-center onb-check-pop"
+          className="w-[100px] h-[100px] rounded-full flex items-center justify-center onb-check-pop"
           style={{ background: "rgba(34,197,94,0.15)" }}
         >
           <svg
-            width="56" height="56" viewBox="0 0 56 56"
+            width="48" height="48" viewBox="0 0 56 56"
             className="onb-check-draw"
           >
             <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(34,197,94,0.3)" strokeWidth="2" />
@@ -307,10 +308,10 @@ function Slide3({ showConfetti }: { showConfetti: boolean }) {
         )}
       </div>
 
-      <h2 className="text-2xl font-bold mb-3 onb-title-up" style={{ fontFamily: "var(--font-title)", color: "#fff" }}>
+      <h2 className="text-2xl font-bold mb-3 onb-title-up" style={{ fontFamily: "var(--font-title)", color: "var(--text)" }}>
         Prêt à commencer ?
       </h2>
-      <p className="text-sm max-w-[280px] onb-desc-up" style={{ color: "rgba(255,255,255,0.5)" }}>
+      <p className="text-sm max-w-[280px] onb-desc-up" style={{ color: "var(--dim)" }}>
         On te fait un petit tour guidé
       </p>
 

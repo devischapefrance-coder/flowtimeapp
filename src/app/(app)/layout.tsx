@@ -355,15 +355,15 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   // Auto-start tutorial after onboarding redirect to /home
   useEffect(() => {
-    if (pathname === "/home" && ready && localStorage.getItem("flowtime_tutorial_pending")) {
+    if (pathname === "/home" && ready && !tutorialActive && localStorage.getItem("flowtime_tutorial_pending")) {
       localStorage.removeItem("flowtime_tutorial_pending");
       const t = setTimeout(() => {
         setTutorialStep(0);
         setTutorialActive(true);
-      }, 500);
+      }, 1000);
       return () => clearTimeout(t);
     }
-  }, [pathname, ready]);
+  }, [pathname, ready, tutorialActive]);
 
   if (!ready) {
     return (
