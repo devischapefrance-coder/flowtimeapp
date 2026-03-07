@@ -9,10 +9,6 @@ import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
 import { useRealtimeMembers, useRealtimeContacts, useRealtimeAddresses } from "@/lib/realtime";
 import { useToast } from "@/components/Toast";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
-import { useThemeMapStyle } from "@/components/MapView";
-
-const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
-const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
 const AddressPickerMap = dynamic(() => import("@/components/AddressPickerMap"), { ssr: false });
 
 const ROLES: { key: string; label: string; defaultEmoji: string }[] = [
@@ -136,7 +132,6 @@ export default function FamillePage() {
   const { toast } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => load());
   const familyId = profile?.family_id;
-  const themeMapStyle = useThemeMapStyle();
 
   const [members, setMembers] = useState<Member[]>([]);
 
@@ -155,8 +150,6 @@ export default function FamillePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
-  const [mapFull, setMapFull] = useState(false);
-  const [mapFocusCenter, setMapFocusCenter] = useState<[number, number] | null>(null);
   const [sharingLocation, setSharingLocation] = useState(false);
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
 
@@ -427,12 +420,6 @@ export default function FamillePage() {
     toast(`${label} supprimé`, "success");
   }
 
-  // Update address after marker drag on map
-  async function handleAddressMoved(id: string, lat: number, lng: number, address: string) {
-    await supabase.from("addresses").update({ lat, lng, address }).eq("id", id);
-    setAddresses((prev) => prev.map((a) => a.id === id ? { ...a, lat, lng, address } : a));
-  }
-
   // Device location sharing
   async function toggleLocationSharing() {
     if (!familyId || !profile) return;
@@ -481,50 +468,6 @@ export default function FamillePage() {
   }, [profile, devices]);
 
 
-  // Map markers
-  const mapMarkers = addresses
-    .filter((a) => a.lat && a.lng)
-    .map((a) => ({
-      id: a.id,
-      lat: a.lat!,
-      lng: a.lng!,
-      emoji: a.emoji,
-      name: a.name,
-      type: "address" as const,
-      draggable: true,
-    }));
-
-  const mapCenter: [number, number] = profile?.lat && profile?.lng
-    ? [profile.lat, profile.lng]
-    : mapMarkers.length > 0
-      ? [mapMarkers[0].lat, mapMarkers[0].lng]
-      : [46.2044, 5.226];
-
-  // Deduplicate devices per user_id (keep most recent)
-  const uniqueDevices = Object.values(
-    devices.reduce<Record<string, typeof devices[0]>>((acc, d) => {
-      if (!acc[d.user_id] || new Date(d.updated_at) > new Date(acc[d.user_id].updated_at)) {
-        acc[d.user_id] = d;
-      }
-      return acc;
-    }, {})
-  );
-
-  const deviceMapMarkers = uniqueDevices.map((d) => {
-    const member = members.find((m) => m.user_id === d.user_id);
-    return {
-      id: d.id,
-      lat: d.lat,
-      lng: d.lng,
-      emoji: member?.emoji || d.emoji,
-      name: member?.name || d.device_name,
-      color: "#3DD6C8",
-      type: "device" as const,
-      updatedAt: d.updated_at,
-      avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
-    };
-  });
-
   const filledAddresses = addresses.filter((a) => a.address).length;
 
   return (
@@ -563,7 +506,8 @@ export default function FamillePage() {
         {/* Member list */}
         <div className="flex flex-col gap-2">
           {members.filter((m) => m.user_id !== profile?.id).map((m) => {
-            const age = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+            const rawAge = m.birth_date ? Math.floor((Date.now() - new Date(m.birth_date).getTime()) / (365.25 * 24 * 60 * 60 * 1000)) : null;
+            const age = rawAge !== null && rawAge > 0 ? rawAge : null;
             const device = devices.find((d) => d.user_id === m.user_id);
             const ago = device ? Math.round((Date.now() - new Date(device.updated_at).getTime()) / 60000) : null;
             return (
@@ -597,8 +541,7 @@ export default function FamillePage() {
                   className={`flex-1 min-w-0${device ? " cursor-pointer active:opacity-70" : ""}`}
                   onClick={() => {
                     if (device) {
-                      setMapFocusCenter([device.lat, device.lng]);
-                      setMapFull(true);
+                      window.location.href = "/snap";
                     }
                   }}
                 >
@@ -747,16 +690,6 @@ export default function FamillePage() {
             </button>
           </div>
         </div>
-        <MapViewDynamic
-          markers={[...mapMarkers, ...deviceMapMarkers]}
-          center={mapCenter}
-          height="220px"
-          mapStyle={themeMapStyle}
-          onMapClick={() => setMapFull(true)}
-        />
-        <p className="text-[10px] text-center mt-2" style={{ color: "var(--faint)" }}>
-          Appuie pour ouvrir en plein écran
-        </p>
       </div>
 
       {/* ADRESSES */}
@@ -800,7 +733,7 @@ export default function FamillePage() {
               </div>
               <div
                 className="flex-1 min-w-0 cursor-pointer"
-                onClick={() => { if (a.lat && a.lng) { setMapFocusCenter([a.lat, a.lng]); setMapFull(true); } }}
+                onClick={() => { if (a.lat && a.lng) window.location.href = "/snap"; }}
               >
                 <p className="font-bold text-sm">
                   {a.name}
@@ -810,24 +743,12 @@ export default function FamillePage() {
                   {a.address || "⚠️ Adresse manquante"}
                 </p>
               </div>
-              {a.lat && a.lng && <span className="text-sm shrink-0 cursor-pointer" style={{ color: "var(--faint)" }} onClick={() => { setMapFocusCenter([a.lat!, a.lng!]); setMapFull(true); }}>›</span>}
+              {a.lat && a.lng && <span className="text-sm shrink-0 cursor-pointer" style={{ color: "var(--faint)" }} onClick={() => { window.location.href = "/snap"; }}>›</span>}
             </div>
           ))}
         </div>
       </div>
 
-      {/* CARTE PLEIN ECRAN */}
-      {mapFull && (
-        <MapFullDynamic
-          markers={mapMarkers}
-          center={mapFocusCenter || mapCenter}
-          initialZoom={mapFocusCenter ? 17 : undefined}
-          onClose={() => { setMapFull(false); setMapFocusCenter(null); }}
-          deviceMarkers={deviceMapMarkers}
-          onAddressMoved={handleAddressMoved}
-          familyId={familyId}
-        />
-      )}
 
       {/* MODAL MEMBRE */}
       <Modal open={memberModal !== null} onClose={() => setMemberModal(null)} title={memberModal === "new" ? "Nouveau membre" : "Modifier le membre"}>
