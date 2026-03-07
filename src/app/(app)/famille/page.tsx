@@ -592,7 +592,7 @@ export default function FamillePage() {
                   <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>
                     {ROLES.find((r) => r.key === getLocalRole(m.id, m.role))?.label || getLocalRole(m.id, m.role)}
                     {age !== null && ` · ${age} ans`}
-                    {ago !== null && ` · ${ago < 1 ? "En ligne" : `il y a ${ago} min`}`}
+                    {ago !== null && ` · ${ago < 1 ? "En ligne" : ago < 60 ? `il y a ${ago} min` : ago < 1440 ? `il y a ${Math.floor(ago / 60)}h` : `il y a ${Math.floor(ago / 1440)}j`}`}
                   </p>
                 </div>
                 {m.phone && (
