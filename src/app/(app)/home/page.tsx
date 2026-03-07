@@ -1444,36 +1444,25 @@ export default function HomePage() {
   }
 
   function renderFamilyMap() {
-    const mapMarkers: MapMarker[] = [
-      ...devices.map((d) => ({
-        id: d.id,
-        lat: d.lat,
-        lng: d.lng,
-        emoji: d.emoji || "📱",
-        name: d.device_name,
-        type: "device" as const,
-        detail: new Date(d.updated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-      })),
-      ...addresses.filter((a) => a.lat && a.lng).map((a) => ({
-        id: a.id,
-        lat: a.lat!,
-        lng: a.lng!,
-        emoji: a.emoji || "📍",
-        name: a.name,
-        type: "address" as const,
-      })),
-    ];
-    const center: [number, number] = devices.length > 0
-      ? [devices[0].lat, devices[0].lng]
-      : profile?.lat && profile?.lng
-        ? [profile.lat, profile.lng]
+    const mapMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
+      id: a.id,
+      lat: a.lat!,
+      lng: a.lng!,
+      emoji: a.emoji || "📍",
+      name: a.name,
+      type: "address" as const,
+    }));
+    const center: [number, number] = profile?.lat && profile?.lng
+      ? [profile.lat, profile.lng]
+      : mapMarkers.length > 0
+        ? [mapMarkers[0].lat, mapMarkers[0].lng]
         : [46.6, 2.5];
     return (
       <div className="card !mb-0 block cursor-pointer" onClick={() => setMapFullOpen(true)}>
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
-            {devices.length} appareil{devices.length !== 1 ? "s" : ""} · Voir →
+            Voir →
           </span>
         </div>
         <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
@@ -2048,34 +2037,23 @@ export default function HomePage() {
 
       {/* Full-screen map (portal-level to avoid stacking context issues) */}
       {mapFullOpen && (() => {
-        const mapMarkers: MapMarker[] = [
-          ...devices.map((d) => ({
-            id: d.id,
-            lat: d.lat,
-            lng: d.lng,
-            emoji: d.emoji || "📱",
-            name: d.device_name,
-            type: "device" as const,
-            detail: new Date(d.updated_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
-          })),
-          ...addresses.filter((a) => a.lat && a.lng).map((a) => ({
-            id: a.id,
-            lat: a.lat!,
-            lng: a.lng!,
-            emoji: a.emoji || "📍",
-            name: a.name,
-            type: "address" as const,
-          })),
-        ];
-        const mapCenter: [number, number] = devices.length > 0
-          ? [devices[0].lat, devices[0].lng]
-          : profile?.lat && profile?.lng
-            ? [profile.lat, profile.lng]
+        const mapMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
+          id: a.id,
+          lat: a.lat!,
+          lng: a.lng!,
+          emoji: a.emoji || "📍",
+          name: a.name,
+          type: "address" as const,
+        }));
+        const mapCenter: [number, number] = profile?.lat && profile?.lng
+          ? [profile.lat, profile.lng]
+          : mapMarkers.length > 0
+            ? [mapMarkers[0].lat, mapMarkers[0].lng]
             : [46.6, 2.5];
         return (
           <MapFull
-            markers={mapMarkers.filter((m) => m.type === "address")}
-            deviceMarkers={mapMarkers.filter((m) => m.type === "device")}
+            markers={mapMarkers}
+            deviceMarkers={[]}
             center={mapCenter}
             onClose={() => setMapFullOpen(false)}
             familyId={profile?.family_id}

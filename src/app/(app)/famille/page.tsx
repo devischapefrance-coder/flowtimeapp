@@ -734,7 +734,7 @@ export default function FamillePage() {
           </div>
         </div>
         <MapViewDynamic
-          markers={[...mapMarkers, ...deviceMapMarkers]}
+          markers={mapMarkers}
           center={mapCenter}
           height="220px"
           mapStyle={themeMapStyle}
@@ -809,7 +809,7 @@ export default function FamillePage() {
           center={mapFocusCenter || mapCenter}
           initialZoom={mapFocusCenter ? 17 : undefined}
           onClose={() => { setMapFull(false); setMapFocusCenter(null); }}
-          deviceMarkers={deviceMapMarkers}
+          deviceMarkers={[]}
           onAddressMoved={handleAddressMoved}
           familyId={familyId}
         />
