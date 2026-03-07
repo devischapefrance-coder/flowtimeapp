@@ -438,9 +438,11 @@ export default function HomePage() {
       supabase.from("chores").select("*").eq("family_id", profile.family_id),
       supabase.from("device_locations").select("*").eq("family_id", profile.family_id),
     ]);
+    const memberIds = new Set((memRes.data || []).map((m: Member) => m.id));
     if (evRes.data) {
-      setEvents(evRes.data as Event[]);
-      cacheData("events", evRes.data as Array<{ id: string } & Record<string, unknown>>);
+      const validEvents = (evRes.data as Event[]).filter((e) => !e.member_id || memberIds.has(e.member_id));
+      setEvents(validEvents);
+      cacheData("events", validEvents as unknown as Array<{ id: string } & Record<string, unknown>>);
     }
     if (memRes.data) {
       setMembers(memRes.data as Member[]);
@@ -449,9 +451,14 @@ export default function HomePage() {
     if (addrRes.data) setAddresses(addrRes.data as Address[]);
     if (contRes.data) setContacts(contRes.data as Contact[]);
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
-    if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
+    if (bdayRes.data) {
+      const validBdays = (bdayRes.data as Birthday[]).filter((b) => b.member_id && memberIds.has(b.member_id));
+      setBirthdays(validBdays);
+    }
     if (choreRes.data) setChores(choreRes.data as Chore[]);
     if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
+    // Clean up orphaned birthdays (member was deleted, member_id set to NULL)
+    supabase.from("birthdays").delete().is("member_id", null).eq("family_id", profile.family_id);
     setDataLoaded(true);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id, selectedDate]);
@@ -472,7 +479,10 @@ export default function HomePage() {
       .gte("date", startDate)
       .lte("date", endDate)
       .then(({ data }) => {
-        if (data) setMonthEvents(data as Event[]);
+        if (data) {
+          const memberSet = new Set(members.map((m) => m.id));
+          setMonthEvents((data as Event[]).filter((e) => !e.member_id || memberSet.has(e.member_id)));
+        }
       });
   }, [calendarView, monthYear, monthMonth, profile?.family_id]);
 

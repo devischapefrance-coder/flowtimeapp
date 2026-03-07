@@ -809,7 +809,8 @@ export default function ViePage() {
         b.emoji = m.emoji;
       }
     }
-    setBirthdays(loadedBdays);
+    const memberIds = new Set(loadedMembers.map((m) => m.id));
+    setBirthdays(loadedBdays.filter((b) => b.member_id && memberIds.has(b.member_id)));
     setMembers(loadedMembers);
     if (shopRes.data) setShoppingItems(shopRes.data as ShoppingItem[]);
     if (choreRes.data) setChores(choreRes.data as Chore[]);

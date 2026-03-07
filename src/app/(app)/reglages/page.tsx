@@ -346,7 +346,23 @@ export default function ReglagesPage() {
   async function deleteAccount() {
     if (deleteConfirm !== "SUPPRIMER") return;
     if (!profile) return;
-    await supabase.from("profiles").delete().eq("id", profile.id);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch("/api/account/delete", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          ...(session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {}),
+        },
+      });
+      if (!res.ok) {
+        alert("Erreur lors de la suppression");
+        return;
+      }
+    } catch {
+      alert("Erreur lors de la suppression");
+      return;
+    }
     await supabase.auth.signOut();
     router.push("/");
   }

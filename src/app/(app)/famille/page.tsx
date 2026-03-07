@@ -416,7 +416,15 @@ export default function FamillePage() {
   async function executeDelete() {
     if (!confirmDelete) return;
     const { type, id, label } = confirmDelete;
-    await supabase.from(type === "member" ? "members" : type === "contact" ? "contacts" : "addresses").delete().eq("id", id);
+    if (type === "member") {
+      await Promise.all([
+        supabase.from("birthdays").delete().eq("member_id", id),
+        supabase.from("events").delete().eq("member_id", id),
+      ]);
+      await supabase.from("members").delete().eq("id", id);
+    } else {
+      await supabase.from(type === "contact" ? "contacts" : "addresses").delete().eq("id", id);
+    }
     setConfirmDelete(null);
     if (type === "member") setMemberModal(null);
     else if (type === "contact") setContactModal(null);
