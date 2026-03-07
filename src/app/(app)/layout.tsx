@@ -326,14 +326,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       router.push("/onboarding");
     }
 
-    // Auto-start tutorial after onboarding
-    if (localStorage.getItem("flowtime_tutorial_pending")) {
-      localStorage.removeItem("flowtime_tutorial_pending");
-      setTimeout(() => {
-        setTutorialStep(0);
-        setTutorialActive(true);
-      }, 800);
-    }
+    // (tutorial_pending is handled in a separate effect)
   }
 
   useEffect(() => {
@@ -359,6 +352,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     return () => subscription.unsubscribe();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Auto-start tutorial after onboarding redirect to /home
+  useEffect(() => {
+    if (pathname === "/home" && ready && localStorage.getItem("flowtime_tutorial_pending")) {
+      localStorage.removeItem("flowtime_tutorial_pending");
+      const t = setTimeout(() => {
+        setTutorialStep(0);
+        setTutorialActive(true);
+      }, 500);
+      return () => clearTimeout(t);
+    }
+  }, [pathname, ready]);
 
   if (!ready) {
     return (

@@ -34,7 +34,7 @@ function Section({ title, emoji, children, defaultOpen = false, forceOpen = fals
           transition: "grid-template-rows 0.3s ease",
         }}
       >
-        <div style={{ overflow: "hidden" }}>
+        <div style={{ overflow: "hidden", paddingTop: 1, paddingBottom: 1 }}>
           {children}
         </div>
       </div>
