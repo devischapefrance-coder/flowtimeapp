@@ -561,6 +561,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
         zoom={mapZoom}
         mapStyle={mapStyle}
         onMarkerDragEnd={onAddressMoved ? handleMarkerDragEnd : undefined}
+        skipFitBounds={!!initialZoom}
       />
     </div>
   );

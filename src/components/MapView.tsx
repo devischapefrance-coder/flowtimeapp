@@ -54,6 +54,7 @@ interface MapViewProps {
   mapStyle?: MapStyle;
   route?: RouteInfo | null;
   onMarkerDragEnd?: (marker: MapMarker, newLat: number, newLng: number) => void;
+  skipFitBounds?: boolean;
 }
 
 function DraggableMarker({ m, icon, interactive, onDragEnd }: {
@@ -329,6 +330,7 @@ export default function MapView({
   mapStyle = "apple",
   route,
   onMarkerDragEnd,
+  skipFitBounds = false,
 }: MapViewProps) {
   const tile = MAP_TILES[mapStyle];
   const markers = useMemo(() => spreadOverlapping(rawMarkers), [rawMarkers]);
@@ -352,7 +354,7 @@ export default function MapView({
         <TileLayer url={tile.url} />
         <InvalidateSize />
         {interactive && <FlyTo center={center} zoom={zoom} />}
-        {interactive && markers.length > 1 && !route && <FitBoundsOnce markers={markers} />}
+        {interactive && markers.length > 1 && !route && !skipFitBounds && <FitBoundsOnce markers={markers} />}
         {route && route.coordinates.length > 1 && <FitRoute route={route} />}
         {/* Route border (wider, darker) */}
         {route && route.coordinates.length > 1 && (
