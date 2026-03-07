@@ -1444,7 +1444,7 @@ export default function HomePage() {
   }
 
   function renderFamilyMap() {
-    const mapMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
+    const addressMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
       id: a.id,
       lat: a.lat!,
       lng: a.lng!,
@@ -1452,11 +1452,27 @@ export default function HomePage() {
       name: a.name,
       type: "address" as const,
     }));
-    const center: [number, number] = profile?.lat && profile?.lng
-      ? [profile.lat, profile.lng]
-      : mapMarkers.length > 0
-        ? [mapMarkers[0].lat, mapMarkers[0].lng]
-        : [46.6, 2.5];
+    const deviceMarkers: MapMarker[] = devices.map((d) => {
+      const member = members.find((m) => m.user_id === d.user_id);
+      return {
+        id: d.id,
+        lat: d.lat,
+        lng: d.lng,
+        emoji: member?.emoji || d.emoji || "📱",
+        name: member?.name || d.device_name,
+        color: "#3DD6C8",
+        type: "device" as const,
+        avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
+      };
+    });
+    const allMarkers = [...addressMarkers, ...deviceMarkers];
+    const center: [number, number] = devices.length > 0
+      ? [devices[0].lat, devices[0].lng]
+      : profile?.lat && profile?.lng
+        ? [profile.lat, profile.lng]
+        : allMarkers.length > 0
+          ? [allMarkers[0].lat, allMarkers[0].lng]
+          : [46.6, 2.5];
     return (
       <div className="card !mb-0 block cursor-pointer" onClick={() => setMapFullOpen(true)}>
         <div className="flex items-center justify-between mb-2">
@@ -1467,9 +1483,9 @@ export default function HomePage() {
         </div>
         <div className="rounded-xl overflow-hidden" style={{ height: 180, pointerEvents: "none" }}>
           <MapView
-            markers={mapMarkers}
+            markers={allMarkers}
             center={center}
-            zoom={mapMarkers.length > 0 ? 12 : 6}
+            zoom={allMarkers.length > 0 ? 12 : 6}
             height="180px"
             mapStyle={themeMapStyle}
             interactive={false}
@@ -2037,7 +2053,7 @@ export default function HomePage() {
 
       {/* Full-screen map (portal-level to avoid stacking context issues) */}
       {mapFullOpen && (() => {
-        const mapMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
+        const addrMarkers: MapMarker[] = addresses.filter((a) => a.lat && a.lng).map((a) => ({
           id: a.id,
           lat: a.lat!,
           lng: a.lng!,
@@ -2045,15 +2061,30 @@ export default function HomePage() {
           name: a.name,
           type: "address" as const,
         }));
-        const mapCenter: [number, number] = profile?.lat && profile?.lng
-          ? [profile.lat, profile.lng]
-          : mapMarkers.length > 0
-            ? [mapMarkers[0].lat, mapMarkers[0].lng]
-            : [46.6, 2.5];
+        const devMarkers: MapMarker[] = devices.map((d) => {
+          const member = members.find((m) => m.user_id === d.user_id);
+          return {
+            id: d.id,
+            lat: d.lat,
+            lng: d.lng,
+            emoji: member?.emoji || d.emoji || "📱",
+            name: member?.name || d.device_name,
+            color: "#3DD6C8",
+            type: "device" as const,
+            avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
+          };
+        });
+        const mapCenter: [number, number] = devices.length > 0
+          ? [devices[0].lat, devices[0].lng]
+          : profile?.lat && profile?.lng
+            ? [profile.lat, profile.lng]
+            : addrMarkers.length > 0
+              ? [addrMarkers[0].lat, addrMarkers[0].lng]
+              : [46.6, 2.5];
         return (
           <MapFull
-            markers={mapMarkers}
-            deviceMarkers={[]}
+            markers={addrMarkers}
+            deviceMarkers={devMarkers}
             center={mapCenter}
             onClose={() => setMapFullOpen(false)}
             familyId={profile?.family_id}

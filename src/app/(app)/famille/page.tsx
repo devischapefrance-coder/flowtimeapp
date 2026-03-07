@@ -500,16 +500,20 @@ export default function FamillePage() {
       ? [mapMarkers[0].lat, mapMarkers[0].lng]
       : [46.2044, 5.226];
 
-  const deviceMapMarkers = devices.map((d) => ({
-    id: d.id,
-    lat: d.lat,
-    lng: d.lng,
-    emoji: d.emoji,
-    name: d.device_name,
-    color: "#3DD6C8",
-    type: "device" as const,
-    updatedAt: d.updated_at,
-  }));
+  const deviceMapMarkers = devices.map((d) => {
+    const member = members.find((m) => m.user_id === d.user_id);
+    return {
+      id: d.id,
+      lat: d.lat,
+      lng: d.lng,
+      emoji: member?.emoji || d.emoji,
+      name: member?.name || d.device_name,
+      color: "#3DD6C8",
+      type: "device" as const,
+      updatedAt: d.updated_at,
+      avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
+    };
+  });
 
   const filledAddresses = addresses.filter((a) => a.address).length;
 
@@ -734,7 +738,7 @@ export default function FamillePage() {
           </div>
         </div>
         <MapViewDynamic
-          markers={mapMarkers}
+          markers={[...mapMarkers, ...deviceMapMarkers]}
           center={mapCenter}
           height="220px"
           mapStyle={themeMapStyle}
@@ -809,7 +813,7 @@ export default function FamillePage() {
           center={mapFocusCenter || mapCenter}
           initialZoom={mapFocusCenter ? 17 : undefined}
           onClose={() => { setMapFull(false); setMapFocusCenter(null); }}
-          deviceMarkers={[]}
+          deviceMarkers={deviceMapMarkers}
           onAddressMoved={handleAddressMoved}
           familyId={familyId}
         />

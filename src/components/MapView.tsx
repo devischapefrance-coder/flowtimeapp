@@ -20,6 +20,7 @@ export interface MapMarker {
   detail?: string;
   updatedAt?: string;
   draggable?: boolean;
+  avatarUrl?: string;
 }
 
 export type MapStyle = "apple" | "dark" | "satellite";
@@ -107,34 +108,34 @@ function createIcon(marker: MapMarker) {
     });
   }
 
-  // Apple-style capsule pin for members/devices
+  // Avatar circle for members/devices
   if (marker.type === "member" || marker.type === "device") {
     const color = marker.color || "#5ED4C8";
-    const pulseRing = marker.type === "device"
-      ? `<span style="position:absolute;width:44px;height:44px;border-radius:50%;background:${color}20;animation:pulse 2s infinite;top:-6px;left:-6px"></span>`
-      : "";
+    const size = 40;
+    const avatarContent = marker.avatarUrl
+      ? `<img src="${marker.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:18px">${marker.emoji}</span>`
+      : `<span style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-size:18px">${marker.emoji}</span>`;
     return L.divIcon({
       className: "",
       html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center">
-        ${pulseRing}
+        <span style="position:absolute;width:${size + 10}px;height:${size + 10}px;border-radius:50%;background:${color}25;animation:pulse 2s infinite;top:-5px;left:-5px"></span>
         <div style="
-          background:#fff;
-          border-radius:16px;
-          padding:4px 8px;
-          display:flex;align-items:center;gap:4px;
-          box-shadow:0 2px 12px rgba(0,0,0,0.15),0 1px 3px rgba(0,0,0,0.1);
+          width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;
+          border:3px solid ${color};
+          box-shadow:0 2px 10px rgba(0,0,0,0.25);
           position:relative;z-index:1;
-          border:1px solid rgba(0,0,0,0.06);
+          background:#1a1a2e;
+        ">${avatarContent}</div>
+        <div style="
+          margin-top:2px;padding:1px 6px;border-radius:8px;
+          background:rgba(0,0,0,0.7);backdrop-filter:blur(4px);
+          position:relative;z-index:1;
         ">
-          <span style="font-size:16px;line-height:1">${marker.emoji}</span>
-          <span style="font-size:10px;font-weight:600;color:#1D1D1F;white-space:nowrap;max-width:60px;overflow:hidden;text-overflow:ellipsis">${marker.name.split(" ")[0]}</span>
-          <span style="width:6px;height:6px;border-radius:50%;background:${color};flex-shrink:0"></span>
+          <span style="font-size:9px;font-weight:700;color:#fff;white-space:nowrap">${marker.name.split(" ")[0]}</span>
         </div>
-        <div style="width:2px;height:6px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.1);position:relative;z-index:1"></div>
-        <div style="width:6px;height:6px;border-radius:50%;background:#fff;box-shadow:0 1px 4px rgba(0,0,0,0.2);position:relative;z-index:1"></div>
       </div>`,
-      iconSize: [32, 52],
-      iconAnchor: [16, 52],
+      iconSize: [size, size + 18],
+      iconAnchor: [size / 2, size / 2],
     });
   }
 
@@ -199,7 +200,7 @@ function LiveMarker({ marker: m, interactive }: { marker: MapMarker; interactive
     if (markerRef.current) {
       markerRef.current.setIcon(createIcon(m));
     }
-  }, [m.emoji, m.name, m.color, m.type]);
+  }, [m.emoji, m.name, m.color, m.type, m.avatarUrl]);
 
   return (
     <Marker ref={markerRef} position={[m.lat, m.lng]} icon={createIcon(m)}>
