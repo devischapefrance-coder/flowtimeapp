@@ -33,6 +33,302 @@ function genId() {
   return crypto.randomUUID();
 }
 
+// ---- Document types ----
+interface FamilyDocument {
+  id: string;
+  type: string;
+  label: string;
+  emoji: string;
+  memberId: string;
+  memberName: string;
+  note: string;
+  images: string[]; // base64 data URLs
+  createdAt: string;
+}
+
+const DOC_TYPES = [
+  { type: "carte_vitale", label: "Carte Vitale", emoji: "💚" },
+  { type: "carte_id", label: "Carte d'identité", emoji: "🪪" },
+  { type: "passeport", label: "Passeport", emoji: "🛂" },
+  { type: "mutuelle", label: "Carte mutuelle", emoji: "🏥" },
+  { type: "assurance_scolaire", label: "Assurance scolaire", emoji: "🎒" },
+  { type: "carnet_sante", label: "Carnet de santé", emoji: "📗" },
+  { type: "carnet_vaccination", label: "Carnet de vaccination", emoji: "💉" },
+  { type: "permis", label: "Permis de conduire", emoji: "🚗" },
+  { type: "carte_grise", label: "Carte grise", emoji: "📋" },
+  { type: "assurance_auto", label: "Assurance auto", emoji: "🚙" },
+  { type: "assurance_habitation", label: "Assurance habitation", emoji: "🏠" },
+  { type: "attestation", label: "Attestation", emoji: "📜" },
+  { type: "ordonnance", label: "Ordonnance", emoji: "💊" },
+  { type: "autre", label: "Autre document", emoji: "📄" },
+];
+
+function DocumentsTab({ members, familyId }: { members: Member[]; familyId: string }) {
+  const STORAGE_KEY = `flowtime_docs_${familyId}`;
+
+  function loadDocs(): FamilyDocument[] {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      return raw ? JSON.parse(raw) : [];
+    } catch { return []; }
+  }
+
+  function saveDocs(docs: FamilyDocument[]) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(docs));
+  }
+
+  const [docs, setDocs] = useState<FamilyDocument[]>(() => loadDocs());
+  const [addOpen, setAddOpen] = useState(false);
+  const [viewDoc, setViewDoc] = useState<FamilyDocument | null>(null);
+  const [viewImage, setViewImage] = useState<string | null>(null);
+  const [filterMember, setFilterMember] = useState("all");
+
+  // Add form state
+  const [addType, setAddType] = useState("carte_vitale");
+  const [addMember, setAddMember] = useState("");
+  const [addNote, setAddNote] = useState("");
+  const [addImages, setAddImages] = useState<string[]>([]);
+
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  function handleFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const files = e.target.files;
+    if (!files) return;
+    Array.from(files).forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          setAddImages((prev) => [...prev, reader.result as string]);
+        }
+      };
+      reader.readAsDataURL(file);
+    });
+    e.target.value = "";
+  }
+
+  function addDoc() {
+    if (!addMember) return;
+    const member = members.find((m) => m.id === addMember);
+    const docType = DOC_TYPES.find((d) => d.type === addType) || DOC_TYPES[DOC_TYPES.length - 1];
+    const newDoc: FamilyDocument = {
+      id: crypto.randomUUID(),
+      type: addType,
+      label: docType.label,
+      emoji: docType.emoji,
+      memberId: addMember,
+      memberName: member ? `${member.emoji} ${member.name}` : "",
+      note: addNote.trim(),
+      images: addImages,
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [newDoc, ...docs];
+    setDocs(updated);
+    saveDocs(updated);
+    setAddOpen(false);
+    setAddType("carte_vitale");
+    setAddMember("");
+    setAddNote("");
+    setAddImages([]);
+  }
+
+  function deleteDoc(id: string) {
+    const updated = docs.filter((d) => d.id !== id);
+    setDocs(updated);
+    saveDocs(updated);
+    setViewDoc(null);
+  }
+
+  const filtered = filterMember === "all" ? docs : docs.filter((d) => d.memberId === filterMember);
+
+  // Group by member
+  const grouped: Record<string, FamilyDocument[]> = {};
+  for (const d of filtered) {
+    if (!grouped[d.memberName]) grouped[d.memberName] = [];
+    grouped[d.memberName].push(d);
+  }
+
+  return (
+    <div>
+      {/* Filter + add */}
+      <div className="flex items-center gap-2 mb-4">
+        {members.length > 1 && (
+          <div className="flex gap-1 flex-1 overflow-x-auto">
+            <button
+              className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold shrink-0"
+              style={{ background: filterMember === "all" ? "var(--accent-soft)" : "var(--surface2)", color: filterMember === "all" ? "var(--accent)" : "var(--dim)" }}
+              onClick={() => setFilterMember("all")}
+            >Tous</button>
+            {members.map((m) => (
+              <button key={m.id}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold shrink-0"
+                style={{ background: filterMember === m.id ? "var(--accent-soft)" : "var(--surface2)", color: filterMember === m.id ? "var(--accent)" : "var(--dim)" }}
+                onClick={() => setFilterMember(m.id)}
+              >{m.emoji} {m.name}</button>
+            ))}
+          </div>
+        )}
+        <button className="btn btn-primary text-sm shrink-0" onClick={() => setAddOpen(true)}>+ Doc</button>
+      </div>
+
+      {filtered.length === 0 && (
+        <EmptyState icon="📄" title="Aucun document" subtitle="Ajoute tes documents familiaux pour les avoir toujours sous la main" />
+      )}
+
+      {/* Documents grouped by member */}
+      {Object.entries(grouped).map(([memberName, memberDocs]) => (
+        <div key={memberName} className="mb-4">
+          <p className="text-[10px] font-bold uppercase mb-2 px-1" style={{ color: "var(--dim)" }}>{memberName}</p>
+          <div className="flex flex-col gap-1.5">
+            {memberDocs.map((doc) => (
+              <button
+                key={doc.id}
+                className="card !mb-0 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform text-left w-full"
+                onClick={() => setViewDoc(doc)}
+              >
+                <span className="text-xl">{doc.emoji}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-bold truncate">{doc.label}</p>
+                  {doc.note && <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>{doc.note}</p>}
+                </div>
+                {doc.images.length > 0 && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>
+                    {doc.images.length} 📷
+                  </span>
+                )}
+                <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      ))}
+
+      {/* View doc modal */}
+      <Modal open={!!viewDoc} onClose={() => setViewDoc(null)} title={viewDoc ? `${viewDoc.emoji} ${viewDoc.label}` : ""}>
+        {viewDoc && (
+          <div className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-xs" style={{ color: "var(--dim)" }}>
+              <span>{viewDoc.memberName}</span>
+              <span>·</span>
+              <span>{new Date(viewDoc.createdAt).toLocaleDateString("fr-FR")}</span>
+            </div>
+            {viewDoc.note && (
+              <p className="text-sm" style={{ color: "var(--text)" }}>{viewDoc.note}</p>
+            )}
+            {viewDoc.images.length > 0 && (
+              <div className="grid grid-cols-2 gap-2">
+                {viewDoc.images.map((img, i) => (
+                  <button key={i} className="rounded-xl overflow-hidden cursor-pointer" onClick={() => setViewImage(img)}>
+                    <img src={img} alt={`${viewDoc.label} ${i + 1}`} className="w-full h-32 object-cover" />
+                  </button>
+                ))}
+              </div>
+            )}
+            <button
+              className="text-xs font-bold py-2 rounded-xl"
+              style={{ background: "rgba(239,68,68,0.1)", color: "var(--red, #ef4444)" }}
+              onClick={() => deleteDoc(viewDoc.id)}
+            >Supprimer ce document</button>
+          </div>
+        )}
+      </Modal>
+
+      {/* Fullscreen image viewer */}
+      {viewImage && (
+        <div
+          className="fixed inset-0 z-[200] flex items-center justify-center bg-black/90"
+          onClick={() => setViewImage(null)}
+        >
+          <img src={viewImage} alt="Document" className="max-w-full max-h-full object-contain" />
+          <button
+            className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-xl"
+            style={{ background: "rgba(255,255,255,0.2)" }}
+            onClick={() => setViewImage(null)}
+          >✕</button>
+        </div>
+      )}
+
+      {/* Add doc modal */}
+      <Modal open={addOpen} onClose={() => { setAddOpen(false); setAddImages([]); }} title="Nouveau document">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Type de document</label>
+            <div className="flex flex-wrap gap-1.5">
+              {DOC_TYPES.map((d) => (
+                <button key={d.type}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold"
+                  style={{
+                    background: addType === d.type ? "var(--accent-soft)" : "var(--surface2)",
+                    color: addType === d.type ? "var(--accent)" : "var(--dim)",
+                    border: addType === d.type ? "1px solid var(--accent)" : "1px solid transparent",
+                  }}
+                  onClick={() => setAddType(d.type)}
+                >{d.emoji} {d.label}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Membre</label>
+            <div className="flex flex-wrap gap-1.5">
+              {members.map((m) => (
+                <button key={m.id}
+                  className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold"
+                  style={{
+                    background: addMember === m.id ? "var(--accent-soft)" : "var(--surface2)",
+                    color: addMember === m.id ? "var(--accent)" : "var(--dim)",
+                    border: addMember === m.id ? "1px solid var(--accent)" : "1px solid transparent",
+                  }}
+                  onClick={() => setAddMember(m.id)}
+                >{m.emoji} {m.name}</button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Note (optionnel)</label>
+            <input
+              className="w-full px-3 py-2.5 rounded-xl text-sm"
+              style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
+              value={addNote}
+              onChange={(e) => setAddNote(e.target.value)}
+              placeholder="N° de carte, date d'expiration..."
+            />
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Photos du document</label>
+            <input ref={fileRef} type="file" accept="image/*" multiple capture="environment" className="hidden" onChange={handleFile} />
+            <div className="flex gap-2 flex-wrap">
+              {addImages.map((img, i) => (
+                <div key={i} className="relative w-20 h-20 rounded-xl overflow-hidden">
+                  <img src={img} alt="" className="w-full h-full object-cover" />
+                  <button
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white"
+                    style={{ background: "rgba(0,0,0,0.6)" }}
+                    onClick={() => setAddImages(addImages.filter((_, j) => j !== i))}
+                  >✕</button>
+                </div>
+              ))}
+              <button
+                className="w-20 h-20 rounded-xl flex flex-col items-center justify-center text-xs"
+                style={{ background: "var(--surface2)", color: "var(--dim)", border: "2px dashed var(--glass-border)" }}
+                onClick={() => fileRef.current?.click()}
+              >
+                <span className="text-lg mb-0.5">📷</span>
+                Photo
+              </button>
+            </div>
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={addDoc}
+            disabled={!addMember}
+          >Ajouter</button>
+        </div>
+      </Modal>
+
+      <input type="file" accept="image/*" className="hidden" />
+    </div>
+  );
+}
+
 // ---- Routine types ----
 interface RoutineStep {
   id: string;
@@ -335,7 +631,7 @@ export default function ViePage() {
   const { toast, toastUndo } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
   const searchParams = useSearchParams();
-  const validTabs = ["notes", "courses", "taches", "routines"] as const;
+  const validTabs = ["notes", "courses", "taches", "routines", "documents"] as const;
   type Tab = typeof validTabs[number];
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
@@ -403,7 +699,7 @@ export default function ViePage() {
   const dataLoadedRef = useRef(false);
 
   // --- Badge "nouveautés" helpers ---
-  const TAB_KEYS = ["notes", "courses", "taches", "routines"] as const;
+  const TAB_KEYS = ["notes", "courses", "taches", "routines", "documents"] as const;
 
   function getLastSeen(t: string): string {
     return localStorage.getItem(`flowtime_vie_lastSeen_${t}`) || "1970-01-01T00:00:00.000Z";
@@ -418,7 +714,7 @@ export default function ViePage() {
     const counts: Record<string, number> = {};
     const dataMap: Record<string, { created_at: string }[]> = {
       notes, courses: shoppingItems,
-      taches: chores, routines: [],
+      taches: chores, routines: [], documents: [],
     };
     for (const key of TAB_KEYS) {
       const lastSeen = getLastSeen(key);
@@ -740,6 +1036,7 @@ export default function ViePage() {
           ["courses", "🛒", "Courses"],
           ["taches", "🧹", "Tâches"],
           ["routines", "🌅", "Routines"],
+          ["documents", "📄", "Docs"],
         ] as const).map(([key, emoji, label]) => (
           <button
             key={key}
@@ -1273,6 +1570,11 @@ export default function ViePage() {
           />
         );
       })()}
+
+      {/* Documents tab */}
+      {tab === "documents" && (
+        <DocumentsTab members={members} familyId={profile?.family_id || ""} />
+      )}
 
       {/* Note Detail Modal */}
       <Modal open={!!detailNote} onClose={() => setDetailNote(null)} title={detailNote?.title || ""}>
