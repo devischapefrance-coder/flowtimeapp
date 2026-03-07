@@ -9,8 +9,9 @@ import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 import { QRCodeSVG } from "qrcode.react";
 
-function Section({ title, emoji, children, defaultOpen = false }: { title: string; emoji: string; children: React.ReactNode; defaultOpen?: boolean }) {
+function Section({ title, emoji, children, defaultOpen = false, forceOpen = false }: { title: string; emoji: string; children: React.ReactNode; defaultOpen?: boolean; forceOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
+  const isOpen = open || forceOpen;
   return (
     <div className="mt-4">
       <button
@@ -21,7 +22,7 @@ function Section({ title, emoji, children, defaultOpen = false }: { title: strin
         <span className="text-sm font-bold flex-1 text-left">{title}</span>
         <svg
           width="12" height="12" viewBox="0 0 12 12" fill="currentColor"
-          style={{ color: "var(--dim)", transform: open ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}
+          style={{ color: "var(--dim)", transform: isOpen ? "rotate(180deg)" : "rotate(0deg)", transition: "transform 0.25s ease" }}
         >
           <path d="M2 4.5l4 4 4-4" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
         </svg>
@@ -29,7 +30,7 @@ function Section({ title, emoji, children, defaultOpen = false }: { title: strin
       <div
         style={{
           display: "grid",
-          gridTemplateRows: open ? "1fr" : "0fr",
+          gridTemplateRows: isOpen ? "1fr" : "0fr",
           transition: "grid-template-rows 0.3s ease",
         }}
       >
@@ -113,7 +114,7 @@ const PROFILE_EMOJIS = [
 export default function ReglagesPage() {
   const router = useRouter();
   const { profile, refreshProfile } = useProfile();
-  const { startTutorial, startTutorialAtSection, completedSections } = useTutorial();
+  const { tutorialActive, currentSection, startTutorial, startTutorialAtSection, completedSections } = useTutorial();
 
   const [firstName, setFirstName] = useState(profile?.first_name || "");
   const [lastName, setLastName] = useState(profile?.last_name || "");
@@ -564,7 +565,7 @@ export default function ReglagesPage() {
       </Section>
 
       {/* Famille */}
-      <Section title="Famille" emoji="👨‍👩‍👧‍👦">
+      <Section title="Famille" emoji="👨‍👩‍👧‍👦" forceOpen={tutorialActive && currentSection === "reglages"}>
       <div className="card" data-tutorial="family-code">
         <p className="text-sm font-bold mb-1">Mon code famille</p>
         <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
