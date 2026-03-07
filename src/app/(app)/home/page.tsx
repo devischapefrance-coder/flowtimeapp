@@ -40,7 +40,7 @@ interface WidgetConfig {
 const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   { id: "stats", label: "Stats rapides", icon: "📊" },
   { id: "flow", label: "Flow AI", icon: "🤖" },
-  { id: "weather", label: "Météo", icon: "🌤️" },
+  // météo fusionnée dans le widget Flow
   { id: "calendar", label: "Planning", icon: "📅" },
   { id: "meals", label: "Repas", icon: "🍽️" },
   { id: "expenses", label: "Dépenses", icon: "💰" },
@@ -936,6 +936,7 @@ export default function HomePage() {
     today: todayStr,
     currentTime: new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }),
     viewMode,
+    weather: weather ? { temperature: weather.temperature, description: weather.description, icon: weather.icon } : null,
   };
 
   // ---- Widget render functions ----
@@ -943,7 +944,7 @@ export default function HomePage() {
     switch (widgetId) {
       case "stats": return renderStats();
       case "flow": return renderFlow();
-      case "weather": return renderWeather();
+      // weather fusionnée dans flow
       case "calendar": return renderCalendar();
       case "meals": return renderMeals();
       case "expenses": return renderExpenses();
@@ -1021,61 +1022,54 @@ export default function HomePage() {
   function renderFlow() {
     return (
       <div
-        className="card flex items-center gap-3 !mb-0"
+        className="card !mb-0 !p-0 overflow-hidden"
         data-tutorial="flow-chat-widget"
         style={{ background: "var(--accent-soft)", border: "1px solid rgba(124,107,240,0.15)" }}
       >
-        <button
-          onClick={() => setChatOpen(true)}
-          className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full text-xl cursor-pointer"
-          style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
-          aria-label="Ouvrir Flow"
-        >
-          <Logo size={24} />
-        </button>
-        <div className="flex-1 min-w-0">
-          {proactiveLoading && !proactiveMsg ? (
-            <div className="space-y-1.5">
-              <div className="h-3 w-3/4 rounded-full animate-pulse" style={{ background: "rgba(124,107,240,0.2)" }} />
-              <div className="h-2.5 w-1/2 rounded-full animate-pulse" style={{ background: "rgba(124,107,240,0.12)" }} />
-            </div>
-          ) : proactiveMsg ? (
-            <>
-              <p className="text-[12px] leading-snug" style={{ color: "var(--text)" }}>{proactiveMsg.main}</p>
-              {proactiveMsg.sub && <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--dim)" }}>{proactiveMsg.sub}</p>}
-            </>
-          ) : (
-            <p className="text-[11px]" style={{ color: "var(--dim)" }}>Demande-moi n&apos;importe quoi !</p>
-          )}
+        {/* Flow message row */}
+        <div className="flex items-center gap-3 p-3">
+          <button
+            onClick={() => setChatOpen(true)}
+            className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full text-xl cursor-pointer"
+            style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
+            aria-label="Ouvrir Flow"
+          >
+            <Logo size={24} />
+          </button>
+          <div className="flex-1 min-w-0">
+            {proactiveLoading && !proactiveMsg ? (
+              <div className="space-y-1.5">
+                <div className="h-3 w-3/4 rounded-full animate-pulse" style={{ background: "rgba(124,107,240,0.2)" }} />
+                <div className="h-2.5 w-1/2 rounded-full animate-pulse" style={{ background: "rgba(124,107,240,0.12)" }} />
+              </div>
+            ) : proactiveMsg ? (
+              <>
+                <p className="text-[12px] leading-snug" style={{ color: "var(--text)" }}>{proactiveMsg.main}</p>
+                {proactiveMsg.sub && <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--dim)" }}>{proactiveMsg.sub}</p>}
+              </>
+            ) : (
+              <p className="text-[11px]" style={{ color: "var(--dim)" }}>Demande-moi n&apos;importe quoi !</p>
+            )}
+          </div>
         </div>
+        {/* Weather bar */}
+        {weather && (
+          <button
+            onClick={() => setWeatherOpen(true)}
+            className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer"
+            style={{ borderTop: "1px solid rgba(124,107,240,0.1)", background: "rgba(124,107,240,0.03)" }}
+          >
+            <span className="text-lg">{weather.icon}</span>
+            <span className="text-xs font-bold">{weather.temperature}°C</span>
+            <span className="text-[10px] flex-1 text-left truncate" style={{ color: "var(--dim)" }}>{weather.description}</span>
+            <span className="text-[10px]" style={{ color: "var(--faint)" }}>›</span>
+          </button>
+        )}
       </div>
     );
   }
 
-  function renderWeather() {
-    if (!weather) {
-      return (
-        <div className="card !mb-0 flex items-center gap-3">
-          <span className="text-2xl">🌡️</span>
-          <div className="flex-1">
-            <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
-            <p className="text-xs" style={{ color: "var(--faint)" }}>Chargement...</p>
-          </div>
-        </div>
-      );
-    }
-    return (
-      <div data-tutorial="weather-widget" className="card !mb-0 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setWeatherOpen(true)}>
-        <span className="text-3xl">{weather.icon}</span>
-        <div className="flex-1">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
-          <p className="text-lg font-bold">{weather.temperature}°C</p>
-          <p className="text-xs" style={{ color: "var(--dim)" }}>{weather.description}</p>
-        </div>
-        <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
-      </div>
-    );
-  }
+  // renderWeather supprimé — météo intégrée dans renderFlow
 
   function renderCalendar() {
     return (

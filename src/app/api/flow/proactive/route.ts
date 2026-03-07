@@ -39,12 +39,17 @@ function buildProactivePrompt(context: Record<string, unknown>): string {
         .join(", ")
     : "Aucun";
 
+  const weatherInfo = context.weather
+    ? `${(context.weather as { temperature: number; description: string; icon: string }).temperature}°C, ${(context.weather as { description: string }).description}`
+    : "non disponible";
+
   return `=== CONTEXTE ===
 👤 Utilisateur : ${userEmoji} ${userName} (${userRole || "membre"})
    Nom dans les membres : ${userMemberName}
    Date de naissance : ${userBirthDate}
 Date du jour : ${context.today}
 Heure : ${context.currentTime || "non disponible"}
+🌤️ Météo : ${weatherInfo}
 👨‍👩‍👧‍👦 Membres : ${members}
 📅 Events du jour : ${todayEvents}
 🎂 Anniversaires : ${birthdays}
