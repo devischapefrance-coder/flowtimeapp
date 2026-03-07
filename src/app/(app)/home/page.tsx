@@ -9,7 +9,7 @@ import Timeline from "@/components/Timeline";
 import DayAgenda from "@/components/DayAgenda";
 import QuickVoice from "@/components/QuickVoice";
 import NotificationManager from "@/components/NotificationManager";
-import type { Event, Member, Address, Contact, Meal, Birthday, Expense, Chore, DeviceLocation } from "@/lib/types";
+import type { Event, Member, Address, Contact, Meal, Birthday, Chore, DeviceLocation } from "@/lib/types";
 import dynamic from "next/dynamic";
 import type { MapMarker } from "@/components/MapView";
 import { useThemeMapStyle } from "@/components/MapView";
@@ -18,7 +18,7 @@ const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 import { notifyFamily } from "@/lib/push";
 import Modal from "@/components/Modal";
 import Logo from "@/components/Logo";
-import { useRealtimeEvents, useRealtimeChores, useRealtimeMeals, useRealtimeBirthdays, useRealtimeMembers, useRealtimeExpenses } from "@/lib/realtime";
+import { useRealtimeEvents, useRealtimeChores, useRealtimeMeals, useRealtimeBirthdays, useRealtimeMembers } from "@/lib/realtime";
 
 import { checkReminders, checkEventReminders } from "@/lib/reminders";
 import { downloadICS, shareICS } from "@/lib/ical";
@@ -43,7 +43,7 @@ const WIDGET_DEFS: { id: string; label: string; icon: string }[] = [
   // météo fusionnée dans le widget Flow
   { id: "calendar", label: "Planning", icon: "📅" },
   { id: "meals", label: "Repas", icon: "🍽️" },
-  { id: "expenses", label: "Dépenses", icon: "💰" },
+  // expenses widget removed
   { id: "birthdays", label: "Anniversaires", icon: "🎂" },
   { id: "family_map", label: "Carte famille", icon: "🗺️" },
   { id: "chores", label: "Tâches", icon: "🧹" },
@@ -171,7 +171,7 @@ export default function HomePage() {
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [meals, setMeals] = useState<Meal[]>([]);
   const [birthdays, setBirthdays] = useState<Birthday[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
+  // expenses state removed
   const [chores, setChores] = useState<Chore[]>([]);
   const [devices, setDevices] = useState<DeviceLocation[]>([]);
   const themeMapStyle = useThemeMapStyle();
@@ -304,7 +304,7 @@ export default function HomePage() {
 
   // Widget expanded modal states
   const [weatherOpen, setWeatherOpen] = useState(false);
-  const [expensesOpen, setExpensesOpen] = useState(false);
+  // expensesOpen state removed
   const [birthdaysOpen, setBirthdaysOpen] = useState(false);
 
   // On mount: check goto-date override from search
@@ -426,12 +426,7 @@ export default function HomePage() {
     const startDate = days[0].date;
     const endDate = days[6].date;
 
-    // Month boundaries for expenses
-    const nowLocal = new Date();
-    const monthStart = localDateStr(new Date(nowLocal.getFullYear(), nowLocal.getMonth(), 1));
-    const monthEnd = localDateStr(new Date(nowLocal.getFullYear(), nowLocal.getMonth() + 1, 0));
-
-    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, expRes, choreRes, devRes] = await Promise.all([
+    const [evRes, memRes, addrRes, contRes, mealRes, bdayRes, choreRes, devRes] = await Promise.all([
       supabase
         .from("events")
         .select("*, members(name,emoji,color)")
@@ -445,9 +440,6 @@ export default function HomePage() {
         .gte("date", startDate)
         .lte("date", endDate),
       supabase.from("birthdays").select("*").eq("family_id", profile.family_id),
-      supabase.from("expenses").select("*").eq("family_id", profile.family_id)
-        .gte("date", monthStart)
-        .lte("date", monthEnd),
       supabase.from("chores").select("*").eq("family_id", profile.family_id),
       supabase.from("device_locations").select("*").eq("family_id", profile.family_id),
     ]);
@@ -463,7 +455,7 @@ export default function HomePage() {
     if (contRes.data) setContacts(contRes.data as Contact[]);
     if (mealRes.data) setMeals(mealRes.data as Meal[]);
     if (bdayRes.data) setBirthdays(bdayRes.data as Birthday[]);
-    if (expRes.data) setExpenses(expRes.data as Expense[]);
+    // expenses loading removed
     if (choreRes.data) setChores(choreRes.data as Chore[]);
     if (devRes.data) setDevices(devRes.data as DeviceLocation[]);
     setDataLoaded(true);
@@ -495,7 +487,7 @@ export default function HomePage() {
   useRealtimeMeals(profile?.family_id, loadData);
   useRealtimeBirthdays(profile?.family_id, loadData);
   useRealtimeMembers(profile?.family_id, loadData);
-  useRealtimeExpenses(profile?.family_id, loadData);
+  // useRealtimeExpenses removed
 
   // Polling fallback: refresh every 10s
   useEffect(() => {
@@ -894,16 +886,6 @@ export default function HomePage() {
   // ---- Computed data for widgets ----
   const totalWeekEvents = viewEvents.length;
 
-  // Expenses: total + top 3 categories
-  const expenseTotal = expenses.reduce((sum, e) => sum + e.amount, 0);
-  const expenseByCategory: Record<string, number> = {};
-  for (const e of expenses) {
-    expenseByCategory[e.category] = (expenseByCategory[e.category] || 0) + e.amount;
-  }
-  const topExpenseCategories = Object.entries(expenseByCategory)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3);
-
   // Birthdays: all sorted by upcoming, widget shows 3
   const allBirthdaysSorted = (() => {
     const today = new Date();
@@ -952,7 +934,7 @@ export default function HomePage() {
       // weather fusionnée dans flow
       case "calendar": return renderCalendar();
       case "meals": return renderMeals();
-      case "expenses": return renderExpenses();
+      // expenses widget removed
       case "birthdays": return renderBirthdays();
 
       case "family_map": return renderFamilyMap();
@@ -1301,31 +1283,7 @@ export default function HomePage() {
     );
   }
 
-  function renderExpenses() {
-    return (
-      <div className="card !mb-0 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setExpensesOpen(true)}>
-        <div className="flex items-center justify-between mb-2">
-          <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Dépenses du mois</p>
-          <div className="flex items-center gap-2">
-            <p className="text-lg font-bold" style={{ color: "var(--warm)" }}>{expenseTotal.toFixed(0)} €</p>
-            <span className="text-sm" style={{ color: "var(--faint)" }}>›</span>
-          </div>
-        </div>
-        {topExpenseCategories.length > 0 ? (
-          <div className="flex flex-col gap-1.5">
-            {topExpenseCategories.map(([cat, amount]) => (
-              <div key={cat} className="flex items-center justify-between">
-                <span className="text-xs capitalize" style={{ color: "var(--dim)" }}>{cat}</span>
-                <span className="text-xs font-bold">{amount.toFixed(0)} €</span>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune depense ce mois</p>
-        )}
-      </div>
-    );
-  }
+  // renderExpenses removed
 
   function renderBirthdays() {
     return (
@@ -1820,52 +1778,7 @@ export default function HomePage() {
         );
       })()}
 
-      <Modal open={expensesOpen} onClose={() => setExpensesOpen(false)} title="Dépenses du mois">
-        <div className="text-center mb-4 p-4 rounded-2xl" style={{ background: "var(--surface2)" }}>
-          <p className="text-3xl font-bold" style={{ color: "var(--warm)" }}>{expenseTotal.toFixed(2)} €</p>
-          <p className="text-xs mt-1" style={{ color: "var(--dim)" }}>Total ce mois</p>
-        </div>
-        {Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1]).length > 0 && (
-          <div className="mb-4">
-            <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Par catégorie</p>
-            <div className="flex flex-col gap-2.5">
-              {Object.entries(expenseByCategory).sort((a, b) => b[1] - a[1]).map(([cat, amount]) => (
-                <div key={cat}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs capitalize font-bold">{cat}</span>
-                    <span className="text-xs font-bold" style={{ color: "var(--warm)" }}>{amount.toFixed(0)} €</span>
-                  </div>
-                  <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "var(--surface2)" }}>
-                    <div className="h-full rounded-full" style={{ width: `${expenseTotal > 0 ? (amount / expenseTotal) * 100 : 0}%`, background: "var(--warm)" }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Dernières transactions</p>
-        {expenses.length > 0 ? (
-          <div className="flex flex-col gap-2">
-            {expenses.slice(0, 20).map((exp) => {
-              const mem = exp.member_id ? members.find((m) => m.id === exp.member_id) : null;
-              return (
-                <div key={exp.id} className="flex items-center gap-3 px-3 py-2 rounded-xl" style={{ background: "var(--surface2)" }}>
-                  <span className="text-base">💰</span>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold truncate">{exp.description}</p>
-                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>
-                      {mem?.name || "Famille"} · {exp.category} · {new Date(exp.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}
-                    </p>
-                  </div>
-                  <span className="text-sm font-bold shrink-0" style={{ color: "var(--warm)" }}>{Number(exp.amount).toFixed(0)} €</span>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-xs" style={{ color: "var(--faint)" }}>Aucune transaction</p>
-        )}
-      </Modal>
+      {/* Expenses modal removed */}
 
       {(() => {
         const birthdaysByMonth: Record<number, typeof allBirthdaysSorted> = {};

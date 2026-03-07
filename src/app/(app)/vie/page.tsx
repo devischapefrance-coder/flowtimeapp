@@ -8,15 +8,14 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 import { useProfile } from "../layout";
-import { useRealtimeNotes, useRealtimeShopping, useRealtimeExpenses, useRealtimeChores, useRealtimeBirthdays } from "@/lib/realtime";
-import PhotoAlbum from "@/components/PhotoAlbum";
+import { useRealtimeNotes, useRealtimeShopping, useRealtimeChores, useRealtimeBirthdays } from "@/lib/realtime";
 import Modal from "@/components/Modal";
 import { SHOPPING_CATEGORIES, detectShoppingCategory } from "@/lib/shopping-categories";
 import { useToast } from "@/components/Toast";
 import { notifyFamily } from "@/lib/push";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 import EmptyState from "@/components/EmptyState";
-import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Expense, Chore, FamilyPhoto } from "@/lib/types";
+import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Chore } from "@/lib/types";
 
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
@@ -34,12 +33,309 @@ function genId() {
   return crypto.randomUUID();
 }
 
+// ---- Routine types ----
+interface RoutineStep {
+  id: string;
+  label: string;
+  emoji: string;
+  duration: number;
+}
+
+interface Routine {
+  id: string;
+  name: string;
+  type: "matin" | "soir";
+  memberId: string;
+  steps: RoutineStep[];
+}
+
+interface RoutineTabProps {
+  members: Member[];
+  childMembers: Member[];
+  defaultMorning: RoutineStep[];
+  defaultEvening: RoutineStep[];
+  loadRoutines: () => Routine[];
+  saveRoutines: (r: Routine[]) => void;
+  loadDone: () => Record<string, string[]>;
+  saveDone: (d: Record<string, string[]>) => void;
+  genId: () => string;
+}
+
+function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loadRoutines, saveRoutines, loadDone, saveDone, genId }: RoutineTabProps) {
+  const [routines, setRoutines] = useState<Routine[]>(() => loadRoutines());
+  const [doneMap, setDoneMap] = useState<Record<string, string[]>>(() => loadDone());
+  const [activeTimer, setActiveTimer] = useState<{ routineId: string; stepId: string; endTime: number } | null>(null);
+  const [timerLeft, setTimerLeft] = useState(0);
+  const [setupOpen, setSetupOpen] = useState(false);
+  const [setupMember, setSetupMember] = useState("");
+  const [setupType, setSetupType] = useState<"matin" | "soir">("matin");
+  const [filterMember, setFilterMember] = useState<string>("all");
+
+  // Timer tick
+  useEffect(() => {
+    if (!activeTimer) return;
+    const id = setInterval(() => {
+      const left = Math.max(0, Math.ceil((activeTimer.endTime - Date.now()) / 1000));
+      setTimerLeft(left);
+      if (left <= 0) {
+        clearInterval(id);
+        // Auto-validate step when timer ends
+        toggleStep(activeTimer.routineId, activeTimer.stepId);
+        setActiveTimer(null);
+      }
+    }, 500);
+    return () => clearInterval(id);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeTimer]);
+
+  function toggleStep(routineId: string, stepId: string) {
+    const newDone = { ...doneMap };
+    const key = routineId;
+    if (!newDone[key]) newDone[key] = [];
+    if (newDone[key].includes(stepId)) {
+      newDone[key] = newDone[key].filter((s) => s !== stepId);
+    } else {
+      newDone[key] = [...newDone[key], stepId];
+    }
+    setDoneMap(newDone);
+    saveDone(newDone);
+  }
+
+  function startTimer(routineId: string, step: RoutineStep) {
+    setActiveTimer({
+      routineId,
+      stepId: step.id,
+      endTime: Date.now() + step.duration * 60 * 1000,
+    });
+    setTimerLeft(step.duration * 60);
+  }
+
+  function addRoutine() {
+    if (!setupMember) return;
+    const member = members.find((m) => m.id === setupMember);
+    if (!member) return;
+    const steps = setupType === "matin"
+      ? defaultMorning.map((s) => ({ ...s, id: genId() }))
+      : defaultEvening.map((s) => ({ ...s, id: genId() }));
+    const newRoutine: Routine = {
+      id: genId(),
+      name: `Routine ${setupType === "matin" ? "du matin" : "du soir"} — ${member.emoji} ${member.name}`,
+      type: setupType,
+      memberId: setupMember,
+      steps,
+    };
+    const updated = [...routines, newRoutine];
+    setRoutines(updated);
+    saveRoutines(updated);
+    setSetupOpen(false);
+    setSetupMember("");
+  }
+
+  function deleteRoutine(id: string) {
+    const updated = routines.filter((r) => r.id !== id);
+    setRoutines(updated);
+    saveRoutines(updated);
+  }
+
+  const formatTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}:${String(s).padStart(2, "0")}`;
+  };
+
+  const filtered = filterMember === "all" ? routines : routines.filter((r) => r.memberId === filterMember);
+
+  return (
+    <div>
+      {/* Filter + add */}
+      <div className="flex items-center gap-2 mb-4">
+        {childMembers.length > 1 && (
+          <div className="flex gap-1 flex-1 overflow-x-auto">
+            <button
+              className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold shrink-0"
+              style={{ background: filterMember === "all" ? "var(--accent-soft)" : "var(--surface2)", color: filterMember === "all" ? "var(--accent)" : "var(--dim)" }}
+              onClick={() => setFilterMember("all")}
+            >Tous</button>
+            {childMembers.map((m) => (
+              <button key={m.id}
+                className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold shrink-0"
+                style={{ background: filterMember === m.id ? "var(--accent-soft)" : "var(--surface2)", color: filterMember === m.id ? "var(--accent)" : "var(--dim)" }}
+                onClick={() => setFilterMember(m.id)}
+              >{m.emoji} {m.name}</button>
+            ))}
+          </div>
+        )}
+        <button
+          className="btn btn-primary text-sm shrink-0"
+          onClick={() => setSetupOpen(true)}
+        >+ Routine</button>
+      </div>
+
+      {filtered.length === 0 && (
+        <EmptyState
+          icon="🌅"
+          title="Aucune routine"
+          subtitle={childMembers.length === 0
+            ? "Ajoute d'abord un membre enfant dans Famille"
+            : "Crée une routine matin ou soir pour tes enfants"}
+        />
+      )}
+
+      {filtered.map((routine) => {
+        const done = doneMap[routine.id] || [];
+        const total = routine.steps.length;
+        const completed = done.length;
+        const allDone = completed === total;
+        const member = members.find((m) => m.id === routine.memberId);
+        const progress = total > 0 ? (completed / total) * 100 : 0;
+
+        return (
+          <div key={routine.id} className="card !mb-3">
+            {/* Header */}
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <span className="text-lg">{routine.type === "matin" ? "🌅" : "🌙"}</span>
+                <div>
+                  <p className="text-sm font-bold">{routine.type === "matin" ? "Routine du matin" : "Routine du soir"}</p>
+                  <p className="text-[10px]" style={{ color: "var(--dim)" }}>{member?.emoji} {member?.name}</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-2">
+                {allDone && <span className="text-lg">🎉</span>}
+                <button className="text-xs p-1" style={{ color: "var(--red, #ef4444)" }} onClick={() => deleteRoutine(routine.id)}>✕</button>
+              </div>
+            </div>
+
+            {/* Progress bar */}
+            <div className="h-2 rounded-full overflow-hidden mb-3" style={{ background: "var(--surface2)" }}>
+              <div
+                className="h-full rounded-full transition-all"
+                style={{
+                  width: `${progress}%`,
+                  background: allDone ? "var(--green, #22c55e)" : "var(--accent)",
+                }}
+              />
+            </div>
+            <p className="text-[10px] font-bold mb-3" style={{ color: allDone ? "var(--green, #22c55e)" : "var(--dim)" }}>
+              {allDone ? "Tout est fait, bravo !" : `${completed}/${total} étapes`}
+            </p>
+
+            {/* Steps */}
+            <div className="flex flex-col gap-1.5">
+              {routine.steps.map((step) => {
+                const isDone = done.includes(step.id);
+                const isTimerActive = activeTimer?.routineId === routine.id && activeTimer?.stepId === step.id;
+
+                return (
+                  <div
+                    key={step.id}
+                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all"
+                    style={{
+                      background: isDone ? "rgba(34,197,94,0.1)" : "var(--surface2)",
+                      opacity: isDone ? 0.6 : 1,
+                    }}
+                  >
+                    {/* Check button */}
+                    <button
+                      className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0"
+                      style={{
+                        background: isDone ? "var(--green, #22c55e)" : "transparent",
+                        border: isDone ? "none" : "2px solid var(--glass-border)",
+                        color: "#fff",
+                      }}
+                      onClick={() => {
+                        toggleStep(routine.id, step.id);
+                        if (isTimerActive) setActiveTimer(null);
+                      }}
+                    >
+                      {isDone ? "✓" : ""}
+                    </button>
+
+                    <span className="text-base">{step.emoji}</span>
+                    <span className={`text-xs flex-1 font-medium ${isDone ? "line-through" : ""}`}>{step.label}</span>
+
+                    {/* Timer */}
+                    {!isDone && (
+                      isTimerActive ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="text-xs font-bold tabular-nums" style={{ color: timerLeft <= 10 ? "var(--red, #ef4444)" : "var(--accent)" }}>
+                            {formatTime(timerLeft)}
+                          </span>
+                          <button
+                            className="text-[10px] px-2 py-1 rounded-lg font-bold"
+                            style={{ background: "var(--surface2)", color: "var(--dim)" }}
+                            onClick={() => setActiveTimer(null)}
+                          >Stop</button>
+                        </div>
+                      ) : (
+                        <button
+                          className="text-[10px] px-2 py-1 rounded-lg font-bold"
+                          style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
+                          onClick={() => startTimer(routine.id, step)}
+                        >
+                          {step.duration} min
+                        </button>
+                      )
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
+      {/* Setup modal */}
+      <Modal open={setupOpen} onClose={() => setSetupOpen(false)} title="Nouvelle routine">
+        <div className="flex flex-col gap-4">
+          <div>
+            <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Type</label>
+            <div className="flex gap-2">
+              <button
+                className="flex-1 py-3 rounded-xl text-sm font-bold"
+                style={{ background: setupType === "matin" ? "var(--accent-soft)" : "var(--surface2)", color: setupType === "matin" ? "var(--accent)" : "var(--dim)", border: setupType === "matin" ? "1px solid var(--accent)" : "1px solid transparent" }}
+                onClick={() => setSetupType("matin")}
+              >🌅 Matin</button>
+              <button
+                className="flex-1 py-3 rounded-xl text-sm font-bold"
+                style={{ background: setupType === "soir" ? "var(--accent-soft)" : "var(--surface2)", color: setupType === "soir" ? "var(--accent)" : "1px solid transparent", border: setupType === "soir" ? "1px solid var(--accent)" : "1px solid transparent" }}
+                onClick={() => setSetupType("soir")}
+              >🌙 Soir</button>
+            </div>
+          </div>
+          <div>
+            <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Enfant</label>
+            {childMembers.length === 0 ? (
+              <p className="text-xs" style={{ color: "var(--faint)" }}>Aucun membre enfant/ado trouvé. Ajoute un membre avec le rôle &quot;Enfant&quot; dans Famille.</p>
+            ) : (
+              <div className="flex flex-wrap gap-2">
+                {childMembers.map((m) => (
+                  <button key={m.id}
+                    className="px-3 py-2 rounded-xl text-xs font-bold"
+                    style={{ background: setupMember === m.id ? "var(--accent-soft)" : "var(--surface2)", color: setupMember === m.id ? "var(--accent)" : "var(--dim)", border: setupMember === m.id ? "1px solid var(--accent)" : "1px solid transparent" }}
+                    onClick={() => setSetupMember(m.id)}
+                  >{m.emoji} {m.name}</button>
+                ))}
+              </div>
+            )}
+          </div>
+          <button
+            className="btn btn-primary"
+            onClick={addRoutine}
+            disabled={!setupMember}
+          >Créer la routine</button>
+        </div>
+      </Modal>
+    </div>
+  );
+}
+
 export default function ViePage() {
   const { profile, setVieUnread } = useProfile();
   const { toast, toastUndo } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
   const searchParams = useSearchParams();
-  const validTabs = ["notes", "courses", "budget", "taches", "photos"] as const;
+  const validTabs = ["notes", "courses", "taches", "routines"] as const;
   type Tab = typeof validTabs[number];
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
@@ -88,14 +384,7 @@ export default function ViePage() {
   const [newShoppingText, setNewShoppingText] = useState("");
   const [shoppingCat, setShoppingCat] = useState("all");
 
-  // Budget state
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [expenseModal, setExpenseModal] = useState(false);
-  const [expAmount, setExpAmount] = useState("");
-  const [expDesc, setExpDesc] = useState("");
-  const [expCategory, setExpCategory] = useState("autre");
-  const [expMember, setExpMember] = useState("");
-  const [expDate, setExpDate] = useState(() => localDateStr(new Date()));
+  // Budget state removed
 
   // Chores state
   const [chores, setChores] = useState<Chore[]>([]);
@@ -105,8 +394,7 @@ export default function ViePage() {
   const [choreFreq, setChoreFreq] = useState<"daily" | "weekly">("weekly");
   const [choreMembers, setChoreMembers] = useState<string[]>([]);
 
-  // Photos state
-  const [photos, setPhotos] = useState<FamilyPhoto[]>([]);
+  // Photos state removed
 
   // Comment counts per note
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
@@ -115,7 +403,7 @@ export default function ViePage() {
   const dataLoadedRef = useRef(false);
 
   // --- Badge "nouveautés" helpers ---
-  const TAB_KEYS = ["notes", "courses", "budget", "taches", "photos"] as const;
+  const TAB_KEYS = ["notes", "courses", "taches", "routines"] as const;
 
   function getLastSeen(t: string): string {
     return localStorage.getItem(`flowtime_vie_lastSeen_${t}`) || "1970-01-01T00:00:00.000Z";
@@ -130,7 +418,7 @@ export default function ViePage() {
     const counts: Record<string, number> = {};
     const dataMap: Record<string, { created_at: string }[]> = {
       notes, courses: shoppingItems,
-      budget: expenses, taches: chores, photos,
+      taches: chores, routines: [],
     };
     for (const key of TAB_KEYS) {
       const lastSeen = getLastSeen(key);
@@ -138,16 +426,16 @@ export default function ViePage() {
     }
     return counts;
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [notes, shoppingItems, expenses, chores, photos]);
+  }, [notes, shoppingItems, chores]);
 
   // Mark the active tab as seen once data loads & propagate total to Navbar
   useEffect(() => {
-    const hasData = notes.length || shoppingItems.length || expenses.length || chores.length || photos.length;
+    const hasData = notes.length || shoppingItems.length || chores.length;
     if (hasData && !dataLoadedRef.current) {
       dataLoadedRef.current = true;
       markSeen(tab);
     }
-  }, [notes, shoppingItems, expenses, chores, photos, tab]);
+  }, [notes, shoppingItems, chores, tab]);
 
   // Propagate total unread to Navbar via layout context
   useEffect(() => {
@@ -162,14 +450,12 @@ export default function ViePage() {
 
   const loadData = useCallback(async () => {
     if (!profile?.family_id) return;
-    const [notesRes, bdayRes, memRes, shopRes, expRes, choreRes, photoRes] = await Promise.all([
+    const [notesRes, bdayRes, memRes, shopRes, choreRes] = await Promise.all([
       supabase.from("notes").select("*").eq("family_id", profile.family_id).order("pinned", { ascending: false }).order("updated_at", { ascending: false }),
       supabase.from("birthdays").select("*").eq("family_id", profile.family_id),
       supabase.from("members").select("*").eq("family_id", profile.family_id),
       supabase.from("shopping_items").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
-      supabase.from("expenses").select("*").eq("family_id", profile.family_id).order("date", { ascending: false }),
       supabase.from("chores").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
-      supabase.from("family_photos").select("*").eq("family_id", profile.family_id).order("created_at", { ascending: false }),
     ]);
     if (notesRes.data) {
       const parsed = (notesRes.data as Record<string, unknown>[]).map((n) => ({
@@ -228,9 +514,7 @@ export default function ViePage() {
     setBirthdays(loadedBdays);
     setMembers(loadedMembers);
     if (shopRes.data) setShoppingItems(shopRes.data as ShoppingItem[]);
-    if (expRes.data) setExpenses(expRes.data as Expense[]);
     if (choreRes.data) setChores(choreRes.data as Chore[]);
-    if (photoRes.data) setPhotos(photoRes.data as FamilyPhoto[]);
   }, [profile?.family_id]);
 
   useEffect(() => { loadData(); }, [loadData]);
@@ -245,7 +529,7 @@ export default function ViePage() {
   // Realtime subscriptions
   useRealtimeNotes(profile?.family_id, profile?.first_name || "", loadData);
   useRealtimeShopping(profile?.family_id, loadData);
-  useRealtimeExpenses(profile?.family_id, loadData);
+  // useRealtimeExpenses removed
   useRealtimeChores(profile?.family_id, loadData);
   useRealtimeBirthdays(profile?.family_id, loadData);
 
@@ -454,9 +738,8 @@ export default function ViePage() {
         {([
           ["notes", "📝", "Notes"],
           ["courses", "🛒", "Courses"],
-          ["budget", "💰", "Budget"],
           ["taches", "🧹", "Tâches"],
-          ["photos", "📸", "Photos"],
+          ["routines", "🌅", "Routines"],
         ] as const).map(([key, emoji, label]) => (
           <button
             key={key}
@@ -777,221 +1060,6 @@ export default function ViePage() {
         );
       })()}
 
-      {/* Budget tab */}
-      {tab === "budget" && (() => {
-        const EXPENSE_CATS = [
-          { value: "courses", label: "Courses", emoji: "🛒" },
-          { value: "sante", label: "Santé", emoji: "🏥" },
-          { value: "loisir", label: "Loisir", emoji: "🎬" },
-          { value: "transport", label: "Transport", emoji: "🚗" },
-          { value: "education", label: "Éducation", emoji: "📚" },
-          { value: "maison", label: "Maison", emoji: "🏠" },
-          { value: "autre", label: "Autre", emoji: "📦" },
-        ];
-
-        const now = new Date();
-        const monthExpenses = expenses.filter((e) => {
-          const d = new Date(e.date);
-          return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
-        });
-        const monthTotal = monthExpenses.reduce((sum, e) => sum + Number(e.amount), 0);
-
-        // Totals by category
-        const byCat: Record<string, number> = {};
-        for (const e of monthExpenses) {
-          byCat[e.category] = (byCat[e.category] || 0) + Number(e.amount);
-        }
-
-        async function addExpense() {
-          if (!profile?.family_id || !expAmount || !expDesc.trim()) return;
-          await supabase.from("expenses").insert({
-            family_id: profile.family_id,
-            amount: parseFloat(expAmount),
-            description: expDesc.trim(),
-            category: expCategory,
-            member_id: expMember || null,
-            date: expDate,
-          });
-          notifyFamily("FlowTime 💰", `${profile.first_name || "Quelqu'un"} a ajouté une dépense : ${expDesc.trim()} (${expAmount}€)`);
-          setExpenseModal(false);
-          setExpAmount("");
-          setExpDesc("");
-          setExpCategory("autre");
-          setExpMember("");
-          loadData();
-        }
-
-        async function deleteExpense(id: string) {
-          await supabase.from("expenses").delete().eq("id", id);
-          loadData();
-        }
-
-        return (
-          <div>
-            {/* Month total */}
-            <div className="card text-center !mb-3">
-              <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Total du mois</p>
-              <p className="text-2xl font-bold" style={{ color: "var(--accent)" }}>{monthTotal.toFixed(2)} €</p>
-            </div>
-
-            {/* Category breakdown */}
-            {Object.keys(byCat).length > 0 && (
-              <div className="flex flex-wrap gap-1.5 mb-3">
-                {Object.entries(byCat).sort((a, b) => b[1] - a[1]).map(([cat, total]) => {
-                  const catInfo = EXPENSE_CATS.find((c) => c.value === cat);
-                  return (
-                    <span key={cat} className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: "var(--surface2)" }}>
-                      {catInfo?.emoji} {catInfo?.label}: {total.toFixed(0)}€
-                    </span>
-                  );
-                })}
-              </div>
-            )}
-
-            {/* Expense splitting - qui doit combien */}
-            {monthExpenses.length > 0 && members.length > 1 && (() => {
-              const perMember: Record<string, number> = {};
-              for (const m of members) perMember[m.id] = 0;
-              for (const exp of monthExpenses) {
-                if (exp.member_id && perMember[exp.member_id] !== undefined) {
-                  perMember[exp.member_id] += Number(exp.amount);
-                }
-              }
-              const activeMembers = members.filter((m) => perMember[m.id] > 0);
-              if (activeMembers.length < 2) return null;
-              const fairShare = monthTotal / activeMembers.length;
-              const balances = activeMembers.map((m) => ({
-                ...m,
-                paid: perMember[m.id],
-                balance: perMember[m.id] - fairShare,
-              }));
-              // Calculate transfers
-              const debtors = balances.filter((b) => b.balance < 0).map((b) => ({ ...b, balance: -b.balance }));
-              const creditors = balances.filter((b) => b.balance > 0).map((b) => ({ ...b }));
-              const transfers: { from: string; to: string; amount: number }[] = [];
-              let di = 0, ci = 0;
-              while (di < debtors.length && ci < creditors.length) {
-                const amount = Math.min(debtors[di].balance, creditors[ci].balance);
-                if (amount > 0.01) {
-                  transfers.push({ from: debtors[di].name, to: creditors[ci].name, amount });
-                }
-                debtors[di].balance -= amount;
-                creditors[ci].balance -= amount;
-                if (debtors[di].balance < 0.01) di++;
-                if (creditors[ci].balance < 0.01) ci++;
-              }
-              return (
-                <div className="card !mb-3">
-                  <p className="text-[10px] font-bold uppercase mb-2" style={{ color: "var(--dim)" }}>Répartition</p>
-                  <div className="flex flex-col gap-1.5 mb-2">
-                    {balances.map((b) => (
-                      <div key={b.id} className="flex items-center justify-between text-xs">
-                        <span>{b.emoji} {b.name}</span>
-                        <div className="flex items-center gap-2">
-                          <span style={{ color: "var(--dim)" }}>{b.paid.toFixed(0)}€ payé</span>
-                          <span className="font-bold" style={{ color: b.balance >= 0 ? "var(--green)" : "var(--red)" }}>
-                            {b.balance >= 0 ? "+" : ""}{b.balance.toFixed(2)}€
-                          </span>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                  {transfers.length > 0 && (
-                    <>
-                      <div className="h-px mb-2" style={{ background: "var(--glass-border)" }} />
-                      <div className="flex flex-col gap-1">
-                        {transfers.map((t, i) => (
-                          <p key={i} className="text-xs font-bold" style={{ color: "var(--accent)" }}>
-                            {t.from} → {t.to} : {t.amount.toFixed(2)}€
-                          </p>
-                        ))}
-                      </div>
-                    </>
-                  )}
-                </div>
-              );
-            })()}
-
-            <button
-              className="btn btn-primary mb-4 text-sm"
-              onClick={() => setExpenseModal(true)}
-            >
-              + Ajouter une dépense
-            </button>
-
-            {/* Expenses list */}
-            {monthExpenses.length === 0 && (
-              <EmptyState icon="💰" title="Aucune dépense ce mois" subtitle="Ajoute une dépense pour commencer" />
-            )}
-            <div className="flex flex-col gap-1.5">
-              {monthExpenses.map((exp) => {
-                const catInfo = EXPENSE_CATS.find((c) => c.value === exp.category);
-                const mem = members.find((m) => m.id === exp.member_id);
-                return (
-                  <div key={exp.id} className="card !mb-0 flex items-center gap-3">
-                    <span className="text-lg">{catInfo?.emoji || "📦"}</span>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold truncate">{exp.description}</p>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[10px]" style={{ color: "var(--dim)" }}>{new Date(exp.date).toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
-                        {mem && <span className="text-[10px]" style={{ color: "var(--dim)" }}>{mem.emoji} {mem.name}</span>}
-                      </div>
-                    </div>
-                    <span className="text-sm font-bold" style={{ color: "var(--red)" }}>-{Number(exp.amount).toFixed(2)}€</span>
-                    <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteExpense(exp.id)}>✕</button>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        );
-      })()}
-
-      {/* Expense Modal */}
-      <Modal open={expenseModal} onClose={() => setExpenseModal(false)} title="Nouvelle dépense">
-        <div className="flex flex-col gap-4">
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Montant (€)</label>
-            <input type="number" step="0.01" className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expAmount} onChange={(e) => setExpAmount(e.target.value)} placeholder="0.00" />
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Description</label>
-            <input className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expDesc} onChange={(e) => setExpDesc(e.target.value)} placeholder="Courses, restaurant..." />
-          </div>
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Categorie</label>
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { value: "courses", emoji: "🛒" }, { value: "sante", emoji: "🏥" },
-                { value: "loisir", emoji: "🎬" }, { value: "transport", emoji: "🚗" },
-                { value: "education", emoji: "📚" }, { value: "maison", emoji: "🏠" },
-                { value: "autre", emoji: "📦" },
-              ].map((c) => (
-                <button key={c.value} className="px-2.5 py-1.5 rounded-xl text-[11px] font-bold" style={{ background: expCategory === c.value ? "var(--accent-soft)" : "var(--surface2)", color: expCategory === c.value ? "var(--accent)" : "var(--dim)", border: expCategory === c.value ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setExpCategory(c.value)}>
-                  {c.emoji} {c.value}
-                </button>
-              ))}
-            </div>
-          </div>
-          {members.length > 0 && (
-            <div>
-              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Membre</label>
-              <select className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expMember} onChange={(e) => setExpMember(e.target.value)}>
-                <option value="">Aucun</option>
-                {members.map((m) => <option key={m.id} value={m.id}>{m.emoji} {m.name}</option>)}
-              </select>
-            </div>
-          )}
-          <div>
-            <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Date</label>
-            <input type="date" className="w-full px-3 py-2.5 rounded-xl text-sm" style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }} value={expDate} onChange={(e) => setExpDate(e.target.value)} />
-          </div>
-          <button className="btn btn-primary" onClick={() => { const addExpense = async () => { if (!profile?.family_id || !expAmount || !expDesc.trim()) return; await supabase.from("expenses").insert({ family_id: profile.family_id, amount: parseFloat(expAmount), description: expDesc.trim(), category: expCategory, member_id: expMember || null, date: expDate }); notifyFamily("FlowTime 💰", `${profile.first_name || "Quelqu'un"} a ajouté une dépense : ${expDesc.trim()} (${expAmount}€)`); setExpenseModal(false); setExpAmount(""); setExpDesc(""); setExpCategory("autre"); setExpMember(""); loadData(); }; addExpense(); }}>
-            Ajouter
-          </button>
-        </div>
-      </Modal>
-
       {/* Chores tab */}
       {tab === "taches" && (() => {
         const CHORE_EMOJIS = ["🧹", "🧺", "🍽️", "🗑️", "🛒", "🐕", "🌱", "🚗", "📚"];
@@ -1141,15 +1209,70 @@ export default function ViePage() {
         </div>
       </Modal>
 
-      {/* Photos tab */}
-      {tab === "photos" && (
-        <PhotoAlbum
-          photos={photos}
-          familyId={profile?.family_id || ""}
-          userName={profile?.first_name || ""}
-          onUpdate={loadData}
-        />
-      )}
+      {/* Routines tab */}
+      {tab === "routines" && (() => {
+        const ROUTINE_STORAGE_KEY = `flowtime_routines_${profile?.family_id}`;
+        const ROUTINE_DONE_KEY = `flowtime_routines_done_${profile?.family_id}_${localDateStr(new Date())}`;
+
+        // Load routines from localStorage
+        function loadRoutines(): Routine[] {
+          try {
+            const raw = localStorage.getItem(ROUTINE_STORAGE_KEY);
+            return raw ? JSON.parse(raw) : [];
+          } catch { return []; }
+        }
+
+        function saveRoutines(r: Routine[]) {
+          localStorage.setItem(ROUTINE_STORAGE_KEY, JSON.stringify(r));
+        }
+
+        // Load done steps for today
+        function loadDone(): Record<string, string[]> {
+          try {
+            const raw = localStorage.getItem(ROUTINE_DONE_KEY);
+            return raw ? JSON.parse(raw) : {};
+          } catch { return {}; }
+        }
+
+        function saveDone(d: Record<string, string[]>) {
+          localStorage.setItem(ROUTINE_DONE_KEY, JSON.stringify(d));
+        }
+
+        const DEFAULT_MORNING: RoutineStep[] = [
+          { id: genId(), label: "Se lever", emoji: "🌅", duration: 2 },
+          { id: genId(), label: "Se brosser les dents", emoji: "🪥", duration: 3 },
+          { id: genId(), label: "S'habiller", emoji: "👕", duration: 5 },
+          { id: genId(), label: "Petit-déjeuner", emoji: "🥣", duration: 15 },
+          { id: genId(), label: "Préparer le cartable", emoji: "🎒", duration: 3 },
+        ];
+
+        const DEFAULT_EVENING: RoutineStep[] = [
+          { id: genId(), label: "Ranger ses affaires", emoji: "🧹", duration: 5 },
+          { id: genId(), label: "Douche / bain", emoji: "🚿", duration: 10 },
+          { id: genId(), label: "Pyjama", emoji: "🌙", duration: 3 },
+          { id: genId(), label: "Brosser les dents", emoji: "🪥", duration: 3 },
+          { id: genId(), label: "Histoire / câlin", emoji: "📖", duration: 10 },
+          { id: genId(), label: "Au lit !", emoji: "😴", duration: 2 },
+        ];
+
+        const childMembers = members.filter((m) =>
+          ["enfant", "ado", "bébé"].includes((m.role || "").toLowerCase())
+        );
+
+        return (
+          <RoutineTab
+            members={members}
+            childMembers={childMembers}
+            defaultMorning={DEFAULT_MORNING}
+            defaultEvening={DEFAULT_EVENING}
+            loadRoutines={loadRoutines}
+            saveRoutines={saveRoutines}
+            loadDone={loadDone}
+            saveDone={saveDone}
+            genId={genId}
+          />
+        );
+      })()}
 
       {/* Note Detail Modal */}
       <Modal open={!!detailNote} onClose={() => setDetailNote(null)} title={detailNote?.title || ""}>
