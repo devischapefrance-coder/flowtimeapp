@@ -272,7 +272,41 @@ export default function TutorialOverlay({
   const sh = spotRect ? spotRect.height + padding * 2 : 0;
   const sr = 16;
 
-  // Tooltip position
+  // Tooltip position — adaptive: flip if not enough space
+  const tooltipH = 240; // estimated tooltip height
+  const gap = 16;
+  const vh = typeof window !== "undefined" ? window.innerHeight : 800;
+  const safeTop = 12;
+  const safeBottom = 12;
+
+  let resolvedPosition: "bottom" | "top" | "center" = "center";
+  let tooltipTop: number | undefined;
+
+  if (hasSpot) {
+    const spaceBelow = vh - (sy + sh) - gap - safeBottom;
+    const spaceAbove = sy - gap - safeTop;
+    const preferred = shownStep.position;
+
+    if (preferred === "bottom" && spaceBelow >= tooltipH) {
+      resolvedPosition = "bottom";
+    } else if (preferred === "top" && spaceAbove >= tooltipH) {
+      resolvedPosition = "top";
+    } else if (spaceBelow >= spaceAbove) {
+      resolvedPosition = "bottom";
+    } else {
+      resolvedPosition = "top";
+    }
+
+    if (resolvedPosition === "bottom") {
+      tooltipTop = Math.min(sy + sh + gap, vh - tooltipH - safeBottom);
+      tooltipTop = Math.max(tooltipTop, safeTop);
+    } else {
+      // Place above: bottom of tooltip aligns just above spotlight
+      tooltipTop = Math.max(sy - gap - tooltipH, safeTop);
+      tooltipTop = Math.min(tooltipTop, vh - tooltipH - safeBottom);
+    }
+  }
+
   const tooltipStyle: React.CSSProperties = {
     position: "fixed",
     width: 340,
@@ -289,14 +323,12 @@ export default function TutorialOverlay({
     tooltipStyle.transform = tooltipVisible
       ? "translate(-50%, -50%)"
       : "translate(-50%, -48%)";
-  } else if (shownStep.position === "bottom") {
-    tooltipStyle.top = Math.min(spotRect!.bottom + padding + 16, window.innerHeight - 280);
   } else {
-    tooltipStyle.bottom = `calc(100vh - ${spotRect!.top - padding - 16}px)`;
+    tooltipStyle.top = tooltipTop;
   }
 
   // Arrow
-  const arrowIsTop = shownStep.position === "bottom";
+  const arrowIsTop = resolvedPosition === "bottom";
 
   // Section info
   const sectionSteps = TUTORIAL_STEPS.filter((s) => s.section === shownStep.section);
