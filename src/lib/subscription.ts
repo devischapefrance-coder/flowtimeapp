@@ -35,7 +35,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     hasDocuments: true,
     hasSnapMap: true,
     hasExport: true,
-    hasExternalShare: true,
+    hasExternalShare: false,
     hasWeeklyDigest: false,
   },
   pro: {

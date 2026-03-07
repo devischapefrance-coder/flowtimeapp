@@ -42,7 +42,7 @@ const PLANS = [
       { label: "Snap Map", included: true },
       { label: "10 thèmes", included: true },
       { label: "Export ICS / PDF", included: true },
-      { label: "Partage externe", included: true },
+      { label: "Partage externe", included: false },
       { label: "Résumé hebdo IA", included: false },
     ],
   },
