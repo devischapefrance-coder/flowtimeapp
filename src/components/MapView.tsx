@@ -229,9 +229,14 @@ function InvalidateSize() {
 
 function FlyTo({ center, zoom }: { center: [number, number]; zoom?: number }) {
   const map = useMap();
-  const prevKey = useRef("");
+  const prevKey = useRef<string | null>(null);
   useEffect(() => {
     const key = `${center[0]},${center[1]},${zoom}`;
+    if (prevKey.current === null) {
+      // Skip first render — MapContainer already set the initial view
+      prevKey.current = key;
+      return;
+    }
     if (key === prevKey.current) return;
     prevKey.current = key;
     map.flyTo(center, zoom ?? map.getZoom(), { duration: 0.8 });
