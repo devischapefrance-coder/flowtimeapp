@@ -500,7 +500,17 @@ export default function FamillePage() {
       ? [mapMarkers[0].lat, mapMarkers[0].lng]
       : [46.2044, 5.226];
 
-  const deviceMapMarkers = devices.map((d) => {
+  // Deduplicate devices per user_id (keep most recent)
+  const uniqueDevices = Object.values(
+    devices.reduce<Record<string, typeof devices[0]>>((acc, d) => {
+      if (!acc[d.user_id] || new Date(d.updated_at) > new Date(acc[d.user_id].updated_at)) {
+        acc[d.user_id] = d;
+      }
+      return acc;
+    }, {})
+  );
+
+  const deviceMapMarkers = uniqueDevices.map((d) => {
     const member = members.find((m) => m.user_id === d.user_id);
     return {
       id: d.id,

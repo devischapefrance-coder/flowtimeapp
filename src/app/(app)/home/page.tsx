@@ -1452,7 +1452,16 @@ export default function HomePage() {
       name: a.name,
       type: "address" as const,
     }));
-    const deviceMarkers: MapMarker[] = devices.map((d) => {
+    // Deduplicate devices per user_id (keep most recent)
+    const uniqueDevs = Object.values(
+      devices.reduce<Record<string, typeof devices[0]>>((acc, d) => {
+        if (!acc[d.user_id] || new Date(d.updated_at) > new Date(acc[d.user_id].updated_at)) {
+          acc[d.user_id] = d;
+        }
+        return acc;
+      }, {})
+    );
+    const deviceMarkers: MapMarker[] = uniqueDevs.map((d) => {
       const member = members.find((m) => m.user_id === d.user_id);
       return {
         id: d.id,
@@ -2061,7 +2070,15 @@ export default function HomePage() {
           name: a.name,
           type: "address" as const,
         }));
-        const devMarkers: MapMarker[] = devices.map((d) => {
+        const uniqueDevsFull = Object.values(
+          devices.reduce<Record<string, typeof devices[0]>>((acc, d) => {
+            if (!acc[d.user_id] || new Date(d.updated_at) > new Date(acc[d.user_id].updated_at)) {
+              acc[d.user_id] = d;
+            }
+            return acc;
+          }, {})
+        );
+        const devMarkers: MapMarker[] = uniqueDevsFull.map((d) => {
           const member = members.find((m) => m.user_id === d.user_id);
           return {
             id: d.id,
