@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { createPortal } from "react-dom";
-import { TUTORIAL_STEPS, TUTORIAL_SECTIONS, getSectionForStep, getFirstStepIndex } from "@/lib/tutorial-data";
+import { TUTORIAL_STEPS, TUTORIAL_SECTIONS, getSectionForStep } from "@/lib/tutorial-data";
 import type { TutorialStep } from "@/lib/tutorial-data";
 
 interface TutorialOverlayProps {
@@ -16,148 +16,235 @@ interface TutorialOverlayProps {
   onJumpToSection: (section: string) => void;
 }
 
+type Phase = "visible" | "fadeOut" | "scrolling" | "fadeIn";
+
 export default function TutorialOverlay({
   active, step, onNext, onPrev, onStop, onSkipSection, onJumpToSection,
 }: TutorialOverlayProps) {
   const router = useRouter();
   const pathname = usePathname();
-  const [rect, setRect] = useState<DOMRect | null>(null);
   const [mounted, setMounted] = useState(false);
-  const [tooltipKey, setTooltipKey] = useState(0);
-  const [transitioning, setTransitioning] = useState(false);
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
+  const [phase, setPhase] = useState<Phase>("visible");
+  const [transitioning, setTransitioning] = useState(false);
+
+  // Spotlight rect — animated via CSS transition, updated here
+  const [spotRect, setSpotRect] = useState<DOMRect | null>(null);
+  // Displayed step content (delayed so tooltip content changes during fade)
+  const [displayStep, setDisplayStep] = useState(step);
+
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const phaseTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const prevStepRef = useRef(step);
+  const scrollContainerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     setMounted(true);
     return () => setMounted(false);
   }, []);
 
-  const currentStep = TUTORIAL_STEPS[step] as TutorialStep | undefined;
+  const currentStep = TUTORIAL_STEPS[displayStep] as TutorialStep | undefined;
+  const targetStep = TUTORIAL_STEPS[step] as TutorialStep | undefined;
   const isFullscreen = !currentStep?.targetAttr;
-  const total = TUTORIAL_STEPS.length;
   const isFinal = currentStep?.id === "done";
-  const section = getSectionForStep(step);
+  const section = getSectionForStep(displayStep);
 
-  // Lock body scroll when tutorial is active
+  // ---- Scroll lock: simple overflow hidden on the scroll container ----
   useEffect(() => {
     if (!active) return;
-    const scrollY = window.scrollY;
-    document.body.style.overflow = "hidden";
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.left = "0";
-    document.body.style.right = "0";
 
-    // Disable navbar clicks
+    // Find the scrollable container (the pb-[80px] div)
+    const container = document.querySelector("[class*='pb-\\[80px\\]']") as HTMLElement | null;
+    scrollContainerRef.current = container;
+
+    // Lock scroll on body and container
+    const origBodyOverflow = document.body.style.overflow;
+    const origHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.documentElement.style.overflow = "hidden";
+
+    // Block touch scrolling
+    const preventScroll = (e: TouchEvent) => {
+      // Allow touches inside the tooltip
+      const tooltip = document.getElementById("tuto-tooltip");
+      if (tooltip && tooltip.contains(e.target as Node)) return;
+      e.preventDefault();
+    };
+    document.addEventListener("touchmove", preventScroll, { passive: false });
+
+    // Disable navbar
     const navbar = document.querySelector("nav") as HTMLElement | null;
     if (navbar) navbar.style.pointerEvents = "none";
 
     return () => {
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
-      window.scrollTo(0, scrollY);
+      document.body.style.overflow = origBodyOverflow;
+      document.documentElement.style.overflow = origHtmlOverflow;
+      document.removeEventListener("touchmove", preventScroll);
       if (navbar) navbar.style.pointerEvents = "";
     };
   }, [active]);
 
-  // Reset state on step change
-  useEffect(() => {
-    setSectionPickerOpen(false);
-    setTooltipKey((k) => k + 1);
-  }, [step]);
+  // ---- Scroll to element without visual jump ----
+  const scrollToAndMeasure = useCallback((el: HTMLElement): Promise<DOMRect> => {
+    return new Promise((resolve) => {
+      // Temporarily allow scroll
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
 
-  // Unlock scroll temporarily to scroll element into view, then relock
-  const scrollToElement = useCallback((el: HTMLElement) => {
-    // Temporarily unlock scroll
-    const savedTop = document.body.style.top;
-    const scrollY = savedTop ? -parseInt(savedTop, 10) : 0;
-    document.body.style.overflow = "";
-    document.body.style.position = "";
-    document.body.style.top = "";
-    window.scrollTo(0, scrollY);
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
 
-    el.scrollIntoView({ behavior: "smooth", block: "center" });
-
-    setTimeout(() => {
-      const newScrollY = window.scrollY;
-      document.body.style.overflow = "hidden";
-      document.body.style.position = "fixed";
-      document.body.style.top = `-${newScrollY}px`;
-      document.body.style.left = "0";
-      document.body.style.right = "0";
-      setRect(el.getBoundingClientRect());
-    }, 400);
+      // Wait for scroll to finish then measure and re-lock
+      setTimeout(() => {
+        const rect = el.getBoundingClientRect();
+        document.body.style.overflow = "hidden";
+        document.documentElement.style.overflow = "hidden";
+        resolve(rect);
+      }, 350);
+    });
   }, []);
 
-  // Find target element with retries
-  const findTarget = useCallback(() => {
-    if (!active || !currentStep) return;
-    if (!currentStep.targetAttr) {
-      setRect(null);
+  // ---- Find target and measure ----
+  const findAndMeasure = useCallback(async (targetAttr: string | null): Promise<DOMRect | null> => {
+    if (!targetAttr) return null;
+
+    let attempts = 0;
+    const maxAttempts = 12;
+
+    return new Promise((resolve) => {
+      function tryFind() {
+        const el = document.querySelector(`[data-tutorial="${targetAttr}"]`) as HTMLElement | null;
+        if (el) {
+          scrollToAndMeasure(el).then(resolve);
+        } else if (attempts < maxAttempts) {
+          attempts++;
+          retryRef.current = setTimeout(tryFind, 250);
+        } else {
+          resolve(null);
+        }
+      }
+      tryFind();
+    });
+  }, [scrollToAndMeasure]);
+
+  // ---- Orchestrate step transitions ----
+  useEffect(() => {
+    if (!active || !targetStep) return;
+    if (prevStepRef.current === step && phase === "visible" && displayStep === step) return;
+
+    const prevStep = TUTORIAL_STEPS[prevStepRef.current];
+    const isPageChange = prevStep && prevStep.page !== targetStep.page;
+
+    // Clear any pending timers
+    if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
+    if (retryRef.current) clearTimeout(retryRef.current);
+
+    // If this is the initial render (component just became active)
+    if (prevStepRef.current === step && displayStep !== step) {
+      setDisplayStep(step);
+      prevStepRef.current = step;
+      if (targetStep.targetAttr) {
+        findAndMeasure(targetStep.targetAttr).then((rect) => {
+          setSpotRect(rect);
+          setPhase("fadeIn");
+          phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+        });
+      } else {
+        setSpotRect(null);
+        setPhase("fadeIn");
+        phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+      }
       return;
     }
 
-    let attempts = 0;
-    const maxAttempts = 10;
+    prevStepRef.current = step;
 
-    function tryFind() {
-      const el = document.querySelector(`[data-tutorial="${currentStep!.targetAttr}"]`) as HTMLElement | null;
-      if (el) {
-        scrollToElement(el);
-      } else if (attempts < maxAttempts) {
-        attempts++;
-        retryRef.current = setTimeout(tryFind, 300);
-      } else {
-        setRect(null);
-      }
-    }
-
-    tryFind();
-  }, [active, currentStep, scrollToElement]);
-
-  // Navigate cross-page if needed
-  useEffect(() => {
-    if (!active || !currentStep) return;
-
-    if (retryRef.current) {
-      clearTimeout(retryRef.current);
-      retryRef.current = null;
-    }
-
-    if (pathname !== currentStep.page) {
+    if (isPageChange) {
+      // ---- Cross-page transition ----
+      // 1. Fade everything out
+      setPhase("fadeOut");
       setTransitioning(true);
-      // Unlock scroll before navigating
-      document.body.style.overflow = "";
-      document.body.style.position = "";
-      document.body.style.top = "";
-      document.body.style.left = "";
-      document.body.style.right = "";
-      router.push(currentStep.page);
-      setTimeout(() => {
-        setTransitioning(false);
-        // Re-lock after navigation
-        const scrollY = window.scrollY;
-        document.body.style.overflow = "hidden";
-        document.body.style.position = "fixed";
-        document.body.style.top = `-${scrollY}px`;
-        document.body.style.left = "0";
-        document.body.style.right = "0";
-        findTarget();
-      }, 700);
+
+      phaseTimerRef.current = setTimeout(() => {
+        // 2. Navigate
+        document.body.style.overflow = "";
+        document.documentElement.style.overflow = "";
+        router.push(targetStep.page);
+
+        // 3. Wait for page, then find element and fade in
+        setTimeout(() => {
+          setDisplayStep(step);
+          setSectionPickerOpen(false);
+
+          if (targetStep.targetAttr) {
+            findAndMeasure(targetStep.targetAttr).then((rect) => {
+              setSpotRect(rect);
+              setTransitioning(false);
+              setPhase("fadeIn");
+              phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+            });
+          } else {
+            setSpotRect(null);
+            setTransitioning(false);
+            setPhase("fadeIn");
+            phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+          }
+        }, 600);
+      }, 300);
     } else {
-      findTarget();
+      // ---- Same-page transition ----
+      // 1. Fade out tooltip
+      setPhase("fadeOut");
+
+      phaseTimerRef.current = setTimeout(() => {
+        // 2. Update content + move spotlight
+        setDisplayStep(step);
+        setSectionPickerOpen(false);
+
+        if (targetStep.targetAttr) {
+          setPhase("scrolling");
+          findAndMeasure(targetStep.targetAttr).then((rect) => {
+            setSpotRect(rect);
+            // 3. Wait for spotlight transition, then fade in
+            phaseTimerRef.current = setTimeout(() => {
+              setPhase("fadeIn");
+              phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+            }, 300);
+          });
+        } else {
+          setSpotRect(null);
+          setPhase("fadeIn");
+          phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+        }
+      }, 250);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, step, pathname]);
+  }, [active, step]);
 
-  // Cleanup on unmount
+  // Initial load
+  useEffect(() => {
+    if (!active || !targetStep) return;
+    if (displayStep === step) return;
+
+    setDisplayStep(step);
+    if (targetStep.targetAttr) {
+      findAndMeasure(targetStep.targetAttr).then((rect) => {
+        setSpotRect(rect);
+        setPhase("fadeIn");
+        phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+      });
+    } else {
+      setSpotRect(null);
+      setPhase("fadeIn");
+      phaseTimerRef.current = setTimeout(() => setPhase("visible"), 400);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active]);
+
+  // Cleanup
   useEffect(() => {
     return () => {
       if (retryRef.current) clearTimeout(retryRef.current);
+      if (phaseTimerRef.current) clearTimeout(phaseTimerRef.current);
     };
   }, []);
 
@@ -165,133 +252,114 @@ export default function TutorialOverlay({
 
   const padding = 12;
 
-  // Progress dots grouped by section
+  // Progress dots
   const sectionDots = TUTORIAL_SECTIONS.map((sec) => {
-    const sectionSteps = TUTORIAL_STEPS.filter((s) => s.section === sec.id);
-    const firstIdx = TUTORIAL_STEPS.indexOf(sectionSteps[0]);
+    const steps = TUTORIAL_STEPS.filter((s) => s.section === sec.id);
+    const firstIdx = TUTORIAL_STEPS.indexOf(steps[0]);
     return {
       section: sec,
-      steps: sectionSteps.map((s, i) => ({
-        globalIndex: firstIdx + i,
-        done: firstIdx + i < step,
-        current: firstIdx + i === step,
+      steps: steps.map((_, i) => ({
+        idx: firstIdx + i,
+        done: firstIdx + i < displayStep,
+        current: firstIdx + i === displayStep,
       })),
     };
   });
 
-  // Spotlight rect values
-  const sx = rect ? rect.left - padding : 0;
-  const sy = rect ? rect.top - padding : 0;
-  const sw = rect ? rect.width + padding * 2 : 0;
-  const sh = rect ? rect.height + padding * 2 : 0;
+  // Spotlight values
+  const hasSpot = !!spotRect && !isFullscreen;
+  const sx = spotRect ? spotRect.left - padding : 0;
+  const sy = spotRect ? spotRect.top - padding : 0;
+  const sw = spotRect ? spotRect.width + padding * 2 : 0;
+  const sh = spotRect ? spotRect.height + padding * 2 : 0;
   const sr = 16;
 
   // Tooltip position
-  let tooltipStyle: React.CSSProperties = {
+  const tooltipStyle: React.CSSProperties = {
     position: "fixed",
     width: 340,
     maxWidth: "calc(100vw - 24px)",
     zIndex: 810,
     left: "50%",
-    transform: "translateX(-50%)",
   };
 
-  if (isFullscreen || !rect) {
+  if (!hasSpot) {
     tooltipStyle.top = "50%";
     tooltipStyle.transform = "translate(-50%, -50%)";
   } else if (currentStep.position === "bottom") {
-    tooltipStyle.top = Math.min(rect.bottom + padding + 16, window.innerHeight - 280);
+    tooltipStyle.top = Math.min(spotRect!.bottom + padding + 16, window.innerHeight - 280);
+    tooltipStyle.transform = "translateX(-50%)";
   } else {
-    const topY = rect.top - padding - 16;
-    tooltipStyle.bottom = `calc(100vh - ${topY}px)`;
+    tooltipStyle.bottom = `calc(100vh - ${spotRect!.top - padding - 16}px)`;
+    tooltipStyle.transform = "translateX(-50%)";
   }
 
-  // Arrow
-  const arrowStyle: React.CSSProperties | null =
-    !isFullscreen && rect
-      ? {
-          position: "absolute" as const,
-          left: "50%",
-          transform: "translateX(-50%)",
-          width: 0,
-          height: 0,
-          borderLeft: "8px solid transparent",
-          borderRight: "8px solid transparent",
-          ...(currentStep.position === "bottom"
-            ? { top: -8, borderBottom: "8px solid rgba(30,30,45,0.95)" }
-            : { bottom: -8, borderTop: "8px solid rgba(30,30,45,0.95)" }),
-        }
-      : null;
+  // Tooltip opacity based on phase
+  const tooltipOpacity = phase === "fadeOut" || phase === "scrolling" ? 0 : 1;
+  const tooltipTranslateY = phase === "fadeOut" ? 12 : phase === "fadeIn" ? 0 : 0;
 
-  // Step number within current section
+  // Arrow
+  const showArrow = hasSpot;
+  const arrowIsTop = currentStep.position === "bottom";
+
+  // Section info
   const sectionSteps = TUTORIAL_STEPS.filter((s) => s.section === currentStep.section);
   const stepInSection = sectionSteps.indexOf(currentStep) + 1;
   const totalInSection = sectionSteps.length;
 
   const overlay = (
     <div style={{ position: "fixed", inset: 0, zIndex: 800 }}>
-      {/* Transition fade */}
-      {transitioning && (
-        <div
-          style={{
-            position: "fixed", inset: 0, background: "#000", zIndex: 850,
-            animation: "tutoFadeInOut 0.6s ease-in-out",
-          }}
-        />
-      )}
+      {/* Cross-page black overlay */}
+      <div
+        style={{
+          position: "fixed", inset: 0, background: "#000", zIndex: 850,
+          opacity: transitioning ? 1 : 0,
+          transition: "opacity 0.3s ease",
+          pointerEvents: transitioning ? "auto" : "none",
+        }}
+      />
 
-      {/* Overlay: 4 dark rects around the spotlight to block clicks outside but allow inside */}
-      {isFullscreen || !rect ? (
-        <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 800 }}
-        />
+      {/* Dark overlay with spotlight cutout */}
+      {!hasSpot ? (
+        <div style={{
+          position: "fixed", inset: 0, zIndex: 800,
+          background: "rgba(0,0,0,0.82)",
+          opacity: phase === "fadeOut" && transitioning ? 0 : 1,
+          transition: "opacity 0.3s ease",
+        }} />
       ) : (
         <>
-          {/* SVG mask for visual darkening — pointer-events: none so it doesn't block */}
-          <svg
-            style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 800, pointerEvents: "none" }}
-          >
+          <svg style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 800, pointerEvents: "none" }}>
             <defs>
               <mask id="tuto-mask">
                 <rect width="100%" height="100%" fill="white" />
                 <rect
                   x={sx} y={sy} width={sw} height={sh} rx={sr} ry={sr}
                   fill="black"
-                  style={{ transition: "all 0.4s cubic-bezier(0.4,0,0.2,1)" }}
+                  style={{ transition: "all 0.5s cubic-bezier(0.4,0,0.2,1)" }}
                 />
               </mask>
             </defs>
+            <rect width="100%" height="100%" fill="rgba(0,0,0,0.82)" mask="url(#tuto-mask)" />
+            {/* Glowing ring */}
             <rect
-              width="100%" height="100%"
-              fill="rgba(0,0,0,0.82)"
-              mask="url(#tuto-mask)"
-            />
-            {/* Pulsing ring */}
-            <rect
-              x={sx - 3} y={sy - 3} width={sw + 6} height={sh + 6} rx={sr + 3} ry={sr + 3}
-              fill="none"
-              stroke="var(--accent)"
-              strokeWidth="2"
-              opacity="0.6"
-              className="tuto-pulse-ring"
-              style={{ transition: "all 0.4s cubic-bezier(0.4,0,0.2,1)" }}
+              x={sx - 2} y={sy - 2} width={sw + 4} height={sh + 4} rx={sr + 2} ry={sr + 2}
+              fill="none" stroke="var(--accent)" strokeWidth="1.5"
+              className="tuto-glow-ring"
+              style={{ transition: "all 0.5s cubic-bezier(0.4,0,0.2,1)" }}
             />
           </svg>
 
-          {/* 4 clickable dark rects around the spotlight to block outside clicks */}
-          {/* Top */}
+          {/* Block outside clicks */}
           <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: Math.max(0, sy), zIndex: 801 }} />
-          {/* Bottom */}
           <div style={{ position: "fixed", top: sy + sh, left: 0, right: 0, bottom: 0, zIndex: 801 }} />
-          {/* Left */}
           <div style={{ position: "fixed", top: sy, left: 0, width: Math.max(0, sx), height: sh, zIndex: 801 }} />
-          {/* Right */}
           <div style={{ position: "fixed", top: sy, left: sx + sw, right: 0, height: sh, zIndex: 801 }} />
         </>
       )}
 
-      {/* Confetti on final step */}
-      {isFinal && (
+      {/* Confetti */}
+      {isFinal && phase === "visible" && (
         <div style={{ position: "fixed", inset: 0, pointerEvents: "none", zIndex: 820 }}>
           {Array.from({ length: 40 }).map((_, i) => (
             <div
@@ -312,30 +380,42 @@ export default function TutorialOverlay({
 
       {/* Tooltip */}
       <div
-        key={tooltipKey}
-        style={tooltipStyle}
-        className="tuto-tooltip-enter"
+        id="tuto-tooltip"
+        style={{
+          ...tooltipStyle,
+          opacity: tooltipOpacity,
+          transition: "opacity 0.25s ease, transform 0.25s ease",
+          ...(phase === "fadeIn" ? { animation: "tutoSlideIn 0.35s ease-out" } : {}),
+        }}
         onClick={(e) => e.stopPropagation()}
       >
-        {arrowStyle && <div style={arrowStyle} />}
+        {/* Arrow */}
+        {showArrow && (
+          <div style={{
+            position: "absolute", left: "50%", transform: "translateX(-50%)",
+            width: 0, height: 0,
+            borderLeft: "8px solid transparent", borderRight: "8px solid transparent",
+            ...(arrowIsTop
+              ? { top: -8, borderBottom: "8px solid rgba(30,30,45,0.95)" }
+              : { bottom: -8, borderTop: "8px solid rgba(30,30,45,0.95)" }),
+          }} />
+        )}
 
-        <div
-          style={{
-            background: "rgba(30,30,45,0.95)",
-            border: "1px solid rgba(124,107,240,0.2)",
-            borderLeft: "4px solid transparent",
-            borderImage: "linear-gradient(180deg, #7C6BF0, #9B8BFF) 1",
-            borderImageSlice: "0 0 0 1",
-            backdropFilter: "blur(24px)",
-            borderRadius: 16,
-            overflow: "hidden",
-          }}
-        >
+        <div style={{
+          background: "rgba(30,30,45,0.95)",
+          border: "1px solid rgba(124,107,240,0.2)",
+          borderLeft: "4px solid transparent",
+          borderImage: "linear-gradient(180deg, #7C6BF0, #9B8BFF) 1",
+          borderImageSlice: "0 0 0 1",
+          backdropFilter: "blur(24px)",
+          borderRadius: 16,
+          overflow: "hidden",
+        }}>
           <div className="p-4">
-            {/* Section pill + step counter + quit */}
+            {/* Section pill + quit */}
             <div className="flex items-center justify-between mb-3">
               <button
-                className="text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 transition-colors"
+                className="text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5"
                 style={{
                   background: "rgba(124,107,240,0.15)",
                   color: "var(--accent)",
@@ -345,13 +425,13 @@ export default function TutorialOverlay({
               >
                 <span>{section?.emoji}</span>
                 <span>{section?.label}</span>
-                <span style={{ opacity: 0.5 }}>{stepInSection}/{totalInSection}</span>
+                <span style={{ opacity: 0.5, fontSize: 10 }}>{stepInSection}/{totalInSection}</span>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: sectionPickerOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
                   <path d="M2 4l3 3 3-3"/>
                 </svg>
               </button>
               <button
-                className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                className="text-[10px] font-bold px-2.5 py-1 rounded-full"
                 style={{ color: "rgba(255,255,255,0.4)", background: "rgba(255,255,255,0.06)" }}
                 onClick={onStop}
               >
@@ -359,21 +439,18 @@ export default function TutorialOverlay({
               </button>
             </div>
 
-            {/* Section picker dropdown */}
+            {/* Section picker */}
             {sectionPickerOpen && (
               <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
                 {TUTORIAL_SECTIONS.map((sec) => (
                   <button
                     key={sec.id}
-                    className="text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap transition-colors"
+                    className="text-[10px] font-bold px-2.5 py-1 rounded-full whitespace-nowrap"
                     style={{
                       background: sec.id === section?.id ? "var(--accent)" : "rgba(255,255,255,0.08)",
                       color: sec.id === section?.id ? "#fff" : "rgba(255,255,255,0.5)",
                     }}
-                    onClick={() => {
-                      setSectionPickerOpen(false);
-                      onJumpToSection(sec.id);
-                    }}
+                    onClick={() => { setSectionPickerOpen(false); onJumpToSection(sec.id); }}
                   >
                     {sec.emoji} {sec.label}
                   </button>
@@ -389,17 +466,18 @@ export default function TutorialOverlay({
               {currentStep.description}
             </p>
 
-            {/* Section progress dots */}
+            {/* Progress dots */}
             <div className="flex items-center justify-center gap-2 mb-4">
               {sectionDots.map((sd) => (
                 <div key={sd.section.id} className="flex items-center gap-0.5">
                   {sd.steps.map((s) => (
                     <div
-                      key={s.globalIndex}
-                      className="rounded-full transition-all duration-300"
+                      key={s.idx}
+                      className="rounded-full"
                       style={{
                         width: s.current ? 16 : 6,
                         height: 6,
+                        transition: "all 0.4s ease",
                         background: s.current
                           ? "var(--accent)"
                           : s.done
@@ -415,7 +493,7 @@ export default function TutorialOverlay({
             {/* Buttons */}
             <div className="flex items-center gap-2">
               <button
-                className="text-[11px] font-bold px-3 py-2 rounded-xl"
+                className="text-[11px] font-bold px-3 py-2 rounded-xl active:scale-95 transition-transform"
                 style={{ color: "rgba(255,255,255,0.35)" }}
                 onClick={onSkipSection}
               >
@@ -423,7 +501,7 @@ export default function TutorialOverlay({
               </button>
               <div className="flex-1" />
               <button
-                className="text-[11px] font-bold px-5 py-2.5 rounded-xl"
+                className="text-[11px] font-bold px-5 py-2.5 rounded-xl active:scale-95 transition-transform"
                 style={{ background: "var(--accent)", color: "#fff" }}
                 onClick={isFinal ? onStop : onNext}
               >
@@ -435,16 +513,9 @@ export default function TutorialOverlay({
       </div>
 
       <style jsx>{`
-        @keyframes tutoSlideUp {
-          from { opacity: 0; transform: translateX(-50%) translateY(16px); }
+        @keyframes tutoSlideIn {
+          from { opacity: 0; transform: translateX(-50%) translateY(10px); }
           to { opacity: 1; transform: translateX(-50%) translateY(0); }
-        }
-        @keyframes tutoSlideUpCenter {
-          from { opacity: 0; transform: translate(-50%, -46%); }
-          to { opacity: 1; transform: translate(-50%, -50%); }
-        }
-        .tuto-tooltip-enter {
-          animation: ${isFullscreen || !rect ? "tutoSlideUpCenter" : "tutoSlideUp"} 0.35s ease-out;
         }
         @keyframes confettiFall {
           0% { transform: translateY(-20px) rotate(0deg); opacity: 1; }
@@ -456,18 +527,12 @@ export default function TutorialOverlay({
           border-radius: 2px;
           animation: confettiFall linear forwards;
         }
-        @keyframes tutoPulseRing {
-          0%, 100% { opacity: 0.4; }
-          50% { opacity: 0.8; }
+        @keyframes tutoGlow {
+          0%, 100% { opacity: 0.3; filter: drop-shadow(0 0 4px var(--accent)); }
+          50% { opacity: 0.7; filter: drop-shadow(0 0 8px var(--accent)); }
         }
-        .tuto-pulse-ring {
-          animation: tutoPulseRing 2s ease-in-out infinite;
-        }
-        @keyframes tutoFadeInOut {
-          0% { opacity: 0; }
-          40% { opacity: 1; }
-          60% { opacity: 1; }
-          100% { opacity: 0; }
+        .tuto-glow-ring {
+          animation: tutoGlow 2.5s ease-in-out infinite;
         }
       `}</style>
     </div>
