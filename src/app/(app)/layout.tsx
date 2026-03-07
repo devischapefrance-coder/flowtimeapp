@@ -293,7 +293,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           .maybeSingle();
 
         if (!linked) {
-          const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.first_name || "";
           // Try to find an unlinked member by name match
           const { data: allMembers } = await supabase
             .from("members")
@@ -307,18 +306,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
             if (match) {
               await supabase.from("members").update({
                 user_id: user.id,
-                name: fullName,
                 phone: data.phone || undefined,
               }).eq("id", match.id);
             }
           }
-        } else {
-          // Already linked — sync name and phone from profile to member
-          const fullName = [data.first_name, data.last_name].filter(Boolean).join(" ") || data.first_name || "";
-          await supabase.from("members").update({
-            name: fullName,
-            phone: data.phone || undefined,
-          }).eq("id", linked.id);
         }
       }
     }
