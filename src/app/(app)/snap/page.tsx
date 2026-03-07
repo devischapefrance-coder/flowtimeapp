@@ -21,6 +21,14 @@ import {
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 
+function formatTimeAgo(dateStr: string): string {
+  const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
+  if (diff < 60) return "à l'instant";
+  if (diff < 3600) return `il y a ${Math.floor(diff / 60)} min`;
+  if (diff < 86400) return `il y a ${Math.floor(diff / 3600)}h`;
+  return `il y a ${Math.floor(diff / 86400)}j`;
+}
+
 interface DeviceWithMember extends DeviceLocation {
   member?: Member;
   avatarUrl?: string;
@@ -355,7 +363,7 @@ export default function SnapPage() {
             </button>
           </div>
 
-          <div className="flex gap-4">
+          <div className="flex gap-4 mb-3">
             <div className="flex-1 text-center glass rounded-xl p-2">
               <p className="text-lg font-bold">{formatDistance(route.distance)}</p>
               <p className="text-[10px]" style={{ color: "var(--dim)" }}>Distance</p>
@@ -370,11 +378,30 @@ export default function SnapPage() {
             </div>
           </div>
 
-          {routeLoading && (
-            <p className="text-[10px] text-center mt-2" style={{ color: "var(--dim)" }}>
-              Mise à jour...
+          {/* Last update + Navigate button */}
+          <div className="flex items-center justify-between">
+            <p className="text-[10px]" style={{ color: "var(--dim)" }}>
+              {routeLoading ? "Mise à jour..." : `Actualisé ${formatTimeAgo(selectedDevice.updated_at)}`}
             </p>
-          )}
+            <button
+              className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold"
+              style={{ background: "var(--accent)", color: "#fff" }}
+              onClick={() => {
+                const lat = selectedDevice.lat;
+                const lng = selectedDevice.lng;
+                const name = encodeURIComponent(selectedDevice.member?.name || selectedDevice.device_name);
+                // Try native maps app, fallback to Google Maps
+                const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+                if (isIOS) {
+                  window.open(`maps://maps.apple.com/?daddr=${lat},${lng}&dirflg=d`, "_blank");
+                } else {
+                  window.open(`https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}&destination_place_id=${name}&travelmode=driving`, "_blank");
+                }
+              }}
+            >
+              🧭 Naviguer
+            </button>
+          </div>
         </div>
       )}
 
