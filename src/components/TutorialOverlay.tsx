@@ -25,13 +25,8 @@ export default function TutorialOverlay({
   const [mounted, setMounted] = useState(false);
   const [tooltipKey, setTooltipKey] = useState(0);
   const [transitioning, setTransitioning] = useState(false);
-  const [interactionDone, setInteractionDone] = useState(false);
-  const [showFallback, setShowFallback] = useState(false);
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
-  const [successAnim, setSuccessAnim] = useState(false);
   const retryRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const fallbackRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const listenerRef = useRef<(() => void) | null>(null);
 
   useEffect(() => {
     setMounted(true);
@@ -43,64 +38,60 @@ export default function TutorialOverlay({
   const total = TUTORIAL_STEPS.length;
   const isFinal = currentStep?.id === "done";
   const section = getSectionForStep(step);
-  const isInteractive = !!currentStep?.interaction;
 
-  // Reset interaction state on step change
+  // Lock body scroll when tutorial is active
   useEffect(() => {
-    setInteractionDone(false);
-    setShowFallback(false);
-    setSuccessAnim(false);
-    setSectionPickerOpen(false);
-    setTooltipKey((k) => k + 1);
+    if (!active) return;
+    const scrollY = window.scrollY;
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
 
-    if (fallbackRef.current) clearTimeout(fallbackRef.current);
-    if (currentStep?.interaction) {
-      fallbackRef.current = setTimeout(() => setShowFallback(true), 8000);
-    }
+    // Disable navbar clicks
+    const navbar = document.querySelector("nav") as HTMLElement | null;
+    if (navbar) navbar.style.pointerEvents = "none";
 
     return () => {
-      if (fallbackRef.current) clearTimeout(fallbackRef.current);
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      window.scrollTo(0, scrollY);
+      if (navbar) navbar.style.pointerEvents = "";
     };
-  }, [step, currentStep?.interaction]);
+  }, [active]);
 
-  // Cleanup interaction listener
-  const cleanupListener = useCallback(() => {
-    if (listenerRef.current) {
-      listenerRef.current();
-      listenerRef.current = null;
-    }
+  // Reset state on step change
+  useEffect(() => {
+    setSectionPickerOpen(false);
+    setTooltipKey((k) => k + 1);
+  }, [step]);
+
+  // Unlock scroll temporarily to scroll element into view, then relock
+  const scrollToElement = useCallback((el: HTMLElement) => {
+    // Temporarily unlock scroll
+    const savedTop = document.body.style.top;
+    const scrollY = savedTop ? -parseInt(savedTop, 10) : 0;
+    document.body.style.overflow = "";
+    document.body.style.position = "";
+    document.body.style.top = "";
+    window.scrollTo(0, scrollY);
+
+    el.scrollIntoView({ behavior: "smooth", block: "center" });
+
+    setTimeout(() => {
+      const newScrollY = window.scrollY;
+      document.body.style.overflow = "hidden";
+      document.body.style.position = "fixed";
+      document.body.style.top = `-${newScrollY}px`;
+      document.body.style.left = "0";
+      document.body.style.right = "0";
+      setRect(el.getBoundingClientRect());
+    }, 400);
   }, []);
-
-  // Setup interaction listener on target element
-  const setupInteractionListener = useCallback((el: HTMLElement) => {
-    cleanupListener();
-    if (!currentStep?.interaction) return;
-
-    const handler = () => {
-      setSuccessAnim(true);
-      setInteractionDone(true);
-      if (fallbackRef.current) clearTimeout(fallbackRef.current);
-      setTimeout(() => onNext(), 800);
-    };
-
-    if (currentStep.interaction === "swipe") {
-      let startX = 0;
-      const onTouchStart = (e: TouchEvent) => { startX = e.touches[0].clientX; };
-      const onTouchEnd = (e: TouchEvent) => {
-        const diff = Math.abs(e.changedTouches[0].clientX - startX);
-        if (diff > 40) handler();
-      };
-      el.addEventListener("touchstart", onTouchStart, { passive: true });
-      el.addEventListener("touchend", onTouchEnd, { passive: true });
-      listenerRef.current = () => {
-        el.removeEventListener("touchstart", onTouchStart);
-        el.removeEventListener("touchend", onTouchEnd);
-      };
-    } else {
-      el.addEventListener("click", handler, { once: true });
-      listenerRef.current = () => el.removeEventListener("click", handler);
-    }
-  }, [currentStep?.interaction, cleanupListener, onNext]);
 
   // Find target element with retries
   const findTarget = useCallback(() => {
@@ -116,11 +107,7 @@ export default function TutorialOverlay({
     function tryFind() {
       const el = document.querySelector(`[data-tutorial="${currentStep!.targetAttr}"]`) as HTMLElement | null;
       if (el) {
-        el.scrollIntoView({ behavior: "smooth", block: "center" });
-        setTimeout(() => {
-          setRect(el.getBoundingClientRect());
-          setupInteractionListener(el);
-        }, 350);
+        scrollToElement(el);
       } else if (attempts < maxAttempts) {
         attempts++;
         retryRef.current = setTimeout(tryFind, 300);
@@ -130,7 +117,7 @@ export default function TutorialOverlay({
     }
 
     tryFind();
-  }, [active, currentStep, setupInteractionListener]);
+  }, [active, currentStep, scrollToElement]);
 
   // Navigate cross-page if needed
   useEffect(() => {
@@ -140,57 +127,57 @@ export default function TutorialOverlay({
       clearTimeout(retryRef.current);
       retryRef.current = null;
     }
-    cleanupListener();
 
     if (pathname !== currentStep.page) {
       setTransitioning(true);
+      // Unlock scroll before navigating
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
       router.push(currentStep.page);
       setTimeout(() => {
         setTransitioning(false);
+        // Re-lock after navigation
+        const scrollY = window.scrollY;
+        document.body.style.overflow = "hidden";
+        document.body.style.position = "fixed";
+        document.body.style.top = `-${scrollY}px`;
+        document.body.style.left = "0";
+        document.body.style.right = "0";
         findTarget();
-      }, 600);
+      }, 700);
     } else {
       findTarget();
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [active, step, pathname]);
 
-  // Recalculate rect on scroll/resize
-  useEffect(() => {
-    if (!active || !currentStep?.targetAttr) return;
-
-    function recalc() {
-      const el = document.querySelector(`[data-tutorial="${currentStep!.targetAttr}"]`) as HTMLElement | null;
-      if (el) setRect(el.getBoundingClientRect());
-    }
-
-    window.addEventListener("scroll", recalc, true);
-    window.addEventListener("resize", recalc);
-    return () => {
-      window.removeEventListener("scroll", recalc, true);
-      window.removeEventListener("resize", recalc);
-    };
-  }, [active, currentStep]);
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
       if (retryRef.current) clearTimeout(retryRef.current);
-      if (fallbackRef.current) clearTimeout(fallbackRef.current);
-      cleanupListener();
     };
-  }, [cleanupListener]);
+  }, []);
 
   if (!active || !currentStep || !mounted) return null;
 
   const padding = 12;
 
-  // Progress dots
-  const dots = TUTORIAL_STEPS.map((s, i) => ({
-    done: i < step,
-    current: i === step,
-    section: s.section,
-  }));
+  // Progress dots grouped by section
+  const sectionDots = TUTORIAL_SECTIONS.map((sec) => {
+    const sectionSteps = TUTORIAL_STEPS.filter((s) => s.section === sec.id);
+    const firstIdx = TUTORIAL_STEPS.indexOf(sectionSteps[0]);
+    return {
+      section: sec,
+      steps: sectionSteps.map((s, i) => ({
+        globalIndex: firstIdx + i,
+        done: firstIdx + i < step,
+        current: firstIdx + i === step,
+      })),
+    };
+  });
 
   // Spotlight rect values
   const sx = rect ? rect.left - padding : 0;
@@ -213,13 +200,13 @@ export default function TutorialOverlay({
     tooltipStyle.top = "50%";
     tooltipStyle.transform = "translate(-50%, -50%)";
   } else if (currentStep.position === "bottom") {
-    tooltipStyle.top = Math.min(rect.bottom + padding + 16, window.innerHeight - 260);
+    tooltipStyle.top = Math.min(rect.bottom + padding + 16, window.innerHeight - 280);
   } else {
     const topY = rect.top - padding - 16;
     tooltipStyle.bottom = `calc(100vh - ${topY}px)`;
   }
 
-  // Arrow for non-fullscreen
+  // Arrow
   const arrowStyle: React.CSSProperties | null =
     !isFullscreen && rect
       ? {
@@ -236,32 +223,10 @@ export default function TutorialOverlay({
         }
       : null;
 
-  // Hint icon SVG
-  function renderHintIcon() {
-    if (!currentStep?.hintIcon) return null;
-    if (currentStep.hintIcon === "swipe") {
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M5 12h14M12 5l7 7-7 7"/>
-        </svg>
-      );
-    }
-    if (currentStep.hintIcon === "toggle") {
-      return (
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="1" y="5" width="22" height="14" rx="7"/>
-          <circle cx="16" cy="12" r="4"/>
-        </svg>
-      );
-    }
-    // tap
-    return (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M12 2a4 4 0 0 1 4 4c0 1.5-.8 2.8-2 3.5V22"/>
-        <path d="M8 6a4 4 0 0 1 8 0"/>
-      </svg>
-    );
-  }
+  // Step number within current section
+  const sectionSteps = TUTORIAL_STEPS.filter((s) => s.section === currentStep.section);
+  const stepInSection = sectionSteps.indexOf(currentStep) + 1;
+  const totalInSection = sectionSteps.length;
 
   const overlay = (
     <div style={{ position: "fixed", inset: 0, zIndex: 800 }}>
@@ -275,70 +240,54 @@ export default function TutorialOverlay({
         />
       )}
 
-      {/* SVG overlay with spotlight mask */}
+      {/* Overlay: 4 dark rects around the spotlight to block clicks outside but allow inside */}
       {isFullscreen || !rect ? (
         <div
-          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)" }}
-          onClick={onStop}
+          style={{ position: "fixed", inset: 0, background: "rgba(0,0,0,0.82)", zIndex: 800 }}
         />
       ) : (
-        <svg
-          style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 800 }}
-          onClick={(e) => {
-            const x = e.clientX;
-            const y = e.clientY;
-            if (x >= sx && x <= sx + sw && y >= sy && y <= sy + sh) return;
-          }}
-        >
-          <defs>
-            <mask id="tuto-mask">
-              <rect width="100%" height="100%" fill="white" />
-              <rect
-                x={sx} y={sy} width={sw} height={sh} rx={sr} ry={sr}
-                fill="black"
-                style={{ transition: "all 0.4s cubic-bezier(0.4,0,0.2,1)" }}
-              />
-            </mask>
-          </defs>
-          <rect
-            width="100%" height="100%"
-            fill="rgba(0,0,0,0.82)"
-            mask="url(#tuto-mask)"
-          />
-          {/* Pulsing ring around spotlight */}
-          <rect
-            x={sx - 3} y={sy - 3} width={sw + 6} height={sh + 6} rx={sr + 3} ry={sr + 3}
-            fill="none"
-            stroke="var(--accent)"
-            strokeWidth="2"
-            opacity="0.6"
-            className="tuto-pulse-ring"
-            style={{ transition: "all 0.4s cubic-bezier(0.4,0,0.2,1)" }}
-          />
-        </svg>
-      )}
+        <>
+          {/* SVG mask for visual darkening — pointer-events: none so it doesn't block */}
+          <svg
+            style={{ position: "fixed", inset: 0, width: "100%", height: "100%", zIndex: 800, pointerEvents: "none" }}
+          >
+            <defs>
+              <mask id="tuto-mask">
+                <rect width="100%" height="100%" fill="white" />
+                <rect
+                  x={sx} y={sy} width={sw} height={sh} rx={sr} ry={sr}
+                  fill="black"
+                  style={{ transition: "all 0.4s cubic-bezier(0.4,0,0.2,1)" }}
+                />
+              </mask>
+            </defs>
+            <rect
+              width="100%" height="100%"
+              fill="rgba(0,0,0,0.82)"
+              mask="url(#tuto-mask)"
+            />
+            {/* Pulsing ring */}
+            <rect
+              x={sx - 3} y={sy - 3} width={sw + 6} height={sh + 6} rx={sr + 3} ry={sr + 3}
+              fill="none"
+              stroke="var(--accent)"
+              strokeWidth="2"
+              opacity="0.6"
+              className="tuto-pulse-ring"
+              style={{ transition: "all 0.4s cubic-bezier(0.4,0,0.2,1)" }}
+            />
+          </svg>
 
-      {/* Success animation */}
-      {successAnim && rect && (
-        <div
-          style={{
-            position: "fixed",
-            top: rect.top + rect.height / 2 - 24,
-            left: rect.left + rect.width / 2 - 24,
-            width: 48, height: 48,
-            zIndex: 815,
-            animation: "tutoSuccessPop 0.6s ease-out forwards",
-          }}
-        >
-          <div style={{
-            width: 48, height: 48, borderRadius: "50%",
-            background: "#22c55e", display: "flex", alignItems: "center", justifyContent: "center",
-          }}>
-            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M5 13l4 4L19 7"/>
-            </svg>
-          </div>
-        </div>
+          {/* 4 clickable dark rects around the spotlight to block outside clicks */}
+          {/* Top */}
+          <div style={{ position: "fixed", top: 0, left: 0, right: 0, height: Math.max(0, sy), zIndex: 801 }} />
+          {/* Bottom */}
+          <div style={{ position: "fixed", top: sy + sh, left: 0, right: 0, bottom: 0, zIndex: 801 }} />
+          {/* Left */}
+          <div style={{ position: "fixed", top: sy, left: 0, width: Math.max(0, sx), height: sh, zIndex: 801 }} />
+          {/* Right */}
+          <div style={{ position: "fixed", top: sy, left: sx + sw, right: 0, height: sh, zIndex: 801 }} />
+        </>
       )}
 
       {/* Confetti on final step */}
@@ -368,7 +317,6 @@ export default function TutorialOverlay({
         className="tuto-tooltip-enter"
         onClick={(e) => e.stopPropagation()}
       >
-        {/* Arrow */}
         {arrowStyle && <div style={arrowStyle} />}
 
         <div
@@ -384,7 +332,7 @@ export default function TutorialOverlay({
           }}
         >
           <div className="p-4">
-            {/* Section pill + quit */}
+            {/* Section pill + step counter + quit */}
             <div className="flex items-center justify-between mb-3">
               <button
                 className="text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5 transition-colors"
@@ -397,6 +345,7 @@ export default function TutorialOverlay({
               >
                 <span>{section?.emoji}</span>
                 <span>{section?.label}</span>
+                <span style={{ opacity: 0.5 }}>{stepInSection}/{totalInSection}</span>
                 <svg width="10" height="10" viewBox="0 0 10 10" fill="currentColor" style={{ transform: sectionPickerOpen ? "rotate(180deg)" : "none", transition: "transform 0.2s" }}>
                   <path d="M2 4l3 3 3-3"/>
                 </svg>
@@ -412,10 +361,7 @@ export default function TutorialOverlay({
 
             {/* Section picker dropdown */}
             {sectionPickerOpen && (
-              <div
-                className="mb-3 flex gap-1.5 overflow-x-auto pb-1"
-                style={{ scrollbarWidth: "none" }}
-              >
+              <div className="mb-3 flex gap-1.5 overflow-x-auto pb-1" style={{ scrollbarWidth: "none" }}>
                 {TUTORIAL_SECTIONS.map((sec) => (
                   <button
                     key={sec.id}
@@ -439,39 +385,30 @@ export default function TutorialOverlay({
             <p className="font-bold text-[15px] mb-1.5" style={{ fontFamily: "var(--font-title)", color: "#fff" }}>
               {currentStep.title}
             </p>
-            <p className="text-xs leading-relaxed mb-3" style={{ color: "rgba(255,255,255,0.55)" }}>
+            <p className="text-xs leading-relaxed mb-4" style={{ color: "rgba(255,255,255,0.55)" }}>
               {currentStep.description}
             </p>
 
-            {/* Interaction hint */}
-            {isInteractive && !interactionDone && currentStep.hintText && (
-              <div
-                className="flex items-center gap-2 mb-3 px-3 py-2 rounded-xl tuto-hint-pulse"
-                style={{ background: "rgba(124,107,240,0.1)", border: "1px solid rgba(124,107,240,0.2)" }}
-              >
-                {renderHintIcon()}
-                <span className="text-[11px] font-bold" style={{ color: "var(--accent)" }}>
-                  {currentStep.hintText}
-                </span>
-              </div>
-            )}
-
-            {/* Progress dots */}
-            <div className="flex items-center justify-center gap-1 mb-3">
-              {dots.map((d, i) => (
-                <div
-                  key={i}
-                  className="rounded-full transition-all duration-300"
-                  style={{
-                    width: d.current ? 16 : 6,
-                    height: 6,
-                    background: d.current
-                      ? "var(--accent)"
-                      : d.done
-                      ? "rgba(124,107,240,0.5)"
-                      : "rgba(255,255,255,0.12)",
-                  }}
-                />
+            {/* Section progress dots */}
+            <div className="flex items-center justify-center gap-2 mb-4">
+              {sectionDots.map((sd) => (
+                <div key={sd.section.id} className="flex items-center gap-0.5">
+                  {sd.steps.map((s) => (
+                    <div
+                      key={s.globalIndex}
+                      className="rounded-full transition-all duration-300"
+                      style={{
+                        width: s.current ? 16 : 6,
+                        height: 6,
+                        background: s.current
+                          ? "var(--accent)"
+                          : s.done
+                          ? "rgba(124,107,240,0.6)"
+                          : "rgba(255,255,255,0.12)",
+                      }}
+                    />
+                  ))}
+                </div>
               ))}
             </div>
 
@@ -479,37 +416,19 @@ export default function TutorialOverlay({
             <div className="flex items-center gap-2">
               <button
                 className="text-[11px] font-bold px-3 py-2 rounded-xl"
-                style={{ color: "rgba(255,255,255,0.4)" }}
+                style={{ color: "rgba(255,255,255,0.35)" }}
                 onClick={onSkipSection}
               >
                 Passer la section
               </button>
               <div className="flex-1" />
-              {isInteractive && !interactionDone ? (
-                <>
-                  <button
-                    className="text-[11px] font-bold px-5 py-2.5 rounded-xl transition-all"
-                    style={{
-                      background: "rgba(124,107,240,0.3)",
-                      color: "rgba(255,255,255,0.4)",
-                      cursor: showFallback ? "pointer" : "default",
-                      opacity: showFallback ? 1 : 0.5,
-                    }}
-                    onClick={showFallback ? onNext : undefined}
-                    disabled={!showFallback}
-                  >
-                    {showFallback ? "Passer" : "Essaie !"}
-                  </button>
-                </>
-              ) : (
-                <button
-                  className="text-[11px] font-bold px-5 py-2.5 rounded-xl"
-                  style={{ background: "var(--accent)", color: "#fff" }}
-                  onClick={isFinal ? onStop : onNext}
-                >
-                  {isFinal ? "C'est parti !" : "Suivant"}
-                </button>
-              )}
+              <button
+                className="text-[11px] font-bold px-5 py-2.5 rounded-xl"
+                style={{ background: "var(--accent)", color: "#fff" }}
+                onClick={isFinal ? onStop : onNext}
+              >
+                {isFinal ? "C'est parti !" : "Suivant"}
+              </button>
             </div>
           </div>
         </div>
@@ -543,18 +462,6 @@ export default function TutorialOverlay({
         }
         .tuto-pulse-ring {
           animation: tutoPulseRing 2s ease-in-out infinite;
-        }
-        @keyframes tutoHintPulse {
-          0%, 100% { opacity: 0.7; }
-          50% { opacity: 1; }
-        }
-        .tuto-hint-pulse {
-          animation: tutoHintPulse 1.5s ease-in-out infinite;
-        }
-        @keyframes tutoSuccessPop {
-          0% { transform: scale(0); opacity: 0; }
-          50% { transform: scale(1.3); opacity: 1; }
-          100% { transform: scale(1); opacity: 1; }
         }
         @keyframes tutoFadeInOut {
           0% { opacity: 0; }

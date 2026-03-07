@@ -1,5 +1,3 @@
-export type InteractionType = "swipe" | "tap" | "toggle" | null;
-
 export interface TutorialSection {
   id: string;
   label: string;
@@ -14,9 +12,6 @@ export interface TutorialStep {
   title: string;
   description: string;
   position: "top" | "bottom" | "center";
-  interaction: InteractionType;
-  hintText: string | null;
-  hintIcon: "swipe" | "tap" | "toggle" | null;
 }
 
 export const TUTORIAL_SECTIONS: TutorialSection[] = [
@@ -34,11 +29,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/home",
     targetAttr: "day-carousel",
     title: "Navigue dans tes jours",
-    description: "Glisse le carrousel pour voir tes événements jour par jour.",
+    description: "Glisse le carrousel pour voir tes événements jour par jour. Chaque jour affiche ton planning complet.",
     position: "bottom",
-    interaction: "swipe",
-    hintText: "Glisse le carrousel",
-    hintIcon: "swipe",
   },
   {
     id: "add-event-btn",
@@ -46,11 +38,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/home",
     targetAttr: "add-event-btn",
     title: "Crée un événement",
-    description: "Appuie sur ce bouton pour ajouter un événement en 2 secondes.",
+    description: "Ce bouton + te permet d'ajouter un événement en quelques secondes. Tu peux aussi demander à Flow de le faire pour toi.",
     position: "bottom",
-    interaction: "tap",
-    hintText: "Appuie sur le bouton +",
-    hintIcon: "tap",
   },
   {
     id: "flow-chat-widget",
@@ -58,11 +47,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/home",
     targetAttr: "flow-chat-widget",
     title: "Ton assistant Flow",
-    description: "Ton copilote IA. Dis-lui ce que tu veux et il s'en occupe.",
+    description: "Ton copilote IA. Dis-lui « Ajoute un cours de danse mardi à 17h » et c'est fait. Il gère ton planning à ta place.",
     position: "top",
-    interaction: "tap",
-    hintText: "Appuie pour ouvrir Flow",
-    hintIcon: "tap",
   },
   {
     id: "weather-widget",
@@ -70,11 +56,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/home",
     targetAttr: "weather-widget",
     title: "Météo en direct",
-    description: "La météo du jour et les prévisions, toujours à portée de main.",
+    description: "La météo du jour et les prévisions, toujours à portée de main. Appuie dessus pour voir les détails.",
     position: "bottom",
-    interaction: null,
-    hintText: null,
-    hintIcon: null,
   },
   // Famille (3 steps)
   {
@@ -83,11 +66,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/famille",
     targetAttr: "famille-membres",
     title: "Les membres de ta famille",
-    description: "Retrouve tous les membres, leur rôle et leur position.",
+    description: "Tous les membres de ta famille sont ici. Appuie sur l'un d'eux pour voir son profil, modifier son rôle ou le lier à un compte.",
     position: "bottom",
-    interaction: "tap",
-    hintText: "Appuie sur un membre",
-    hintIcon: "tap",
   },
   {
     id: "famille-map",
@@ -95,11 +75,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/famille",
     targetAttr: "famille-map",
     title: "Carte interactive",
-    description: "Visualise tes proches et tes adresses sur la carte.",
+    description: "Visualise tes adresses et tes proches sur la carte. Appuie pour l'ouvrir en plein écran avec recherche et itinéraire.",
     position: "top",
-    interaction: null,
-    hintText: null,
-    hintIcon: null,
   },
   {
     id: "location-toggle",
@@ -107,11 +84,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/famille",
     targetAttr: "location-toggle",
     title: "Partage ta position",
-    description: "Active le partage pour que ta famille te localise en temps réel.",
+    description: "Active ce bouton pour que ta famille puisse te localiser en temps réel sur la carte.",
     position: "top",
-    interaction: "toggle",
-    hintText: "Active le toggle",
-    hintIcon: "toggle",
   },
   // Vie (2 steps)
   {
@@ -120,11 +94,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/vie",
     targetAttr: "vie-tabs",
     title: "Ta vie organisée",
-    description: "Notes, courses, budget, tâches, photos — tout par onglets.",
+    description: "Notes, courses, budget, tâches, photos — tout est organisé par onglets. Appuie sur un onglet pour changer de catégorie.",
     position: "bottom",
-    interaction: "tap",
-    hintText: "Appuie sur un onglet",
-    hintIcon: "tap",
   },
   {
     id: "vie-add-item",
@@ -132,11 +103,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/vie",
     targetAttr: "vie-add-item",
     title: "Ajoute un élément",
-    description: "Crée une note, une course ou une tâche en un clic.",
+    description: "Ce bouton te permet de créer une note, un article de course ou une tâche selon l'onglet actif.",
     position: "bottom",
-    interaction: "tap",
-    hintText: "Appuie sur + Ajouter",
-    hintIcon: "tap",
   },
   // Réglages (2 steps)
   {
@@ -145,11 +113,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/reglages",
     targetAttr: "family-code",
     title: "Invite ta famille",
-    description: "Partage ce code pour synchroniser toute la famille.",
+    description: "Partage ce code à tes proches. Ils pourront rejoindre ta famille en le saisissant à l'inscription.",
     position: "top",
-    interaction: "tap",
-    hintText: "Appuie pour copier",
-    hintIcon: "tap",
   },
   {
     id: "done",
@@ -157,11 +122,8 @@ export const TUTORIAL_STEPS: TutorialStep[] = [
     page: "/reglages",
     targetAttr: null,
     title: "Tu es prêt !",
-    description: "Tu connais FlowTime ! Explore et laisse Flow t'aider.",
+    description: "Tu connais FlowTime ! Explore librement et laisse Flow t'aider au quotidien.",
     position: "center",
-    interaction: null,
-    hintText: null,
-    hintIcon: null,
   },
 ];
 
