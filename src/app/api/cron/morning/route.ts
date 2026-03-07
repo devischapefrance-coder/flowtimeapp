@@ -99,8 +99,8 @@ export async function GET(req: NextRequest) {
               timestamp: reminderTime,
               title: `${emoji} ${e.title} a ${e.time}`,
               body: memberName
-                ? `C'est bientot l'heure ! ${memberName}, c'est dans 15 min`
-                : "C'est bientot l'heure ! Dans 15 minutes",
+                ? `C'est bientot l'heure ! ${memberName}, RDV a ${e.time}`
+                : `C'est bientot l'heure ! RDV a ${e.time}`,
               tag: `flowtime-reminder-${e.id}`,
             };
           })

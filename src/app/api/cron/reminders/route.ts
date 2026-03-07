@@ -15,10 +15,10 @@ export async function GET(req: NextRequest) {
     const parisNow = new Date(now.toLocaleString("en-US", { timeZone: "Europe/Paris" }));
     const today = `${parisNow.getFullYear()}-${String(parisNow.getMonth() + 1).padStart(2, "0")}-${String(parisNow.getDate()).padStart(2, "0")}`;
 
-    // Current time + 15 min window
+    // Current time + 10 min window
     const currentMinutes = parisNow.getHours() * 60 + parisNow.getMinutes();
-    const reminderStart = currentMinutes + 10; // events in 10-20 min
-    const reminderEnd = currentMinutes + 20;
+    const reminderStart = currentMinutes + 5; // events in 5-15 min
+    const reminderEnd = currentMinutes + 15;
 
     // Get today's events
     const { data: events } = await supabaseAdmin
@@ -71,14 +71,16 @@ export async function GET(req: NextRequest) {
       const familyUserIds = familyProfiles.map((p) => p.id);
       const familySubs = subs.filter((s) => familyUserIds.includes(s.user_id));
 
+      const [evH, evM] = event.time.split(":").map(Number);
+      const minsUntil = (evH * 60 + evM) - currentMinutes;
       const cat = (event.category as string) || "general";
       const emoji = catEmoji(cat);
 
       const payload = JSON.stringify({
         title: `${emoji} ${event.title} a ${event.time}`,
         body: mName
-          ? `C'est bientot l'heure ! ${mName}, c'est dans 15 min`
-          : "C'est bientot l'heure ! Dans 15 minutes",
+          ? `C'est bientot l'heure ! ${mName}, c'est dans ${minsUntil} min`
+          : `C'est bientot l'heure ! Dans ${minsUntil} minutes`,
         icon: "/icons/icon-192.png",
         badge: "/icons/icon-192.png",
         tag: `flowtime-reminder-${event.id}`,

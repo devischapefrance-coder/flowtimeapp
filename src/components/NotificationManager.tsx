@@ -100,23 +100,25 @@ export default function NotificationManager({ events, birthdays, enabled }: Noti
         const key15 = `${ev.id}-15`;
         const key5 = `${ev.id}-5`;
 
-        // 15 minutes before
-        if (diffMin > 14 && diffMin <= 15 && !notifiedRef.current.has(key15)) {
+        const roundedMin = Math.round(diffMin);
+
+        // 10 minutes before (window: 9-11 min)
+        if (diffMin > 9 && diffMin <= 11 && !notifiedRef.current.has(key15)) {
           notifiedRef.current.add(key15);
           const memberName = ev.members?.name ? ` (${ev.members.name})` : "";
           new Notification("FlowTime ⏰", {
-            body: `Dans 15 min : ${ev.title}${memberName} a ${ev.time}`,
+            body: `Dans ${roundedMin} min : ${ev.title}${memberName} a ${ev.time}`,
             icon: "/icons/icon.svg",
             tag: key15,
           });
         }
 
-        // 5 minutes before
-        if (diffMin > 4 && diffMin <= 5 && !notifiedRef.current.has(key5)) {
+        // 5 minutes before (window: 4-6 min)
+        if (diffMin > 4 && diffMin <= 6 && !notifiedRef.current.has(key5)) {
           notifiedRef.current.add(key5);
           const memberName = ev.members?.name ? ` (${ev.members.name})` : "";
           new Notification("FlowTime 🔔", {
-            body: `Dans 5 min : ${ev.title}${memberName}`,
+            body: `Dans ${roundedMin} min : ${ev.title}${memberName}`,
             icon: "/icons/icon.svg",
             tag: key5,
           });
