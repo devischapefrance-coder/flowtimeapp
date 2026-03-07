@@ -53,34 +53,53 @@ export default function TutorialOverlay({
   useEffect(() => {
     if (!active) return;
 
-    // Find the scrollable container (the pb-[80px] div)
-    const container = document.querySelector("[class*='pb-\\[80px\\]']") as HTMLElement | null;
-    scrollContainerRef.current = container;
+    scrollContainerRef.current = document.querySelector("[class*='pb-\\[80px\\]']") as HTMLElement | null;
 
-    // Lock scroll on body and container
-    const origBodyOverflow = document.body.style.overflow;
-    const origHtmlOverflow = document.documentElement.style.overflow;
+    // Save scroll position and lock body with position:fixed to prevent iOS Safari bounce
+    const scrollY = window.scrollY;
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.left = "0";
+    document.body.style.right = "0";
     document.body.style.overflow = "hidden";
     document.documentElement.style.overflow = "hidden";
 
     // Block touch scrolling
     const preventScroll = (e: TouchEvent) => {
-      // Allow touches inside the tooltip
       const tooltip = document.getElementById("tuto-tooltip");
       if (tooltip && tooltip.contains(e.target as Node)) return;
       e.preventDefault();
     };
     document.addEventListener("touchmove", preventScroll, { passive: false });
 
-    // Disable navbar
+    // Disable navbar + hide the white gap below it on iOS
     const navbar = document.querySelector("nav") as HTMLElement | null;
-    if (navbar) navbar.style.pointerEvents = "none";
+    if (navbar) {
+      navbar.style.pointerEvents = "none";
+      navbar.style.paddingBottom = `calc(10px + env(safe-area-inset-bottom, 0px))`;
+    }
+
+    // Black fill below everything to prevent white flash on iOS
+    const fill = document.createElement("div");
+    fill.id = "tuto-ios-fill";
+    fill.style.cssText = "position:fixed;inset:0;background:#000;z-index:799;pointer-events:none";
+    document.body.appendChild(fill);
 
     return () => {
-      document.body.style.overflow = origBodyOverflow;
-      document.documentElement.style.overflow = origHtmlOverflow;
+      document.body.style.position = "";
+      document.body.style.top = "";
+      document.body.style.left = "";
+      document.body.style.right = "";
+      document.body.style.overflow = "";
+      document.documentElement.style.overflow = "";
+      window.scrollTo(0, scrollY);
       document.removeEventListener("touchmove", preventScroll);
-      if (navbar) navbar.style.pointerEvents = "";
+      if (navbar) {
+        navbar.style.pointerEvents = "";
+        navbar.style.paddingBottom = "";
+      }
+      const f = document.getElementById("tuto-ios-fill");
+      if (f) f.remove();
     };
   }, [active]);
 
