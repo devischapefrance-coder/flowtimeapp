@@ -101,8 +101,8 @@ export default function LandingPage() {
           <circle cx="12" cy="16" r="1.5" fill="var(--accent)" stroke="none" />
         </svg>
       ),
-      title: "Planning familial",
-      desc: "Calendrier partagé, événements récurrents, rappels intelligents et export PDF.",
+      title: "Planning intelligent",
+      desc: "Calendrier partagé, vues semaine et mois, récurrences, export PDF & iCal.",
       color: "var(--accent)",
     },
     {
@@ -111,8 +111,8 @@ export default function LandingPage() {
           <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
         </svg>
       ),
-      title: "Gestion famille",
-      desc: "Membres, contacts de confiance, adresses et carte interactive en temps réel.",
+      title: "Famille connectée",
+      desc: "Membres, carte GPS temps réel, contacts d'urgence et adresses partagées.",
       color: "var(--teal)",
     },
     {
@@ -122,8 +122,8 @@ export default function LandingPage() {
           <circle cx="9" cy="10" r="0.8" fill="var(--lavender)" stroke="none" /><circle cx="12" cy="10" r="0.8" fill="var(--lavender)" stroke="none" /><circle cx="15" cy="10" r="0.8" fill="var(--lavender)" stroke="none" />
         </svg>
       ),
-      title: "Assistant Flow",
-      desc: "Une IA conversationnelle qui gère votre planning à la voix ou au texte.",
+      title: "Flow AI",
+      desc: "Assistant IA conversationnel qui gère votre planning par texte.",
       color: "var(--lavender)",
     },
     {
@@ -133,8 +133,8 @@ export default function LandingPage() {
           <line x1="9" y1="13" x2="15" y2="13" /><line x1="9" y1="17" x2="13" y2="17" />
         </svg>
       ),
-      title: "Vie de famille",
-      desc: "Notes collaboratives, courses, dépenses partagées et tâches ménagères.",
+      title: "Organisation quotidienne",
+      desc: "Notes, courses, budget, tâches ménagères et photos partagées.",
       color: "var(--warm)",
     },
   ];
@@ -143,11 +143,12 @@ export default function LandingPage() {
     {
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--teal)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" /><circle cx="12" cy="12" r="3" />
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" /><circle cx="12" cy="10" r="3" />
         </svg>
       ),
-      title: "Localisation en direct",
-      desc: "Voyez où se trouvent vos proches sur la carte en temps réel.",
+      title: "Carte temps réel",
+      desc: "Leaflet + localisation famille en direct sur la carte.",
+      color: "var(--teal)",
     },
     {
       icon: (
@@ -157,6 +158,7 @@ export default function LandingPage() {
       ),
       title: "Notifications push",
       desc: "Rappels le matin, alertes 15 min avant chaque événement.",
+      color: "var(--accent)",
     },
     {
       icon: (
@@ -165,34 +167,38 @@ export default function LandingPage() {
         </svg>
       ),
       title: "Récurrences",
-      desc: "Événements quotidiens, hebdo ou mensuels sans ressaisir.",
+      desc: "Événements quotidiens, hebdo ou mensuels auto-répétés.",
+      color: "var(--warm)",
     },
     {
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+          <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8" /><polyline points="16 6 12 2 8 6" /><line x1="12" y1="2" x2="12" y2="15" />
         </svg>
       ),
-      title: "Bien-être",
-      desc: "Méditation, respiration, yoga et suivi d'activités intégrés.",
+      title: "Export & partage",
+      desc: "PDF, iCal et QR code famille pour inviter facilement.",
+      color: "var(--green)",
     },
     {
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--lavender)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
+          <path d="M12 2L2 7l10 5 10-5-10-5z" /><path d="M2 17l10 5 10-5" /><path d="M2 12l10 5 10-5" />
         </svg>
       ),
-      title: "Sécurité totale",
-      desc: "Données isolées par famille, chiffrement et contrôle d'accès RLS.",
+      title: "Mode hors ligne",
+      desc: "Données cachées localement, toujours accessibles.",
+      color: "var(--lavender)",
     },
     {
       icon: (
         <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--red)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M12 19l7-7 3 3-7 7-3-3z" /><path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" /><path d="M2 2l7.586 7.586" /><circle cx="11" cy="11" r="2" />
+          <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0 1 10 0v4" />
         </svg>
       ),
-      title: "Itinéraires gratuits",
-      desc: "Calcul d'itinéraires voiture, vélo et piéton sans clé API.",
+      title: "Sécurité totale",
+      desc: "RLS Supabase, données isolées par famille.",
+      color: "var(--red)",
     },
   ];
 
@@ -261,7 +267,17 @@ export default function LandingPage() {
           className="mt-6 text-[36px] font-bold leading-tight stagger-in"
           style={{ fontFamily: "var(--font-fraunces), serif" }}
         >
-          Flow<span style={{ color: "var(--accent)" }}>Time</span>
+          <span
+            style={{
+              background: "linear-gradient(135deg, var(--accent), #9B8BFF, var(--teal))",
+              backgroundSize: "200% 200%",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              animation: "gradient-shift 4s ease-in-out infinite",
+            }}
+          >
+            FlowTime
+          </span>
         </h1>
         <p
           className="mt-3 text-[16px] max-w-[300px] leading-relaxed stagger-in"
@@ -325,16 +341,26 @@ export default function LandingPage() {
             </div>
           </div>
           {/* App header */}
-          <div className="px-4 pb-3 flex items-center gap-3">
-            <div
-              className="w-9 h-9 rounded-xl flex items-center justify-center"
-              style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
-            >
-              <Logo size={22} />
+          <div className="px-4 pb-3 flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <div
+                className="w-9 h-9 rounded-xl flex items-center justify-center"
+                style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
+              >
+                <Logo size={22} />
+              </div>
+              <div>
+                <p className="text-xs font-bold">Bonjour, Marie</p>
+                <p className="text-[9px]" style={{ color: "var(--dim)" }}>3 événements aujourd&apos;hui</p>
+              </div>
             </div>
-            <div>
-              <p className="text-xs font-bold">Bonjour, Marie</p>
-              <p className="text-[9px]" style={{ color: "var(--dim)" }}>3 événements aujourd&apos;hui</p>
+            {/* Weather badge */}
+            <div
+              className="flex items-center gap-1 px-2 py-1 rounded-lg"
+              style={{ background: "var(--surface2)", border: "1px solid var(--glass-border)" }}
+            >
+              <span className="text-[10px]">☀️</span>
+              <span className="text-[9px] font-bold">18°</span>
             </div>
           </div>
           {/* Mock cards */}
@@ -376,7 +402,7 @@ export default function LandingPage() {
             className="flex justify-around py-2.5"
             style={{ background: "var(--nav-bg)", borderTop: "1px solid var(--glass-border)" }}
           >
-            {["🏠", "👨‍👩‍👧‍👦", "🌊", "⚙️"].map((icon, i) => (
+            {["🏠", "👨‍👩‍👧‍👦", "📋", "⚙️"].map((icon, i) => (
               <div
                 key={i}
                 className="w-8 h-8 rounded-lg flex items-center justify-center text-sm"
@@ -435,8 +461,8 @@ export default function LandingPage() {
           style={{ borderRadius: "var(--radius)" }}
         >
           {[
-            { value: 6, suffix: "+", label: "Activités bien-être" },
-            { value: 12, suffix: "", label: "Catégories POI" },
+            { value: 9, suffix: "", label: "Widgets personnalisables" },
+            { value: 5, suffix: "", label: "Espaces de vie" },
             { value: 20, suffix: "", label: "Thèmes de couleurs" },
           ].map((s, i) => (
             <div key={i} className="flex-1">
@@ -613,11 +639,15 @@ export default function LandingPage() {
         </p>
       </footer>
 
-      {/* Keyframes for floating orbs */}
+      {/* Keyframes */}
       <style jsx>{`
         @keyframes float {
           0%, 100% { transform: translateY(0px); }
           50% { transform: translateY(-20px); }
+        }
+        @keyframes gradient-shift {
+          0%, 100% { background-position: 0% 50%; }
+          50% { background-position: 100% 50%; }
         }
       `}</style>
     </div>
