@@ -65,7 +65,7 @@ export function useTutorial() {
   return useContext(TutorialContext);
 }
 
-const TAB_ORDER = ["/home", "/famille", "/vie", "/reglages"];
+const TAB_ORDER = ["/home", "/famille", "/snap", "/vie", "/reglages"];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();
@@ -140,6 +140,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
+        speed: pos.coords.speed,
+        heading: pos.coords.heading,
         updated_at: new Date().toISOString(),
       }).eq("user_id", profile!.id);
     }

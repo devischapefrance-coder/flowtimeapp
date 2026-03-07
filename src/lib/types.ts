@@ -10,6 +10,7 @@ export interface Profile {
   lng: number | null;
   family_id: string;
   avatar_url: string | null;
+  birth_date: string | null;
   created_at: string;
 }
 
@@ -92,6 +93,8 @@ export interface DeviceLocation {
   lat: number;
   lng: number;
   accuracy: number | null;
+  speed: number | null;
+  heading: number | null;
   updated_at: string;
   created_at: string;
 }

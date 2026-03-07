@@ -7,6 +7,7 @@ import { useProfile } from "@/app/(app)/layout";
 const tabs = [
   { href: "/home", emoji: "🏠", label: "Accueil" },
   { href: "/famille", emoji: "👨‍👩‍👧‍👦", label: "Famille" },
+  { href: "/snap", emoji: "📍", label: "Carte" },
   { href: "/vie", emoji: "📌", label: "Vie" },
   { href: "/reglages", emoji: "⚙️", label: "Réglages" },
 ];
