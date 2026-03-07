@@ -3,7 +3,7 @@
 import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-leaflet";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 
 // Disable Leaflet's tap handler globally to fix iOS touch issues (300ms delay)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -299,6 +299,23 @@ function spreadOverlapping(markers: MapMarker[]): MapMarker[] {
     });
   }
   return result;
+}
+
+/** Returns "apple" for light theme, "dark" for dark theme. Reacts to theme changes. */
+export function useThemeMapStyle(): MapStyle {
+  const [style, setStyle] = useState<MapStyle>(() => {
+    if (typeof document === "undefined") return "dark";
+    return document.documentElement.classList.contains("light") ? "apple" : "dark";
+  });
+  useEffect(() => {
+    const check = () =>
+      setStyle(document.documentElement.classList.contains("light") ? "apple" : "dark");
+    check();
+    const observer = new MutationObserver(check);
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
+  return style;
 }
 
 export default function MapView({

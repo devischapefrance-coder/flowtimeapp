@@ -484,6 +484,7 @@ export default function ViePage() {
           <div className="flex items-center justify-between mb-3">
             <p className="label !mb-0">Notes partagees</p>
             <button
+              data-tutorial="vie-add-item"
               className="text-xs font-bold px-3 py-1.5 rounded-full"
               style={{ background: "var(--accent)", color: "#fff" }}
               onClick={openNewNote}

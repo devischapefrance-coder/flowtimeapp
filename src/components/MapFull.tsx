@@ -52,13 +52,20 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
   const [activeCategory, setActiveCategory] = useState<string | null>(null);
   const [searching, setSearching] = useState(false);
   const [tab, setTab] = useState<SideTab>(null);
-  const [mapStyle, setMapStyle] = useState<MapStyle>("apple");
   const [showStylePicker, setShowStylePicker] = useState(false);
 
   // Detect light/dark theme
   const [isLight, setIsLight] = useState(false);
+  const [mapStyle, setMapStyle] = useState<MapStyle>(() => {
+    if (typeof document === "undefined") return "dark";
+    return document.documentElement.classList.contains("light") ? "apple" : "dark";
+  });
   useEffect(() => {
-    const check = () => setIsLight(document.documentElement.classList.contains("light"));
+    const check = () => {
+      const light = document.documentElement.classList.contains("light");
+      setIsLight(light);
+      setMapStyle((prev) => prev === "satellite" ? prev : (light ? "apple" : "dark"));
+    };
     check();
     const observer = new MutationObserver(check);
     observer.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });

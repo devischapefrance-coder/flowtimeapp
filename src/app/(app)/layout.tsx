@@ -10,6 +10,7 @@ import { I18nProvider } from "@/lib/i18n";
 import { ToastProvider } from "@/components/Toast";
 import FamilyChat from "@/components/FamilyChat";
 import TutorialOverlay from "@/components/TutorialOverlay";
+import { TUTORIAL_STEPS, TUTORIAL_SECTIONS, getFirstStepIndex } from "@/lib/tutorial-data";
 import { subscribeToPush, isPushSubscribed } from "@/lib/push";
 
 interface ProfileContextType {
@@ -37,19 +38,27 @@ export function useProfile() {
 interface TutorialContextType {
   tutorialActive: boolean;
   tutorialStep: number;
+  currentSection: string | null;
+  completedSections: string[];
   startTutorial: () => void;
+  startTutorialAtSection: (section: string) => void;
   stopTutorial: () => void;
   nextStep: () => void;
   prevStep: () => void;
+  skipSection: () => void;
 }
 
 const TutorialContext = createContext<TutorialContextType>({
   tutorialActive: false,
   tutorialStep: 0,
+  currentSection: null,
+  completedSections: [],
   startTutorial: () => {},
+  startTutorialAtSection: () => {},
   stopTutorial: () => {},
   nextStep: () => {},
   prevStep: () => {},
+  skipSection: () => {},
 });
 
 export function useTutorial() {
@@ -159,10 +168,78 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   const [tutorialActive, setTutorialActive] = useState(false);
   const [tutorialStep, setTutorialStep] = useState(0);
+  const [completedSections, setCompletedSections] = useState<string[]>(() => {
+    if (typeof window !== "undefined") {
+      try { return JSON.parse(localStorage.getItem("flowtime_tuto_sections") || "[]"); } catch { return []; }
+    }
+    return [];
+  });
+
+  const currentSection = tutorialActive ? (TUTORIAL_STEPS[tutorialStep]?.section ?? null) : null;
+
+  const markSectionComplete = useCallback((sectionId: string) => {
+    setCompletedSections((prev) => {
+      if (prev.includes(sectionId)) return prev;
+      const next = [...prev, sectionId];
+      localStorage.setItem("flowtime_tuto_sections", JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const startTutorial = useCallback(() => { setTutorialStep(0); setTutorialActive(true); }, []);
-  const stopTutorial = useCallback(() => { setTutorialActive(false); setTutorialStep(0); }, []);
-  const nextStep = useCallback(() => setTutorialStep((s) => s + 1), []);
+
+  const startTutorialAtSection = useCallback((section: string) => {
+    const idx = getFirstStepIndex(section);
+    if (idx >= 0) {
+      setTutorialStep(idx);
+      setTutorialActive(true);
+    }
+  }, []);
+
+  const stopTutorial = useCallback(() => {
+    // Mark current section as completed
+    const step = TUTORIAL_STEPS[tutorialStep];
+    if (step) markSectionComplete(step.section);
+    setTutorialActive(false);
+    setTutorialStep(0);
+  }, [tutorialStep, markSectionComplete]);
+
+  const nextStep = useCallback(() => {
+    setTutorialStep((s) => {
+      const current = TUTORIAL_STEPS[s];
+      const next = TUTORIAL_STEPS[s + 1];
+      // Mark section complete when moving to next section
+      if (current && next && current.section !== next.section) {
+        markSectionComplete(current.section);
+      }
+      // Mark last section complete at end
+      if (current && s + 1 >= TUTORIAL_STEPS.length) {
+        markSectionComplete(current.section);
+        setTutorialActive(false);
+        return 0;
+      }
+      return s + 1;
+    });
+  }, [markSectionComplete]);
+
   const prevStep = useCallback(() => setTutorialStep((s) => Math.max(0, s - 1)), []);
+
+  const skipSection = useCallback(() => {
+    setTutorialStep((s) => {
+      const current = TUTORIAL_STEPS[s];
+      if (!current) return s;
+      markSectionComplete(current.section);
+      // Find first step of next section
+      const currentSectionIdx = TUTORIAL_SECTIONS.findIndex((sec) => sec.id === current.section);
+      const nextSection = TUTORIAL_SECTIONS[currentSectionIdx + 1];
+      if (!nextSection) {
+        setTutorialActive(false);
+        return 0;
+      }
+      const idx = getFirstStepIndex(nextSection.id);
+      return idx >= 0 ? idx : s;
+    });
+  }, [markSectionComplete]);
 
   const initialLang = typeof window !== "undefined"
     ? localStorage.getItem("flowtime_lang") || "fr"
@@ -244,15 +321,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       }, 3000);
     }
 
-    // Check onboarding
+    // Check onboarding — show for any user who hasn't completed it yet
     if (!localStorage.getItem("flowtime_onboarded") && data) {
-      const created = new Date(data.created_at);
-      const now = new Date();
-      if (now.getTime() - created.getTime() < 5 * 60 * 1000) {
-        router.push("/onboarding");
-      } else {
-        localStorage.setItem("flowtime_onboarded", "true");
-      }
+      router.push("/onboarding");
+    }
+
+    // Auto-start tutorial after onboarding
+    if (localStorage.getItem("flowtime_tutorial_pending")) {
+      localStorage.removeItem("flowtime_tutorial_pending");
+      setTimeout(() => {
+        setTutorialStep(0);
+        setTutorialActive(true);
+      }, 800);
     }
   }
 
@@ -291,7 +371,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   return (
     <I18nProvider initialLang={initialLang}>
       <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread }}>
-        <TutorialContext.Provider value={{ tutorialActive, tutorialStep, startTutorial, stopTutorial, nextStep, prevStep }}>
+        <TutorialContext.Provider value={{ tutorialActive, tutorialStep, currentSection, completedSections, startTutorial, startTutorialAtSection, stopTutorial, nextStep, prevStep, skipSection }}>
           <ToastProvider>
             <div
               key={transitionKey}
@@ -321,6 +401,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               onNext={nextStep}
               onPrev={prevStep}
               onStop={stopTutorial}
+              onSkipSection={skipSection}
+              onJumpToSection={startTutorialAtSection}
             />
           </ToastProvider>
         </TutorialContext.Provider>

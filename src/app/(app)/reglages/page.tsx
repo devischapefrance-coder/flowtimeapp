@@ -81,7 +81,7 @@ const PROFILE_EMOJIS = [
 export default function ReglagesPage() {
   const router = useRouter();
   const { profile, refreshProfile } = useProfile();
-  const { startTutorial } = useTutorial();
+  const { startTutorial, startTutorialAtSection, completedSections } = useTutorial();
 
   const [firstName, setFirstName] = useState(profile?.first_name || "");
   const [lastName, setLastName] = useState(profile?.last_name || "");
@@ -626,13 +626,40 @@ export default function ReglagesPage() {
       {/* Aide */}
       <p className="label mt-4">Aide</p>
       <div className="card">
-        <p className="text-sm font-bold mb-1">Tutoriel interactif</p>
+        <p className="text-sm font-bold mb-1">Tutoriel complet</p>
         <p className="text-[11px] mb-3" style={{ color: "var(--dim)" }}>
-          Redécouvre les fonctionnalités principales de FlowTime avec un guide pas à pas.
+          Redécouvre FlowTime pas à pas
         </p>
         <button className="btn btn-primary text-xs" onClick={startTutorial}>
           Lancer le tutoriel
         </button>
+      </div>
+
+      <p className="label mt-3">Guides par section</p>
+      <div className="card !p-0 overflow-hidden">
+        {[
+          { id: "accueil", emoji: "\u{1F3E0}", label: "Accueil", steps: 4 },
+          { id: "famille", emoji: "\u{1F468}\u200D\u{1F469}\u200D\u{1F467}\u200D\u{1F466}", label: "Famille", steps: 3 },
+          { id: "vie", emoji: "\u{1F4CC}", label: "Vie", steps: 2 },
+          { id: "reglages", emoji: "\u2699\uFE0F", label: "Réglages", steps: 2 },
+        ].map((sec, i, arr) => (
+          <button
+            key={sec.id}
+            className="w-full flex items-center gap-3 px-4 py-3 text-left active:bg-[rgba(255,255,255,0.03)] transition-colors"
+            style={{ borderBottom: i < arr.length - 1 ? "1px solid var(--glass-border)" : "none" }}
+            onClick={() => startTutorialAtSection(sec.id)}
+          >
+            <span className="text-lg">{sec.emoji}</span>
+            <div className="flex-1">
+              <p className="text-sm font-bold">{sec.label}</p>
+              <p className="text-[10px]" style={{ color: "var(--dim)" }}>{sec.steps} étapes</p>
+            </div>
+            {completedSections.includes(sec.id) && (
+              <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>✓</span>
+            )}
+            <span className="text-xs" style={{ color: "var(--faint)" }}>›</span>
+          </button>
+        ))}
       </div>
 
       {/* FAQ */}

@@ -16,6 +16,7 @@ import Logo from "@/components/Logo";
 import { useRealtimeEvents, useRealtimeChores, useRealtimeMeals, useRealtimeBirthdays, useRealtimeMembers, useRealtimeExpenses } from "@/lib/realtime";
 import dynamic from "next/dynamic";
 import type { MapMarker } from "@/components/MapView";
+import { useThemeMapStyle } from "@/components/MapView";
 
 const MapView = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFull = dynamic(() => import("@/components/MapFull"), { ssr: false });
@@ -158,6 +159,7 @@ function getGreeting(date: Date): string {
 
 export default function HomePage() {
   const { profile, chatUnread, openChat } = useProfile();
+  const themeMapStyle = useThemeMapStyle();
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
   function getAvatarUrl(userId: string): string {
     const { data } = supabase.storage.from("avatars").getPublicUrl(`${userId}/avatar.webp`);
@@ -1132,7 +1134,7 @@ export default function HomePage() {
       );
     }
     return (
-      <div className="card !mb-0 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setWeatherOpen(true)}>
+      <div data-tutorial="weather-widget" className="card !mb-0 flex items-center gap-3 cursor-pointer active:scale-[0.98] transition-transform" onClick={() => setWeatherOpen(true)}>
         <span className="text-3xl">{weather.icon}</span>
         <div className="flex-1">
           <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Météo</p>
@@ -1480,7 +1482,7 @@ export default function HomePage() {
             center={center}
             zoom={mapMarkers.length > 0 ? 12 : 6}
             height="180px"
-            mapStyle="dark"
+            mapStyle={themeMapStyle}
             interactive={false}
           />
         </div>

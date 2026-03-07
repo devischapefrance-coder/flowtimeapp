@@ -9,6 +9,7 @@ import type { Member, Contact, Address, DeviceLocation } from "@/lib/types";
 import { useRealtimeMembers, useRealtimeContacts, useRealtimeAddresses } from "@/lib/realtime";
 import { useToast } from "@/components/Toast";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
+import { useThemeMapStyle } from "@/components/MapView";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const MapFullDynamic = dynamic(() => import("@/components/MapFull"), { ssr: false });
@@ -135,6 +136,7 @@ export default function FamillePage() {
   const { toast } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => load());
   const familyId = profile?.family_id;
+  const themeMapStyle = useThemeMapStyle();
 
   const [members, setMembers] = useState<Member[]>([]);
 
@@ -719,6 +721,7 @@ export default function FamillePage() {
               {sharingLocation ? "Position partagée" : "Position désactivée"}
             </p>
             <button
+              data-tutorial="location-toggle"
               className="w-10 h-6 rounded-full relative transition-colors"
               style={{ background: sharingLocation ? "var(--teal)" : "var(--surface2)" }}
               onClick={toggleLocationSharing}
@@ -734,7 +737,7 @@ export default function FamillePage() {
           markers={[...mapMarkers, ...deviceMapMarkers]}
           center={mapCenter}
           height="220px"
-          mapStyle="dark"
+          mapStyle={themeMapStyle}
           onMapClick={() => setMapFull(true)}
         />
         <p className="text-[10px] text-center mt-2" style={{ color: "var(--faint)" }}>
