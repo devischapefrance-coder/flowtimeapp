@@ -21,6 +21,7 @@ export default function TutorialOverlay({
 }: TutorialOverlayProps) {
   const router = useRouter();
   const pathname = usePathname();
+  const pathnameRef = useRef(pathname);
   const [mounted, setMounted] = useState(false);
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
 
@@ -35,6 +36,9 @@ export default function TutorialOverlay({
   const savedScrollRef = useRef(0);
 
   useEffect(() => { setMounted(true); return () => setMounted(false); }, []);
+
+  // Keep pathname ref in sync without triggering effects
+  useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
 
   const targetStep = TUTORIAL_STEPS[step] as TutorialStep | undefined;
   const shownStep = TUTORIAL_STEPS[displayStep] as TutorialStep | undefined;
@@ -138,8 +142,7 @@ export default function TutorialOverlay({
 
     clearTimers();
 
-    const needsPageChange = pathname !== targetStep.page;
-    const isSamePage = !needsPageChange;
+    const needsPageChange = pathnameRef.current !== targetStep.page;
 
     async function run() {
       // Phase 1: Fade out current tooltip
@@ -154,8 +157,21 @@ export default function TutorialOverlay({
         unlockScroll();
         router.push(targetStep!.page);
 
-        // Wait for navigation to complete
-        await delay(700);
+        // Wait for navigation — poll until pathname actually changes
+        await new Promise<void>((resolve) => {
+          let checks = 0;
+          function poll() {
+            checks++;
+            if (pathnameRef.current === targetStep!.page || checks > 20) {
+              resolve();
+            } else {
+              const t = setTimeout(poll, 100);
+              seqRef.current.push(t);
+            }
+          }
+          const t = setTimeout(poll, 300);
+          seqRef.current.push(t);
+        });
 
         // Update displayed content
         setDisplayStep(step);
@@ -197,7 +213,7 @@ export default function TutorialOverlay({
 
     return () => clearTimers();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [active, step, pathname]);
+  }, [active, step]);
 
   // Cleanup
   useEffect(() => () => clearTimers(), [clearTimers]);
