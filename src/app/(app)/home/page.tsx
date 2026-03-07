@@ -563,7 +563,8 @@ export default function HomePage() {
     }
   }
 
-  const myMember = members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
+  const myMember = members.find((m) => m.user_id === profile?.id)
+    || members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
   const viewEvents = viewMode === "perso" && myMember
     ? events.filter((e) => e.member_id === myMember.id || e.member_id === null)
