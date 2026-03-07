@@ -46,9 +46,13 @@ export async function POST(req: Request) {
   // 2. Get the joining user's profile info
   const { data: joinerProfile } = await adminClient
     .from("profiles")
-    .select("first_name, last_name, emoji, phone")
+    .select("first_name, last_name, emoji, phone, email")
     .eq("id", user.id)
     .single();
+
+  const fullName = joinerProfile
+    ? [joinerProfile.first_name, joinerProfile.last_name].filter(Boolean).join(" ") || joinerProfile.first_name
+    : "";
 
   // 3. Update the user's family_id to join the family
   const { error: updateError } = await adminClient
@@ -81,16 +85,21 @@ export async function POST(req: Request) {
         .is("user_id", null);
 
       if (matchByName && matchByName.length > 0) {
-        // Link the existing unlinked member to this user
+        // Link the existing unlinked member to this user + update their info
         await adminClient
           .from("members")
-          .update({ user_id: user.id, emoji: joinerProfile.emoji || undefined })
+          .update({
+            user_id: user.id,
+            name: fullName,
+            emoji: joinerProfile.emoji || undefined,
+            phone: joinerProfile.phone || undefined,
+          })
           .eq("id", matchByName[0].id);
       } else {
         // Create a new member entry
         const memberData: Record<string, unknown> = {
           family_id: targetFamilyId,
-          name: joinerProfile.first_name,
+          name: fullName,
           emoji: joinerProfile.emoji || "👤",
           role: "parent",
           user_id: user.id,
