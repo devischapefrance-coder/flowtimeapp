@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import ReactDOM from "react-dom";
 import dynamic from "next/dynamic";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../layout";
@@ -204,28 +205,43 @@ export default function SnapPage() {
 
   const hasDevices = devices.length > 0;
 
-  return (
-    <div className="fixed inset-0" style={{ zIndex: 10, width: "100vw", height: "100dvh" }}>
-      {/* Full-screen map — key forces re-mount once data is ready so Leaflet gets correct center */}
-      {dataReady && (
-        <MapView
-          key={`snap-${mapMarkers.length}`}
-          markers={mapMarkers}
-          center={mapCenter}
-          zoom={mapZoom}
-          interactive
-          height="100dvh"
-          mapStyle={mapStyle}
-          route={route}
-          skipFitBounds={!!selectedUserId}
-        />
-      )}
+  // Use a portal to escape the layout wrapper (which has CSS transforms that break position:fixed)
+  const [portalRoot, setPortalRoot] = useState<HTMLElement | null>(null);
+  useEffect(() => {
+    const el = document.createElement("div");
+    el.id = "snap-portal";
+    document.body.appendChild(el);
+    setPortalRoot(el);
+    return () => { document.body.removeChild(el); };
+  }, []);
+
+  const content = (
+    <div style={{ position: "fixed", inset: 0, zIndex: 50, width: "100vw", height: "100dvh" }}>
+      {/* Map — takes full screen minus navbar */}
+      <div style={{ position: "absolute", top: 0, left: 0, right: 0, bottom: 80 }}>
+        {dataReady && (
+          <MapView
+            key={`snap-${mapMarkers.length}`}
+            markers={mapMarkers}
+            center={mapCenter}
+            zoom={mapZoom}
+            interactive
+            height="100%"
+            mapStyle={mapStyle}
+            route={route}
+            skipFitBounds={!!selectedUserId}
+          />
+        )}
+      </div>
 
       {/* Back button */}
       <button
         onClick={() => window.history.back()}
-        className="fixed top-4 left-4 glass"
+        className="glass"
         style={{
+          position: "absolute",
+          top: 12,
+          left: 12,
           zIndex: 20,
           width: 40,
           height: 40,
@@ -243,8 +259,8 @@ export default function SnapPage() {
       {/* Empty state */}
       {!hasDevices && (
         <div
-          className="fixed inset-x-0 bottom-24 flex flex-col items-center gap-3 px-6"
-          style={{ zIndex: 20 }}
+          style={{ position: "absolute", bottom: 100, left: 0, right: 0, zIndex: 20, padding: "0 24px" }}
+          className="flex flex-col items-center"
         >
           <div className="glass p-6 rounded-2xl text-center w-full" style={{ maxWidth: 380 }}>
             <p className="text-3xl mb-2">📍</p>
@@ -263,15 +279,18 @@ export default function SnapPage() {
         </div>
       )}
 
-      {/* Bottom member chips */}
-      {hasDevices && (
+      {/* Bottom member chips — above navbar */}
+      {hasDevices && !selectedDevice && (
         <div
-          className="fixed bottom-20 inset-x-0 flex gap-2 px-3 py-2 overflow-x-auto"
+          className="flex gap-2 overflow-x-auto"
           style={{
+            position: "absolute",
+            bottom: 88,
+            left: 0,
+            right: 0,
             zIndex: 20,
-            paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 8px)",
+            padding: "8px 12px",
             scrollbarWidth: "none",
-            WebkitOverflowScrolling: "touch",
           }}
         >
           {devices.map((d) => {
@@ -320,13 +339,15 @@ export default function SnapPage() {
       {/* Bottom sheet — selected member route info */}
       {selectedDevice && route && (
         <div
-          className="fixed bottom-20 inset-x-0 mx-3 glass rounded-2xl p-4 animate-in"
+          className="glass rounded-2xl p-4 animate-in"
           style={{
+            position: "absolute",
+            bottom: 88,
+            left: 12,
+            right: 12,
             zIndex: 25,
-            marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)",
             maxWidth: 410,
-            left: "50%",
-            transform: "translateX(-50%)",
+            margin: "0 auto",
           }}
         >
           <div className="flex items-center justify-between mb-3">
@@ -377,13 +398,15 @@ export default function SnapPage() {
       {/* Loading state for route */}
       {selectedUserId && !route && routeLoading && (
         <div
-          className="fixed bottom-20 inset-x-0 mx-3 glass rounded-2xl p-4 text-center animate-in"
+          className="glass rounded-2xl p-4 text-center animate-in"
           style={{
+            position: "absolute",
+            bottom: 88,
+            left: 12,
+            right: 12,
             zIndex: 25,
-            marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)",
             maxWidth: 410,
-            left: "50%",
-            transform: "translateX(-50%)",
+            margin: "0 auto",
           }}
         >
           <p className="text-sm" style={{ color: "var(--dim)" }}>Calcul de l&apos;itinéraire...</p>
@@ -393,13 +416,15 @@ export default function SnapPage() {
       {/* No home address warning */}
       {selectedUserId && !route && !routeLoading && (
         <div
-          className="fixed bottom-20 inset-x-0 mx-3 glass rounded-2xl p-4 text-center animate-in"
+          className="glass rounded-2xl p-4 text-center animate-in"
           style={{
+            position: "absolute",
+            bottom: 88,
+            left: 12,
+            right: 12,
             zIndex: 25,
-            marginBottom: "calc(env(safe-area-inset-bottom, 0px) + 60px)",
             maxWidth: 410,
-            left: "50%",
-            transform: "translateX(-50%)",
+            margin: "0 auto",
           }}
         >
           <p className="text-sm" style={{ color: "var(--dim)" }}>
@@ -411,4 +436,8 @@ export default function SnapPage() {
       )}
     </div>
   );
+
+  // Render via portal to escape layout transform wrapper
+  if (!portalRoot) return null;
+  return ReactDOM.createPortal(content, portalRoot);
 }
