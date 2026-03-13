@@ -22,7 +22,16 @@
       "Bash(sed:*)",
       "Bash(pkill:*)",
       "Bash(mv:*)",
-      "WebFetch(domain:open-meteo.com)"
+      "WebFetch(domain:open-meteo.com)",
+      "Bash(find C:\\\\Users\\\\Thibault\\\\flowtime-project\\\\src\\\\app\\\\\\(app\\):*)",
+      "Bash(npx supabase:*)",
+      "Bash(find C:\\\\Users\\\\Thibault\\\\flowtime-project\\\\src\\\\app:*)",
+      "Bash(cat:*)",
+      "Bash(npx tsc:*)",
+      "WebSearch",
+      "WebFetch(domain:getsense.ai)",
+      "WebFetch(domain:www.growmaple.com)",
+      "Bash(find:*)"
     ]
   }
 }

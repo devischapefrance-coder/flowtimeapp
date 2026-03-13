@@ -147,7 +147,7 @@ export default function ReglagesPage() {
     return "fr";
   });
 
-  const PALETTE_CLASSES = ["light","p1","p2","p3","p4","p5","p6","p7","p8","p9","p10","p11","p12","p13","p14","p15","p16","p17","p18","p19","p20","p21","p22","p23","p24","p25","p26","p27","p28","p29","p30"];
+  const PALETTE_CLASSES = ["light","p1","p2","p3","p4","p5","p6","p7","p8","p9","p10","p11","p12","p13","p14","p15","p16","p17","p18","p19","p20"];
 
   function changeTheme(t: string) {
     setTheme(t);
@@ -486,29 +486,24 @@ export default function ReglagesPage() {
         <p className="text-sm font-bold mb-3 mt-4">Couleur d&apos;accent</p>
         {(() => {
           const plan = profile?.subscription_status === "active" ? profile?.subscription_plan : "free";
-          // Free: dark only (index 0), Plus: 10 first themes, Pro: all 30
-          const allPalettes: [string, string, boolean][] = [
-            ["dark", "#7C6BF0", false],
-            ["p1", "#4A9EF0", false], ["p2", "#4CAF50", false], ["p3", "#F07C4A", false], ["p4", "#E04069", false],
-            ["p5", "#A182E0", false], ["p6", "#3860B0", false], ["p7", "#DAA532", false], ["p8", "#88A8C2", false],
-            ["p9", "#DB8EB0", false],
-            ["p10", "#40CEC4", false], ["p11", "#F06262", false], ["p12", "#9CCC3C", false],
-            ["p13", "#5C4ECC", false], ["p14", "#C48248", false], ["p15", "#C83CC8", false], ["p16", "#60B4F0", false],
-            ["p17", "#34C484", false], ["p18", "#94A3B8", false], ["p19", "#A03048", false],
-            ["p21", "#1A1A2E", true], ["p22", "#FF6B6B", true], ["p23", "#4ECDC4", true], ["p24", "#2D1B69", true],
-            ["p25", "#F8B500", true], ["p26", "#0D7377", true], ["p27", "#FC5185", true], ["p28", "#3A0CA3", true],
-            ["p29", "#B8D12A", true], ["p30", "#E63946", true],
+          const allPalettes: [string, string][] = [
+            ["dark", "#7C6BF0"],
+            ["p1", "#4A9EF0"], ["p2", "#4CAF50"], ["p3", "#F07C4A"], ["p4", "#E04069"],
+            ["p5", "#A182E0"], ["p6", "#3860B0"], ["p7", "#DAA532"], ["p8", "#88A8C2"],
+            ["p9", "#DB8EB0"], ["p10", "#40CEC4"], ["p11", "#F06262"], ["p12", "#9CCC3C"],
+            ["p13", "#5C4ECC"], ["p14", "#C48248"], ["p15", "#C83CC8"], ["p16", "#60B4F0"],
+            ["p17", "#34C484"], ["p18", "#94A3B8"], ["p19", "#A03048"], ["p20", "#8C3CF0"],
           ];
-          const maxThemes = plan === "pro" ? 30 : plan === "plus" ? 10 : 1;
+          const maxThemes = plan === "pro" ? 20 : plan === "plus" ? 10 : 1;
           return (
             <div className="relative">
               <div className="flex flex-wrap gap-2.5 justify-center">
-                {allPalettes.map(([key, color, exclusive], i) => {
+                {allPalettes.map(([key, color], i) => {
                   const locked = i >= maxThemes;
                   return (
                     <button
                       key={key}
-                      className="w-8 h-8 rounded-full transition-all relative"
+                      className="w-8 h-8 rounded-full transition-all"
                       style={{
                         background: color,
                         boxShadow: theme === key ? `0 0 0 3px var(--bg), 0 0 0 5px ${color}` : "none",
@@ -519,14 +514,12 @@ export default function ReglagesPage() {
                         if (locked) { router.push("/abonnement"); return; }
                         changeTheme(key);
                       }}
-                      aria-label={`Palette ${key}${exclusive ? " (exclusif)" : ""}`}
-                    >
-                      {exclusive && !locked && <span className="absolute -top-1 -right-1 text-[8px]">✦</span>}
-                    </button>
+                      aria-label={`Palette ${key}`}
+                    />
                   );
                 })}
               </div>
-              {maxThemes < 30 && (
+              {maxThemes < 20 && (
                 <p className="text-center text-[10px] mt-2" style={{ color: "var(--dim)" }}>
                   🔒 {maxThemes === 1 ? "Thèmes disponibles avec FlowTime+" : "Plus de thèmes avec FlowTime Pro"}
                 </p>

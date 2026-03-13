@@ -42,7 +42,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxMembers: Infinity,
     maxFlowMessages: Infinity,
     maxRoutines: Infinity,
-    maxThemes: 30,
+    maxThemes: 20,
     hasProactive: true,
     hasDocuments: true,
     hasSnapMap: true,

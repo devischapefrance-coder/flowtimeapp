@@ -60,7 +60,7 @@ const PLANS = [
       { label: "Message proactif IA", included: true },
       { label: "Documents", included: true },
       { label: "Snap Map", included: true },
-      { label: "30 thèmes dont 10 exclusifs", included: true },
+      { label: "20 thèmes", included: true },
       { label: "Export ICS / PDF", included: true },
       { label: "Partage externe", included: true },
       { label: "Résumé hebdo IA", included: true },
