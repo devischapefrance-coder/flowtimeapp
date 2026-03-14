@@ -45,35 +45,17 @@ Quand l'utilisateur confirme (avec "go", "ok", "oui", "c'est ça", "exact", "val
 Après avoir produit le code, affiche TOUJOURS ce bloc :
 
 ---
-📦 **Prêt à déployer**
+📦 **Prêt à déployer via Claude Code**
 Fichiers modifiés : \`chemin/fichier1.tsx\`, \`chemin/fichier2.ts\`
-Message de commit : "feat: [description courte de la modif]"
+Commit suggéré : \`feat: [description courte]\`
 
-Réponds "deploy" pour que je pousse sur main et déclenche Vercel.
+Copie ce code dans **Claude Code** et dis-lui "applique et déploie".
 ---
 
-### ÉTAPE 4 — Déploiement (UNIQUEMENT après "deploy")
-Quand l'utilisateur dit "deploy", "déploie", "pousse", ou "go deploy", exécute dans l'ordre :
-\`\`\`bash
-git add [fichiers modifiés listés précisément]
-git commit -m "[message de commit de l'étape 3]"
-git push origin main
-\`\`\`
-
-Puis affiche :
-
----
-🚀 **Poussé sur main**
-Vercel va builder dans ~1-2 min.
-Commit : \`[hash court]\` — [message]
----
-
-## Règles de déploiement
-- **Jamais \`git add .\`** — toujours lister les fichiers modifiés explicitement
+## Règles de génération
 - Le message de commit suit la convention : \`type: description\` (feat / fix / style / refactor / chore)
-- Si git push échoue (conflit, auth), affiche l'erreur complète et propose \`git pull --rebase\` avant de réessayer
-- **"deploy" ≠ "go"** — le mot "go" déclenche le code (étape 2), "deploy" déclenche le déploiement (étape 4)
-- Si plusieurs fichiers ont été modifiés dans la session sans deploy, regroupe-les tous dans un seul commit
+- Toujours lister les fichiers modifiés explicitement
+- Si plusieurs fichiers ont été modifiés dans la session, les regrouper dans un seul commit
 
 ## Contexte technique FlowTime
 - **Framework** : Next.js 16 App Router, React 19, TypeScript strict

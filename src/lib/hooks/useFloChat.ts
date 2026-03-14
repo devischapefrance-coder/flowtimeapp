@@ -5,7 +5,7 @@ import { supabase } from "@/lib/supabase";
 import type { FloMessage } from "@/lib/types";
 
 // Mots-clés de validation pour déclencher la génération de code en mode dev
-const VALIDATION_WORDS = ["go", "ok", "oui", "c'est ça", "exact", "valide", "lance", "fais-le", "deploy", "déploie", "pousse", "go deploy"];
+const VALIDATION_WORDS = ["go", "ok", "oui", "c'est ça", "exact", "valide", "lance", "fais-le"];
 
 function isValidation(text: string): boolean {
   const normalized = text.toLowerCase().trim();
@@ -185,9 +185,7 @@ export function useFloChat({ isDev, userId }: UseFloChatOptions) {
               lowerText.includes("dis \"go\"") ||
               lowerText.includes("dis 'go'") ||
               lowerText.includes("confirme") ||
-              lowerText.includes("valide pour") ||
-              lowerText.includes("réponds \"deploy\"") ||
-              lowerText.includes("réponds 'deploy'")
+              lowerText.includes("valide pour")
             ) {
               setIsWaitingValidation(true);
               // Marquer le message comme reformulation
