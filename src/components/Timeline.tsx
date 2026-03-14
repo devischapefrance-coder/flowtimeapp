@@ -22,6 +22,7 @@ interface TimelineProps {
   events: Event[];
   allEvents?: Event[];
   selectedDate?: string;
+  viewMode?: "perso" | "famille";
   onDelete: (id: string) => void;
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
@@ -54,6 +55,7 @@ function SortableEvent({
   isNext,
   isConflict,
   catColor,
+  showScopeIcon,
   onDelete,
   onDeleteSeries,
   onEditSeries,
@@ -69,6 +71,7 @@ function SortableEvent({
   isNext: boolean;
   isConflict: boolean;
   catColor: string;
+  showScopeIcon: boolean;
   onDelete: (id: string) => void;
   onDeleteSeries?: (ev: Event) => void;
   onEditSeries?: (ev: Event) => void;
@@ -234,11 +237,18 @@ function SortableEvent({
             />
           ) : (
             <p
-              className="text-sm font-bold mt-0.5 cursor-pointer"
+              className="text-sm font-bold mt-0.5 cursor-pointer flex items-center gap-1.5"
               onClick={() => { if (onEditTitle) { setTempTitle(ev.title); setEditingTitle(true); } }}
               title={onEditTitle ? "Modifier le titre" : undefined}
             >
               {ev.title}
+              {showScopeIcon && ev.scope === "perso" && (
+                <span title="Personnel" style={{ color: "var(--dim)" }}>
+                  <svg width={12} height={12} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="11" width="18" height="11" rx="2" /><path d="M7 11V7a5 5 0 0110 0v4" />
+                  </svg>
+                </span>
+              )}
             </p>
           )}
           {editingDesc ? (
@@ -344,7 +354,7 @@ function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-export default function Timeline({ events, allEvents, selectedDate, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle, onEditDescription, getAvatarUrl }: TimelineProps) {
+export default function Timeline({ events, allEvents, selectedDate, viewMode, onDelete, onDeleteSeries, onEditSeries, onReorder, onEditTitle, onEditDescription, getAvatarUrl }: TimelineProps) {
   const now = new Date();
   const todayStr = localDateStr(now);
   const isToday = !selectedDate || selectedDate === todayStr;
@@ -403,6 +413,7 @@ export default function Timeline({ events, allEvents, selectedDate, onDelete, on
                 isNext={isNext}
                 isConflict={conflictIds.has(ev.id)}
                 catColor={catColor}
+                showScopeIcon={viewMode === "perso"}
                 onDelete={onDelete}
                 onDeleteSeries={onDeleteSeries}
                 onEditSeries={onEditSeries}

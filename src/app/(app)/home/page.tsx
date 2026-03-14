@@ -10,7 +10,7 @@ import Timeline from "@/components/Timeline";
 import DayAgenda from "@/components/DayAgenda";
 import QuickVoice from "@/components/QuickVoice";
 import NotificationManager from "@/components/NotificationManager";
-import type { Event, Member, Address, Contact, Meal, Birthday, Chore, DeviceLocation } from "@/lib/types";
+import type { Event, EventScope, Member, Address, Contact, Meal, Birthday, Chore, DeviceLocation } from "@/lib/types";
 import dynamic from "next/dynamic";
 import type { MapMarker } from "@/components/MapView";
 import { useThemeMapStyle } from "@/components/MapView";
@@ -184,6 +184,9 @@ export default function HomePage() {
   const [isOffline, setIsOffline] = useState(false);
   const scrollStripRef = useRef<HTMLDivElement>(null);
   const scrollInitRef = useRef(false);
+  const isAutoScrollingRef = useRef(false);
+  const selectedDateRef = useRef(selectedDate);
+  selectedDateRef.current = selectedDate;
 
   // Live clock: updates every 30s
   const [now, setNow] = useState(() => new Date());
@@ -284,7 +287,7 @@ export default function HomePage() {
   const [qeMember, setQeMember] = useState<string>("");
   const [qeCategory, setQeCategory] = useState("general");
   const [qeDescription, setQeDescription] = useState("");
-  const [qeShared, setQeShared] = useState(true);
+  const [qeScope, setQeScope] = useState<EventScope | null>(null);
   const [qeReminder, setQeReminder] = useState<number | null>(null);
 
   const [qeRecurrence, setQeRecurrence] = useState<"none" | "daily" | "weekly" | "monthly">("none");
@@ -505,6 +508,8 @@ export default function HomePage() {
   useEffect(() => {
     if (!selectedDate) return;
 
+    isAutoScrollingRef.current = true;
+
     function scrollToDate(instant: boolean) {
       if (!scrollStripRef.current) return;
       const el = scrollStripRef.current.querySelector(`[data-date="${selectedDate}"]`) as HTMLElement | null;
@@ -522,12 +527,48 @@ export default function HomePage() {
       // First load: try multiple times to ensure layout is ready
       scrollToDate(true);
       const t1 = setTimeout(() => scrollToDate(true), 50);
-      const t2 = setTimeout(() => { scrollToDate(true); scrollInitRef.current = true; }, 200);
+      const t2 = setTimeout(() => { scrollToDate(true); scrollInitRef.current = true; isAutoScrollingRef.current = false; }, 300);
       return () => { clearTimeout(t1); clearTimeout(t2); };
     } else {
       scrollToDate(false);
+      const t = setTimeout(() => { isAutoScrollingRef.current = false; }, 400);
+      return () => clearTimeout(t);
     }
   }, [selectedDate]);
+
+  // Auto-select centered date when user scrolls the day strip
+  useEffect(() => {
+    const el = scrollStripRef.current;
+    if (!el) return;
+
+    let timeout: ReturnType<typeof setTimeout>;
+
+    function handleScrollEnd() {
+      if (isAutoScrollingRef.current) return;
+      if (!scrollStripRef.current) return;
+      const container = scrollStripRef.current;
+      const centerX = container.scrollLeft + container.clientWidth / 2;
+      const buttons = container.querySelectorAll<HTMLElement>("[data-date]");
+      let closestDate = "";
+      let closestDist = Infinity;
+      for (const btn of buttons) {
+        const btnCenter = btn.offsetLeft + btn.clientWidth / 2;
+        const dist = Math.abs(btnCenter - centerX);
+        if (dist < closestDist) { closestDist = dist; closestDate = btn.dataset.date || ""; }
+      }
+      if (closestDate && closestDate !== selectedDateRef.current) {
+        setSelectedDate(closestDate);
+      }
+    }
+
+    function handleScroll() {
+      clearTimeout(timeout);
+      timeout = setTimeout(handleScrollEnd, 250);
+    }
+
+    el.addEventListener("scroll", handleScroll, { passive: true });
+    return () => { el.removeEventListener("scroll", handleScroll); clearTimeout(timeout); };
+  }, [calendarView]);
 
   // Proactive reminders check every minute
   useEffect(() => {
@@ -563,15 +604,18 @@ export default function HomePage() {
   const myMember = members.find((m) => m.user_id === profile?.id)
     || members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase());
 
+  // Filtrage par scope :
+  // - "Mon planning" : events perso du user + events famille (tous membres)
+  // - "Famille" : uniquement les events scope=famille
   const viewEvents = viewMode === "perso" && myMember
-    ? events.filter((e) => e.member_id === myMember.id || e.member_id === null)
+    ? events.filter((e) => (e.scope === "perso" && e.member_id === myMember.id) || e.scope === "famille")
     : viewMode === "perso" && !myMember
-      ? events.filter((e) => e.member_id === null)
-      : events.filter((e) => e.shared === true || (myMember && e.member_id === myMember.id));
+      ? events.filter((e) => e.scope === "famille")
+      : events.filter((e) => e.scope === "famille");
 
   const dayEvents = viewEvents.filter((e) => e.date === currentDate);
   const filteredEvents = filter
-    ? dayEvents.filter((e) => e.member_id === filter && (e.shared === true || (myMember && filter === myMember.id)))
+    ? dayEvents.filter((e) => e.member_id === filter)
     : dayEvents;
 
   const eventCounts: Record<string, number> = {};
@@ -593,10 +637,10 @@ export default function HomePage() {
 
   const monthEventsByDay: Record<string, Event[]> = {};
   const viewMonthEvents = viewMode === "perso" && myMember
-    ? monthEvents.filter((e) => e.member_id === myMember.id)
+    ? monthEvents.filter((e) => (e.scope === "perso" && e.member_id === myMember.id) || e.scope === "famille")
     : viewMode === "perso" && !myMember
-      ? []
-      : monthEvents;
+      ? monthEvents.filter((e) => e.scope === "famille")
+      : monthEvents.filter((e) => e.scope === "famille");
   for (const ev of viewMonthEvents) {
     if (!monthEventsByDay[ev.date]) monthEventsByDay[ev.date] = [];
     monthEventsByDay[ev.date].push(ev);
@@ -677,23 +721,23 @@ export default function HomePage() {
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
 
-    // En mode perso → shared=false, en mode famille → shared=true
-    const isShared = viewMode === "famille";
-    await executeFlowAction(action, isShared);
+    await executeFlowAction(action);
 
-    // Notification famille si partagé
-    if (isShared && (action.type === "add_event" || action.type === "add_recurring")) {
+    // Notification famille si scope=famille
+    const scope = (action.data.scope as string) || (viewMode === "famille" ? "famille" : "perso");
+    if (scope === "famille" && (action.type === "add_event" || action.type === "add_recurring")) {
       const title = String(action.data.title || "");
       const name = profile?.first_name || "Quelqu'un";
       notifyFamily("FlowTime 📅", `${name} a ajouté : ${title}`);
     }
   }
 
-  async function executeFlowAction(action: { type: string; data: Record<string, unknown> }, isShared: boolean) {
+  async function executeFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
 
-    // Allow Flow AI to override shared via action data (e.g. "passe en famille")
-    const shared = typeof action.data.shared === "boolean" ? action.data.shared : isShared;
+    // Déterminer le scope : priorité à action.data.scope, sinon déduit du viewMode
+    const scope = (action.data.scope as EventScope) || (viewMode === "famille" ? "famille" : "perso");
+    const shared = scope === "famille";
 
     if (action.type === "add_event") {
       const title = action.data.title as string;
@@ -706,6 +750,7 @@ export default function HomePage() {
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
         shared,
+        scope,
       });
     } else if (action.type === "delete_event") {
       await supabase.from("events").delete().eq("id", action.data.event_id);
@@ -721,6 +766,7 @@ export default function HomePage() {
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
         shared,
+        scope,
       });
     } else if (action.type === "add_recurring") {
       const memberId = resolveFlowMemberId(action.data.member_name as string);
@@ -728,7 +774,6 @@ export default function HomePage() {
       const title = action.data.title as string;
       const category = (action.data.category as string) || detectCategory(title);
       const startDate = new Date();
-      let count = 0;
       for (let week = 0; week < 4; week++) {
         for (const day of recurringDays) {
           const d = new Date(startDate);
@@ -742,8 +787,8 @@ export default function HomePage() {
             recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
             category,
             shared,
+            scope,
           });
-          count++;
         }
       }
     }
@@ -757,7 +802,7 @@ export default function HomePage() {
     setQeMember(viewMode === "perso" && myMember ? myMember.id : "");
     setQeCategory("general");
     setQeDescription("");
-    setQeShared(true);
+    setQeScope(null);
     setQeReminder(null);
     setQeRecurrence("none");
     setQeConflict(null);
@@ -765,7 +810,7 @@ export default function HomePage() {
   }
 
   async function saveQuickEvent() {
-    if (!profile?.family_id || !qeTitle.trim() || !qeTime) return;
+    if (!profile?.family_id || !qeTitle.trim() || !qeTime || !qeScope) return;
     const category = qeCategory === "general" ? detectCategory(qeTitle) : qeCategory;
     const baseEvent = {
       family_id: profile.family_id,
@@ -774,7 +819,8 @@ export default function HomePage() {
       member_id: qeMember || null,
       description: qeDescription.trim(),
       category,
-      shared: qeShared,
+      shared: qeScope === "famille",
+      scope: qeScope,
       reminder_minutes: qeReminder,
     };
 
@@ -1237,7 +1283,7 @@ export default function HomePage() {
         </div>
 
         {viewType === "timeline" ? (
-          <Timeline events={filteredEvents} allEvents={dayEvents} selectedDate={currentDate} onDelete={deleteEvent} onDeleteSeries={deleteEventSeries}
+          <Timeline events={filteredEvents} allEvents={dayEvents} selectedDate={currentDate} viewMode={viewMode} onDelete={deleteEvent} onDeleteSeries={deleteEventSeries}
             onReorder={async (eventId, newTime) => { await supabase.from("events").update({ time: newTime }).eq("id", eventId); loadData(); }}
             onEditTitle={async (eventId, newTitle) => { await supabase.from("events").update({ title: newTitle }).eq("id", eventId); loadData(); }}
             onEditDescription={async (eventId, newDesc) => { await supabase.from("events").update({ description: newDesc }).eq("id", eventId); loadData(); }}
@@ -1653,18 +1699,45 @@ export default function HomePage() {
               <option value="60">1 heure avant</option>
             </select>
           </div>
-          <label className="flex items-center gap-3 cursor-pointer py-1">
-            <div className="relative w-11 h-6 rounded-full transition-colors"
-              style={{ background: qeShared ? "var(--accent)" : "var(--surface2)", border: "1px solid var(--glass-border)" }}
-              onClick={() => setQeShared(!qeShared)}>
-              <div className="absolute top-0.5 w-5 h-5 rounded-full transition-all" style={{ background: "#fff", left: qeShared ? 20 : 2 }} />
+          <div>
+            <label className="text-xs font-bold block mb-2" style={{ color: "var(--dim)" }}>Visibilité *</label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl transition-all"
+                style={{
+                  background: qeScope === "perso" ? "var(--accent-glow)" : "transparent",
+                  border: qeScope === "perso" ? "1.5px solid var(--accent)" : "1.5px solid var(--glass-border)",
+                }}
+                onClick={() => setQeScope("perso")}
+              >
+                <span className="text-lg">🔒</span>
+                <span className="text-xs font-bold" style={{ color: qeScope === "perso" ? "var(--accent)" : "var(--text)" }}>Personnel</span>
+                <span className="text-[10px] text-center leading-tight" style={{ color: "var(--dim)" }}>Visible uniquement dans Mon planning</span>
+              </button>
+              <button
+                type="button"
+                className="flex flex-col items-center gap-1.5 px-3 py-3 rounded-xl transition-all"
+                style={{
+                  background: qeScope === "famille" ? "var(--accent-glow)" : "transparent",
+                  border: qeScope === "famille" ? "1.5px solid var(--accent)" : "1.5px solid var(--glass-border)",
+                }}
+                onClick={() => setQeScope("famille")}
+              >
+                <span className="text-lg">👨‍👩‍👧‍👦</span>
+                <span className="text-xs font-bold" style={{ color: qeScope === "famille" ? "var(--accent)" : "var(--text)" }}>Familial</span>
+                <span className="text-[10px] text-center leading-tight" style={{ color: "var(--dim)" }}>Visible par toute la famille</span>
+              </button>
             </div>
-            <span className="text-sm" style={{ color: "var(--text)" }}>
-              {qeShared ? "👨‍👩‍👧‍👦 Visible par la famille" : "🔒 Perso uniquement"}
-            </span>
-          </label>
-          <button className="w-full py-3 rounded-xl font-bold text-sm"
-            style={{ background: "var(--accent)", color: "#fff" }} onClick={saveQuickEvent}>Ajouter</button>
+          </div>
+          <button className="w-full py-3 rounded-xl font-bold text-sm transition-all"
+            style={{
+              background: qeScope ? "var(--accent)" : "var(--surface2)",
+              color: qeScope ? "#fff" : "var(--dim)",
+              cursor: qeScope ? "pointer" : "not-allowed",
+            }}
+            disabled={!qeScope}
+            onClick={saveQuickEvent}>Ajouter</button>
         </div>
       </Modal>
 

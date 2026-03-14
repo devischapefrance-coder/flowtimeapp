@@ -24,6 +24,7 @@ CREATE TABLE profiles (
   subscription_status TEXT DEFAULT 'inactive' CHECK (subscription_status IN ('active', 'inactive', 'past_due', 'canceled')),
   subscription_period_end TIMESTAMPTZ,
   stripe_customer_id TEXT,
+  is_dev BOOLEAN DEFAULT false,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -83,6 +84,7 @@ CREATE TABLE events (
   recurring JSONB DEFAULT NULL,
   category TEXT DEFAULT 'general',
   shared BOOLEAN DEFAULT TRUE,
+  scope TEXT NOT NULL DEFAULT 'famille' CHECK (scope IN ('perso', 'famille')),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -204,6 +206,17 @@ CREATE TABLE family_messages (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
+-- Messages Flo (assistant IA — persistance mode normal)
+CREATE TABLE flo_messages (
+  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+  user_id UUID REFERENCES auth.users ON DELETE CASCADE NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('user', 'assistant')),
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS flo_messages_user_created ON flo_messages (user_id, created_at DESC);
+
 -- Abonnements push notifications
 CREATE TABLE push_subscriptions (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -232,6 +245,7 @@ ALTER TABLE meals ENABLE ROW LEVEL SECURITY;
 ALTER TABLE shopping_items ENABLE ROW LEVEL SECURITY;
 ALTER TABLE expenses ENABLE ROW LEVEL SECURITY;
 ALTER TABLE chores ENABLE ROW LEVEL SECURITY;
+ALTER TABLE flo_messages ENABLE ROW LEVEL SECURITY;
 ALTER TABLE push_subscriptions ENABLE ROW LEVEL SECURITY;
 ALTER TABLE family_messages ENABLE ROW LEVEL SECURITY;
 
@@ -306,6 +320,11 @@ CREATE POLICY "Family expenses" ON expenses FOR ALL USING (
 -- Tâches : accès par famille
 CREATE POLICY "Family chores" ON chores FOR ALL USING (
   family_id IN (SELECT family_id FROM profiles WHERE id = auth.uid())
+);
+
+-- Messages Flo : accès à ses propres messages uniquement
+CREATE POLICY "Own flo messages" ON flo_messages FOR ALL USING (
+  user_id = auth.uid()
 );
 
 -- Push subscriptions : accès à ses propres abonnements uniquement
