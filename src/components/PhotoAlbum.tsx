@@ -136,13 +136,13 @@ export default function PhotoAlbum({ photos, familyId, userName, onUpdate }: Pho
       {lightbox && (
         <div
           className="fixed inset-0 z-[800] flex flex-col"
-          style={{ background: "rgba(0,0,0,0.95)", maxWidth: 430, margin: "0 auto" }}
+          style={{ background: "var(--overlay)", maxWidth: 430, margin: "0 auto" }}
           onClick={() => setLightbox(null)}
         >
           <div className="flex justify-end" style={{ padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 8px 16px" }}>
             <button
               className="w-9 h-9 flex items-center justify-center rounded-full text-white text-lg"
-              style={{ background: "rgba(255,255,255,0.15)" }}
+              style={{ background: "var(--faint)" }}
               onClick={(e) => { e.stopPropagation(); setLightbox(null); }}
             >
               ✕
@@ -155,7 +155,7 @@ export default function PhotoAlbum({ photos, familyId, userName, onUpdate }: Pho
             <div className="flex gap-2 mb-2">
               <input
                 className="flex-1 px-3 py-2 rounded-xl text-sm"
-                style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.2)" }}
+                style={{ background: "var(--surface2)", color: "var(--text)", border: "1px solid var(--glass-border)" }}
                 value={editCaption}
                 onChange={(e) => setEditCaption(e.target.value)}
                 placeholder="Ajouter une legende..."
@@ -163,12 +163,12 @@ export default function PhotoAlbum({ photos, familyId, userName, onUpdate }: Pho
               />
             </div>
             <div className="flex items-center justify-between">
-              <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.5)" }}>
+              <span className="text-[10px]" style={{ color: "var(--dim)" }}>
                 Par {lightbox.uploaded_by} · {new Date(lightbox.created_at).toLocaleDateString("fr-FR")}
               </span>
               <button
                 className="text-xs px-2 py-1 rounded-lg"
-                style={{ color: "#F06B7E" }}
+                style={{ color: "var(--red)" }}
                 onClick={() => deletePhoto(lightbox.id)}
               >
                 Supprimer

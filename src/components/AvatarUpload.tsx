@@ -164,7 +164,7 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
             emoji
           )}
           {uploading && (
-            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "rgba(0,0,0,0.5)" }}>
+            <div className="absolute inset-0 flex items-center justify-center" style={{ background: "var(--overlay)" }}>
               <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
             </div>
           )}
@@ -201,7 +201,7 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
       {cropSrc && createPortal(
         <div
           className="fixed inset-0 flex flex-col items-center justify-center"
-          style={{ zIndex: 700, background: "rgba(0,0,0,0.9)", touchAction: "none" }}
+          style={{ zIndex: 700, background: "var(--overlay)", touchAction: "none" }}
           onClick={(e) => e.stopPropagation()}
           onTouchStart={(e) => e.stopPropagation()}
           onTouchMove={(e) => { e.stopPropagation(); e.preventDefault(); }}
@@ -209,7 +209,7 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
           onPointerDown={(e) => e.stopPropagation()}
         >
           <p className="text-sm font-bold text-white mb-1">Ajuster la photo</p>
-          <p className="text-xs mb-6" style={{ color: "rgba(255,255,255,0.5)" }}>Glisse pour repositionner</p>
+          <p className="text-xs mb-6" style={{ color: "var(--dim)" }}>Glisse pour repositionner</p>
 
           {/* Crop area */}
           <div
@@ -220,7 +220,7 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
               border: "3px solid var(--accent)",
               touchAction: "none",
               cursor: "move",
-              background: "#000",
+              background: "var(--bg)",
             }}
             onTouchStart={onTouchStart}
             onTouchMove={onTouchMove}
@@ -259,7 +259,7 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
           <div className="flex items-center gap-4 mt-6 mb-6">
             <button
               className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
-              style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+              style={{ background: "var(--faint)", color: "var(--text)" }}
               onClick={() => setScale((s) => Math.max(0.5, s - 0.15))}
             >
               −
@@ -273,14 +273,14 @@ export default function AvatarUpload({ userId, currentUrl, emoji, onUploaded, si
                   style={{
                     width: scale >= s ? 8 : 5,
                     height: scale >= s ? 8 : 5,
-                    background: scale >= s ? "var(--accent)" : "rgba(255,255,255,0.2)",
+                    background: scale >= s ? "var(--accent)" : "var(--faint)",
                   }}
                 />
               ))}
             </div>
             <button
               className="w-10 h-10 rounded-full flex items-center justify-center text-lg font-bold"
-              style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}
+              style={{ background: "var(--faint)", color: "var(--text)" }}
               onClick={() => setScale((s) => Math.min(3, s + 0.15))}
             >
               ＋

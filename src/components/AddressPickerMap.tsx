@@ -24,7 +24,7 @@ function createPinIcon(emoji: string) {
     html: `<div style="
       width:36px;height:36px;display:flex;align-items:center;justify-content:center;
       background:#fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3);
-      font-size:18px;border:2px solid var(--accent,#7C6BF0);
+      font-size:18px;border:2px solid var(--accent);
     ">${emoji}</div>`,
   });
 }
@@ -83,7 +83,7 @@ export default function AddressPickerMap({ lat, lng, emoji = "📍", onPositionC
       <MapContainer
         center={[centerLat, centerLng]}
         zoom={hasPosition ? 17 : 6}
-        style={{ height: "100%", width: "100%", background: "#1a1a2e" }}
+        style={{ height: "100%", width: "100%", background: "var(--bg)" }}
         zoomControl={false}
         attributionControl={false}
       >

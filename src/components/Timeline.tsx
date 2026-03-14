@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import type { Event } from "@/lib/types";
 import { getCategoryColor } from "@/lib/categories";
 import {
@@ -49,7 +49,7 @@ function findConflicts(events: Event[]): Set<string> {
   return conflictIds;
 }
 
-function SortableEvent({
+const SortableEvent = memo(function SortableEvent({
   ev,
   isPast,
   isNext,
@@ -208,7 +208,7 @@ function SortableEvent({
               </span>
             )}
             {isConflict && (
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(240,107,126,0.15)", color: "var(--red)" }}>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "color-mix(in srgb, var(--red) 15%, transparent)", color: "var(--red)" }}>
                 Conflit
               </span>
             )}
@@ -327,7 +327,7 @@ function SortableEvent({
                   {onDeleteSeries && (
                     <button
                       className="w-full text-left text-xs px-3 py-2 hover:opacity-80"
-                      style={{ color: "var(--red, #ef4444)" }}
+                      style={{ color: "var(--red)" }}
                       onClick={() => { setMenuOpen(null); onDeleteSeries(ev); }}
                     >
                       🗑️ Supprimer la serie
@@ -348,7 +348,7 @@ function SortableEvent({
       </div>
     </div>
   );
-}
+});
 
 function localDateStr(d: Date): string {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
@@ -364,7 +364,8 @@ export default function Timeline({ events, allEvents, selectedDate, viewMode, on
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
 
   const sorted = [...events].sort((a, b) => a.time.localeCompare(b.time));
-  const conflictIds = findConflicts(allEvents || events);
+  const conflictSource = allEvents || events;
+  const conflictIds = useMemo(() => findConflicts(conflictSource), [conflictSource]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -393,7 +394,7 @@ export default function Timeline({ events, allEvents, selectedDate, viewMode, on
           {/* Vertical line */}
           <div
             className="absolute left-[7px] top-2 bottom-2 w-[2px] rounded-full"
-            style={{ background: "linear-gradient(to bottom, var(--accent), rgba(124,107,240,0.1))" }}
+            style={{ background: "linear-gradient(to bottom, var(--accent), color-mix(in srgb, var(--accent) 10%, transparent))" }}
           />
 
           {sorted.map((ev, i) => {

@@ -144,7 +144,7 @@ function LoginContent() {
       <div
         className="absolute top-[-20%] left-1/2 -translate-x-1/2 w-[400px] h-[400px] rounded-full"
         style={{
-          background: "radial-gradient(circle, rgba(124,107,240,0.12) 0%, transparent 70%)",
+          background: "radial-gradient(circle, var(--accent-soft) 0%, transparent 70%)",
           filter: "blur(40px)",
           pointerEvents: "none",
         }}
@@ -157,7 +157,7 @@ function LoginContent() {
           width: 72,
           height: 72,
           borderRadius: 22,
-          background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
+          background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))",
           boxShadow: "0 8px 40px var(--accent-glow)",
         }}
       >
@@ -179,9 +179,9 @@ function LoginContent() {
         <div
           className="mt-3 px-4 py-2 rounded-xl text-xs font-bold text-center"
           style={{
-            background: "rgba(124,107,240,0.1)",
+            background: "var(--accent-soft)",
             color: "var(--accent)",
-            border: "1px solid rgba(124,107,240,0.2)",
+            border: "1px solid var(--accent-glow)",
           }}
         >
           Connecte-toi pour rejoindre la famille {joinCode}
@@ -197,9 +197,9 @@ function LoginContent() {
           <div
             className="mb-4 p-3 rounded-xl text-xs font-bold text-center"
             style={{
-              background: "rgba(255,107,107,0.1)",
+              background: "color-mix(in srgb, var(--red) 10%, transparent)",
               color: "var(--red)",
-              border: "1px solid rgba(255,107,107,0.2)",
+              border: "1px solid color-mix(in srgb, var(--red) 20%, transparent)",
             }}
           >
             {error}
@@ -209,9 +209,9 @@ function LoginContent() {
           <div
             className="mb-4 p-3 rounded-xl text-xs font-bold text-center"
             style={{
-              background: "rgba(94,200,158,0.1)",
+              background: "color-mix(in srgb, var(--green) 10%, transparent)",
               color: "var(--green)",
-              border: "1px solid rgba(94,200,158,0.2)",
+              border: "1px solid color-mix(in srgb, var(--green) 20%, transparent)",
             }}
           >
             {success}

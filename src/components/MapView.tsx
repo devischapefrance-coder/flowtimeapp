@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline, useMap } from "react-
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { useEffect, useRef, useMemo, useState } from "react";
+import { DEFAULT_MEMBER_COLOR } from "@/lib/constants";
 
 // Disable Leaflet's tap handler globally to fix iOS touch issues (300ms delay)
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -84,6 +85,7 @@ function DraggableMarker({ m, icon, interactive, onDragEnd }: {
     >
       {interactive && (
         <Popup>
+          {/* Popup Leaflet — toujours light-mode, couleurs intentionnellement fixes */}
           <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
             <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
             {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
@@ -101,8 +103,8 @@ function createIcon(marker: MapMarker) {
     return L.divIcon({
       className: "",
       html: `<div style="position:relative;display:flex;align-items:center;justify-content:center">
-        <span style="position:absolute;width:40px;height:40px;border-radius:50%;background:rgba(0,122,255,0.15);animation:pulse 2s infinite"></span>
-        <span style="width:14px;height:14px;border-radius:50%;background:#007AFF;border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.3);position:relative;z-index:1"></span>
+        <span style="position:absolute;width:40px;height:40px;border-radius:50%;background:var(--accent-soft);animation:pulse 2s infinite"></span>
+        <span style="width:14px;height:14px;border-radius:50%;background:var(--accent);border:3px solid #fff;box-shadow:0 1px 6px rgba(0,0,0,0.3);position:relative;z-index:1"></span>
       </div>`,
       iconSize: [14, 14],
       iconAnchor: [7, 7],
@@ -111,7 +113,7 @@ function createIcon(marker: MapMarker) {
 
   // Avatar circle for members/devices
   if (marker.type === "member" || marker.type === "device") {
-    const color = marker.color || "#5ED4C8";
+    const color = marker.color || DEFAULT_MEMBER_COLOR;
     const size = 40;
     const avatarContent = marker.avatarUrl
       ? `<img src="${marker.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:18px">${marker.emoji}</span>`
@@ -125,7 +127,7 @@ function createIcon(marker: MapMarker) {
           border:3px solid ${color};
           box-shadow:0 2px 10px rgba(0,0,0,0.25);
           position:relative;z-index:1;
-          background:#1a1a2e;
+          background:var(--surface-solid);
         ">${avatarContent}</div>
         <div style="
           margin-top:2px;padding:1px 6px;border-radius:8px;
@@ -179,7 +181,7 @@ function createIcon(marker: MapMarker) {
         <span style="font-size:10px;font-weight:600;color:#1D1D1F;white-space:nowrap;max-width:70px;overflow:hidden;text-overflow:ellipsis">${marker.name}</span>
       </div>
       <div style="width:2px;height:6px;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,0.1)"></div>
-      <div style="width:6px;height:6px;border-radius:50%;background:#FF3B30;box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
+      <div style="width:6px;height:6px;border-radius:50%;background:var(--red);box-shadow:0 1px 4px rgba(0,0,0,0.2)"></div>
     </div>`,
     iconSize: [40, 50],
     iconAnchor: [20, 50],
@@ -207,6 +209,7 @@ function LiveMarker({ marker: m, interactive }: { marker: MapMarker; interactive
     <Marker ref={markerRef} position={[m.lat, m.lng]} icon={createIcon(m)}>
       {interactive && (
         <Popup>
+          {/* Popup Leaflet — toujours light-mode, couleurs intentionnellement fixes */}
           <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
             <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
             {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
@@ -325,6 +328,12 @@ export function useThemeMapStyle(): MapStyle {
   return style;
 }
 
+/** Lit une variable CSS résolue (hex) pour les APIs qui ne supportent pas var() */
+function getCSSColor(varName: string, fallback: string): string {
+  if (typeof document === "undefined") return fallback;
+  return getComputedStyle(document.documentElement).getPropertyValue(varName).trim() || fallback;
+}
+
 export default function MapView({
   markers: rawMarkers,
   center = [46.2044, 5.226],
@@ -339,6 +348,7 @@ export default function MapView({
 }: MapViewProps) {
   const tile = MAP_TILES[mapStyle];
   const markers = useMemo(() => spreadOverlapping(rawMarkers), [rawMarkers]);
+  const accentHex = getCSSColor("--accent", "#7C6BF0");
 
   return (
     <div
@@ -348,7 +358,7 @@ export default function MapView({
       <MapContainer
         center={center}
         zoom={zoom}
-        style={{ height: "100%", width: "100%", background: mapStyle === "dark" ? "#0F1117" : "#F5F5F7" }}
+        style={{ height: "100%", width: "100%", background: "var(--bg)" }}
         dragging={interactive}
         zoomControl={false}
         scrollWheelZoom={interactive}
@@ -365,14 +375,14 @@ export default function MapView({
         {route && route.coordinates.length > 1 && (
           <Polyline
             positions={route.coordinates}
-            pathOptions={{ color: "#2563EB", weight: 8, opacity: 0.3, lineCap: "round", lineJoin: "round" }}
+            pathOptions={{ color: accentHex, weight: 8, opacity: 0.3, lineCap: "round", lineJoin: "round" }}
           />
         )}
         {/* Route line */}
         {route && route.coordinates.length > 1 && (
           <Polyline
             positions={route.coordinates}
-            pathOptions={{ color: "#007AFF", weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round" }}
+            pathOptions={{ color: accentHex, weight: 5, opacity: 0.9, lineCap: "round", lineJoin: "round" }}
           />
         )}
         {markers.map((m, i) => (

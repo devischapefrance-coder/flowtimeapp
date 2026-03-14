@@ -24,7 +24,6 @@ export default function TutorialOverlay({
   const pathnameRef = useRef(pathname);
   const [mounted, setMounted] = useState(false);
   const [sectionPickerOpen, setSectionPickerOpen] = useState(false);
-  const [isLight, setIsLight] = useState(false);
 
   // Visual states
   const [spotRect, setSpotRect] = useState<DOMRect | null>(null);
@@ -40,15 +39,6 @@ export default function TutorialOverlay({
 
   // Keep pathname ref in sync without triggering effects
   useEffect(() => { pathnameRef.current = pathname; }, [pathname]);
-
-  // Detect light/dark theme
-  useEffect(() => {
-    const check = () => setIsLight(document.documentElement.classList.contains("light"));
-    check();
-    const obs = new MutationObserver(check);
-    obs.observe(document.documentElement, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
 
   const targetStep = TUTORIAL_STEPS[step] as TutorialStep | undefined;
   const shownStep = TUTORIAL_STEPS[displayStep] as TutorialStep | undefined;
@@ -140,7 +130,7 @@ export default function TutorialOverlay({
 
     // Set body background for iOS gap fix (no opaque overlay blocking view)
     const prevBodyBg = document.body.style.background;
-    document.body.style.background = document.documentElement.classList.contains("light") ? "#F5F5F7" : "#0F1117";
+    document.body.style.background = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim() || "#0F1117";
 
     return () => {
       unlockScroll();
@@ -234,19 +224,19 @@ export default function TutorialOverlay({
 
   if (!active || !shownStep || !mounted) return null;
 
-  // Theme-aware colors
-  const overlayDim = isLight ? "rgba(0,0,0,0.45)" : "rgba(0,0,0,0.55)";
-  const cardBg = isLight ? "rgba(255,255,255,0.92)" : "rgba(30,30,45,0.92)";
-  const cardBorder = isLight ? "rgba(124,107,240,0.15)" : "rgba(124,107,240,0.2)";
-  const titleColor = isLight ? "#1D1D1F" : "#fff";
-  const descColor = isLight ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.55)";
-  const quitBg = isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.06)";
-  const quitColor = isLight ? "rgba(0,0,0,0.4)" : "rgba(255,255,255,0.4)";
-  const skipColor = isLight ? "rgba(0,0,0,0.35)" : "rgba(255,255,255,0.35)";
-  const dotBg = isLight ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.12)";
-  const sectionInactiveBg = isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)";
-  const sectionInactiveColor = isLight ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.5)";
-  const transitionBg = isLight ? "#F5F5F7" : "#000";
+  // Theme-aware colors — via CSS variables pour support multi-thème
+  const overlayDim = "var(--overlay)";
+  const cardBg = "var(--nav-bg)";
+  const cardBorder = "var(--accent-glow)";
+  const titleColor = "var(--text)";
+  const descColor = "var(--dim)";
+  const quitBg = "var(--surface)";
+  const quitColor = "var(--faint)";
+  const skipColor = "var(--faint)";
+  const dotBg = "var(--glass-border)";
+  const sectionInactiveBg = "var(--surface2)";
+  const sectionInactiveColor = "var(--dim)";
+  const transitionBg = "var(--bg)";
 
   const padding = 12;
 
@@ -380,6 +370,7 @@ export default function TutorialOverlay({
               left: `${Math.random() * 100}%`,
               animationDelay: `${Math.random() * 2}s`,
               animationDuration: `${2 + Math.random() * 2}s`,
+              /* illustration — intentionnellement fixe */
               background: ["#7C6BF0", "#9B8BFF", "#5ED4C8", "#F5C563", "#F06B7E", "#FF9F43"][i % 6],
               width: `${6 + Math.random() * 6}px`,
               height: `${6 + Math.random() * 6}px`,
@@ -406,18 +397,18 @@ export default function TutorialOverlay({
           background: cardBg,
           border: `1px solid ${cardBorder}`,
           borderLeft: "4px solid transparent",
-          borderImage: "linear-gradient(180deg, #7C6BF0, #9B8BFF) 1",
+          borderImage: "linear-gradient(180deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff)) 1",
           borderImageSlice: "0 0 0 1",
           backdropFilter: "blur(24px)",
           borderRadius: 16, overflow: "hidden",
-          boxShadow: isLight ? "0 8px 32px rgba(0,0,0,0.12)" : "0 8px 32px rgba(0,0,0,0.4)",
+          boxShadow: "0 8px 32px rgba(0,0,0,0.3)", /* ombre — intentionnellement fixe */
         }}>
           <div className="p-4">
             {/* Section pill + quit */}
             <div className="flex items-center justify-between mb-3">
               <button
                 className="text-[11px] font-bold px-3 py-1 rounded-full flex items-center gap-1.5"
-                style={{ background: "rgba(124,107,240,0.15)", color: "var(--accent)", border: "1px solid rgba(124,107,240,0.3)" }}
+                style={{ background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--accent-glow)" }}
                 onClick={() => setSectionPickerOpen(!sectionPickerOpen)}
               >
                 <span>{section?.emoji}</span>
@@ -471,7 +462,7 @@ export default function TutorialOverlay({
                     <div key={s.idx} className="rounded-full" style={{
                       width: s.current ? 16 : 6, height: 6,
                       transition: "all 0.4s ease",
-                      background: s.current ? "var(--accent)" : s.done ? "rgba(124,107,240,0.6)" : dotBg,
+                      background: s.current ? "var(--accent)" : s.done ? "color-mix(in srgb, var(--accent) 60%, transparent)" : dotBg,
                     }} />
                   ))}
                 </div>

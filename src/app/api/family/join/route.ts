@@ -1,15 +1,41 @@
 import { createClient } from "@supabase/supabase-js";
 import { getAuthUser } from "@/lib/server-auth";
 
+// Rate limiting par utilisateur pour la jointure famille
+const joinAttempts = new Map<string, { count: number; resetAt: number }>();
+const MAX_JOIN_ATTEMPTS = 5; // 5 tentatives par minute
+
+function isJoinRateLimited(userId: string): boolean {
+  const now = Date.now();
+  const entry = joinAttempts.get(userId);
+  if (!entry || entry.resetAt < now) {
+    joinAttempts.set(userId, { count: 1, resetAt: now + 60_000 });
+    return false;
+  }
+  entry.count++;
+  // Nettoyage paresseux (max 1000 entrées)
+  if (joinAttempts.size > 1000) {
+    for (const [key, val] of joinAttempts) {
+      if (val.resetAt < now) joinAttempts.delete(key);
+    }
+  }
+  return entry.count > MAX_JOIN_ATTEMPTS;
+}
+
 export async function POST(req: Request) {
   const user = await getAuthUser(req);
   if (!user) {
     return Response.json({ error: "Non autorisé" }, { status: 401 });
   }
 
+  // Rate limiting par utilisateur
+  if (isJoinRateLimited(user.id)) {
+    return Response.json({ error: "Trop de tentatives. Réessaie dans une minute." }, { status: 429 });
+  }
+
   const { code } = await req.json();
-  if (!code || typeof code !== "string" || code.trim().length < 4) {
-    return Response.json({ error: "Code invalide" }, { status: 400 });
+  if (!code || typeof code !== "string" || code.trim().length !== 8) {
+    return Response.json({ error: "Le code famille doit faire exactement 8 caractères" }, { status: 400 });
   }
 
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -23,7 +49,10 @@ export async function POST(req: Request) {
 
   const search = code.trim().toLowerCase();
 
-  // 1. Find the target family — fetch all profiles and filter in JS (UUID can't use ilike)
+  // Délai constant pour éviter le timing attack
+  await new Promise((r) => setTimeout(r, 200 + Math.random() * 300));
+
+  // 1. Find the target family — match exact sur les 8 premiers caractères du family_id
   const { data: allProfiles, error: fetchError } = await adminClient
     .from("profiles")
     .select("id, family_id, first_name, last_name, emoji, phone")
@@ -34,7 +63,7 @@ export async function POST(req: Request) {
   }
 
   const match = allProfiles.find((p) =>
-    p.family_id.toLowerCase().startsWith(search)
+    p.family_id.toLowerCase().substring(0, 8) === search
   );
 
   if (!match) {

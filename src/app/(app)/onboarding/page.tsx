@@ -37,9 +37,9 @@ export default function OnboardingPage() {
 
   // Background gradient hue shifts between slides
   const bgGradients = [
-    "radial-gradient(ellipse at 30% 40%, rgba(124,107,240,0.15) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, rgba(94,212,200,0.08) 0%, transparent 50%)",
-    "radial-gradient(ellipse at 60% 30%, rgba(94,212,200,0.15) 0%, transparent 60%), radial-gradient(ellipse at 30% 70%, rgba(245,197,99,0.08) 0%, transparent 50%)",
-    "radial-gradient(ellipse at 50% 50%, rgba(124,107,240,0.12) 0%, transparent 50%), radial-gradient(ellipse at 70% 30%, rgba(240,107,126,0.08) 0%, transparent 50%)",
+    "radial-gradient(ellipse at 30% 40%, var(--accent-glow) 0%, transparent 60%), radial-gradient(ellipse at 70% 80%, color-mix(in srgb, var(--teal) 8%, transparent) 0%, transparent 50%)",
+    "radial-gradient(ellipse at 60% 30%, color-mix(in srgb, var(--teal) 15%, transparent) 0%, transparent 60%), radial-gradient(ellipse at 30% 70%, color-mix(in srgb, var(--warm) 8%, transparent) 0%, transparent 50%)",
+    "radial-gradient(ellipse at 50% 50%, var(--accent-soft) 0%, transparent 50%), radial-gradient(ellipse at 70% 30%, color-mix(in srgb, var(--red) 8%, transparent) 0%, transparent 50%)",
   ];
 
   return (
@@ -92,8 +92,8 @@ export default function OnboardingPage() {
               width: i === step ? 24 : 8,
               height: 8,
               background: i === step
-                ? "linear-gradient(90deg, var(--accent), #9B8BFF)"
-                : "rgba(255,255,255,0.12)",
+                ? "linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))"
+                : "var(--faint)",
             }}
           />
         ))}
@@ -104,7 +104,7 @@ export default function OnboardingPage() {
         {step < 2 ? (
           <button
             className="w-full py-3.5 rounded-2xl text-sm font-bold"
-            style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)", color: "#fff" }}
+            style={{ background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))", color: "#fff" }}
             onClick={() => goTo(step + 1)}
           >
             Suivant
@@ -113,7 +113,7 @@ export default function OnboardingPage() {
           <div className="flex flex-col gap-3">
             <button
               className="w-full py-3.5 rounded-2xl text-sm font-bold"
-              style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)", color: "#fff" }}
+              style={{ background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))", color: "#fff" }}
               onClick={() => finish(true)}
             >
               Découvrir FlowTime
@@ -149,14 +149,14 @@ function Slide1() {
       <div className="relative w-[140px] h-[140px] flex items-center justify-center mb-8">
         {/* Rotating ring */}
         <div className="absolute inset-0 rounded-full onb-ring-spin" style={{
-          background: "conic-gradient(from 0deg, #7C6BF0, #9B8BFF, #5ED4C8, #F5C563, #7C6BF0)",
+          background: "conic-gradient(from 0deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff), var(--teal), var(--warm), var(--accent))",
           padding: 3,
           WebkitMask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
           mask: "radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 3px))",
         }} />
         {/* Inner circle */}
         <div className="w-[122px] h-[122px] rounded-full flex items-center justify-center"
-          style={{ background: "rgba(124,107,240,0.1)" }}>
+          style={{ background: "var(--accent-soft)" }}>
           <div className="onb-logo-pop">
             <Logo size={70} />
           </div>
@@ -197,9 +197,9 @@ function Slide1() {
 /* ---- Slide 2: 3 mini glass cards ---- */
 function Slide2() {
   const cards = [
-    { icon: "\u{1F4C5}", label: "Planning", color: "rgba(124,107,240,0.15)" },
-    { icon: "\u{1F5FA}\uFE0F", label: "Famille", color: "rgba(94,212,200,0.15)" },
-    { icon: "\u{1F30A}", label: "Flow AI", color: "rgba(245,197,99,0.15)" },
+    { icon: "\u{1F4C5}", label: "Planning", color: "var(--accent-glow)" },
+    { icon: "\u{1F5FA}\uFE0F", label: "Famille", color: "color-mix(in srgb, var(--teal) 15%, transparent)" },
+    { icon: "\u{1F30A}", label: "Flow AI", color: "color-mix(in srgb, var(--warm) 15%, transparent)" },
   ];
 
   return (
@@ -260,17 +260,17 @@ function Slide3({ showConfetti }: { showConfetti: boolean }) {
         {/* Animated checkmark circle */}
         <div
           className="w-[100px] h-[100px] rounded-full flex items-center justify-center onb-check-pop"
-          style={{ background: "rgba(34,197,94,0.15)" }}
+          style={{ background: "color-mix(in srgb, var(--green) 15%, transparent)" }}
         >
           <svg
             width="48" height="48" viewBox="0 0 56 56"
             className="onb-check-draw"
           >
-            <circle cx="28" cy="28" r="24" fill="none" stroke="rgba(34,197,94,0.3)" strokeWidth="2" />
+            <circle cx="28" cy="28" r="24" fill="none" stroke="color-mix(in srgb, var(--green) 30%, transparent)" strokeWidth="2" />
             <path
               d="M16 28l8 8 16-16"
               fill="none"
-              stroke="#22c55e"
+              stroke="var(--green)"
               strokeWidth="3.5"
               strokeLinecap="round"
               strokeLinejoin="round"
@@ -295,6 +295,7 @@ function Slide3({ showConfetti }: { showConfetti: boolean }) {
                   width: `${4 + Math.random() * 4}px`,
                   height: `${4 + Math.random() * 4}px`,
                   borderRadius: "1px",
+                  /* illustration — intentionnellement fixe */
                   background: ["#7C6BF0", "#9B8BFF", "#5ED4C8", "#F5C563", "#F06B7E", "#22c55e"][i % 6],
                   animationDelay: `${Math.random() * 0.3}s`,
                   animationDuration: `${0.6 + Math.random() * 0.6}s`,

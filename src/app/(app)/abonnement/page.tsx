@@ -142,12 +142,12 @@ export default function AbonnementPage() {
 
       {/* Status banners */}
       {success && (
-        <div className="glass p-3 mb-4 rounded-xl text-center text-sm" style={{ borderColor: "#22c55e40" }}>
+        <div className="glass p-3 mb-4 rounded-xl text-center text-sm" style={{ borderColor: "color-mix(in srgb, var(--green) 25%, transparent)" }}>
           ✅ Abonnement activé ! Bienvenue dans FlowTime{currentPlan === "pro" ? " Pro" : "+"} 🎉
         </div>
       )}
       {canceled && (
-        <div className="glass p-3 mb-4 rounded-xl text-center text-sm" style={{ borderColor: "#f59e0b40" }}>
+        <div className="glass p-3 mb-4 rounded-xl text-center text-sm" style={{ borderColor: "color-mix(in srgb, var(--warm) 25%, transparent)" }}>
           Le paiement a été annulé. Vous pouvez réessayer quand vous voulez.
         </div>
       )}
@@ -177,7 +177,7 @@ export default function AbonnementPage() {
       )}
 
       {profile?.subscription_status === "past_due" && (
-        <div className="glass p-3 mb-4 rounded-xl text-center text-sm" style={{ borderColor: "#ef444440" }}>
+        <div className="glass p-3 mb-4 rounded-xl text-center text-sm" style={{ borderColor: "color-mix(in srgb, var(--red) 25%, transparent)" }}>
           ⚠️ Paiement en retard — mettez à jour votre moyen de paiement
           <button
             onClick={handlePortal}
@@ -267,7 +267,7 @@ export default function AbonnementPage() {
               <div className="flex flex-col gap-1.5 mb-4">
                 {plan.features.map((f) => (
                   <div key={f.label} className="flex items-center gap-2 text-xs">
-                    <span style={{ color: f.included ? "#22c55e" : "var(--dim)", fontSize: "10px" }}>
+                    <span style={{ color: f.included ? "var(--green)" : "var(--dim)", fontSize: "10px" }}>
                       {f.included ? "✓" : "✕"}
                     </span>
                     <span style={{ color: f.included ? "var(--text)" : "var(--dim)" }}>
@@ -302,7 +302,7 @@ export default function AbonnementPage() {
                   className="w-full text-sm py-2.5 rounded-xl font-semibold transition-all active:scale-[0.98]"
                   style={{
                     background: plan.popular
-                      ? "linear-gradient(135deg, var(--accent), #9B8BFF)"
+                      ? "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))"
                       : "var(--glass-bg)",
                     color: plan.popular ? "#fff" : "var(--text)",
                     border: plan.popular ? "none" : "1px solid var(--glass-border)",

@@ -13,6 +13,7 @@ import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 import Link from "next/link";
 import type { MapMarker } from "@/components/MapView";
 import { useThemeMapStyle } from "@/components/MapView";
+import { MEMBER_COLORS, DEFAULT_MEMBER_COLOR } from "@/lib/constants";
 
 const MapViewDynamic = dynamic(() => import("@/components/MapView"), { ssr: false });
 const AddressPickerMap = dynamic(() => import("@/components/AddressPickerMap"), { ssr: false });
@@ -101,7 +102,6 @@ const ROLE_EMOJIS: Record<string, string[]> = {
   autre:       ["🧑","👤","😊","🌟","💫","🎭","🙂","✨","🦊","🐻","🐼"],
 };
 
-const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
 const ADDRESS_EMOJIS = ["🏠","🏫","💼","⚽","🏥","👶","👴","🏪","🎭","🏖️"];
 const CONTACT_CATEGORIES: Record<string, string[]> = {
   "Famille": ["Conjoint(e)", "Pere", "Mere", "Fils", "Fille", "Frere", "Soeur", "Beau-pere", "Belle-mere", "Gendre", "Belle-fille", "Grand-pere", "Grand-mere", "Petit-fils", "Petite-fille", "Oncle", "Tante", "Cousin(e)", "Parrain", "Marraine"],
@@ -225,13 +225,6 @@ export default function FamillePage() {
   useRealtimeContacts(familyId, load);
   useRealtimeAddresses(familyId, load);
 
-  // Polling fallback: refresh every 10s in case realtime isn't enabled
-  useEffect(() => {
-    if (!familyId) return;
-    const interval = setInterval(load, 10000);
-    return () => clearInterval(interval);
-  }, [familyId, load]);
-
   // Suggest default addresses if none exist
   useEffect(() => {
     if (familyId && addresses.length === 0 && members.length >= 0) {
@@ -277,7 +270,7 @@ export default function FamillePage() {
         router.push("/abonnement");
         return;
       }
-      setForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
+      setForm({ name: "", role: "fils", emoji: "👦", color: DEFAULT_MEMBER_COLOR, birth_date: "", phone: "" });
     } else {
       setForm({ name: m.name, role: getLocalRole(m.id, m.role), emoji: m.emoji, color: m.color, birth_date: m.birth_date || "", phone: m.phone || "" });
     }
@@ -511,7 +504,7 @@ export default function FamillePage() {
       return {
         id: d.id, lat: d.lat, lng: d.lng,
         emoji: member?.emoji || d.emoji, name: member?.name || d.device_name,
-        color: "#3DD6C8", type: "device" as const,
+        color: DEFAULT_MEMBER_COLOR, type: "device" as const,
         avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
       };
     }),
@@ -610,7 +603,7 @@ export default function FamillePage() {
                   <a
                     href={`tel:${m.phone}`}
                     className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
-                    style={{ background: "rgba(94,200,158,0.12)" }}
+                    style={{ background: "color-mix(in srgb, var(--green) 12%, transparent)" }}
                     onClick={(e) => e.stopPropagation()}
                     aria-label={`Appeler ${m.name}`}
                   >
@@ -670,7 +663,7 @@ export default function FamillePage() {
                     <a
                       href={`tel:${c.phone}`}
                       className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
-                      style={{ background: "rgba(94,200,158,0.12)" }}
+                      style={{ background: "color-mix(in srgb, var(--green) 12%, transparent)" }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       📞
@@ -710,7 +703,7 @@ export default function FamillePage() {
                   </div>
                   {c.phone && (
                     <a href={`tel:${c.phone}`} className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
-                      style={{ background: "rgba(94,200,158,0.12)" }} onClick={(e) => e.stopPropagation()}>📞</a>
+                      style={{ background: "color-mix(in srgb, var(--green) 12%, transparent)" }} onClick={(e) => e.stopPropagation()}>📞</a>
                   )}
                 </div>
               ))}

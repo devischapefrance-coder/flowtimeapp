@@ -42,7 +42,7 @@ export default function Modal({ open, onClose, title, children }: ModalProps) {
       className={`fixed inset-0 flex items-end justify-center ${closing ? "modal-backdrop-out" : "modal-backdrop-in"}`}
       style={{
         zIndex: 600,
-        background: "rgba(0,0,0,0.5)",
+        background: "var(--overlay)",
         backdropFilter: "blur(4px)",
         WebkitBackdropFilter: "blur(4px)",
       }}

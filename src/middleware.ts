@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 
 // Simple in-memory rate limiting
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
+const MAX_RATE_LIMIT_ENTRIES = 10_000;
 
 let lastCleanup = Date.now();
 
@@ -17,11 +18,15 @@ function isRateLimited(ip: string, path: string): boolean {
 
   const now = Date.now();
 
-  // Lazy cleanup every 5 minutes
-  if (now - lastCleanup > 5 * 60_000) {
+  // Nettoyage toutes les 2 minutes ou si la map dépasse la taille max
+  if (now - lastCleanup > 2 * 60_000 || rateLimitMap.size > MAX_RATE_LIMIT_ENTRIES) {
     lastCleanup = now;
     for (const [key, val] of rateLimitMap) {
       if (val.resetAt < now) rateLimitMap.delete(key);
+    }
+    // Si toujours trop grande après nettoyage, vider complètement
+    if (rateLimitMap.size > MAX_RATE_LIMIT_ENTRIES) {
+      rateLimitMap.clear();
     }
   }
 

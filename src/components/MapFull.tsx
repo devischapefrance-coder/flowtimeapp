@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, memo } from "react";
 import dynamic from "next/dynamic";
 import type { MapMarker, MapStyle } from "./MapView";
 import { supabase } from "@/lib/supabase";
+import { DEFAULT_MEMBER_COLOR } from "@/lib/constants";
 
 const MapView = dynamic(() => import("./MapView"), { ssr: false });
 
@@ -72,24 +73,24 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
     return () => observer.disconnect();
   }, []);
 
-  // Theme-aware colors
-  const t = {
-    panelBg: isLight ? "rgba(255,255,255,0.92)" : "rgba(30,32,42,0.92)",
-    stripBg: isLight ? "rgba(255,255,255,0.95)" : "rgba(30,32,42,0.95)",
-    pillBg: isLight ? "rgba(255,255,255,0.95)" : "rgba(30,32,42,0.95)",
-    text: isLight ? "#1D1D1F" : "#ECEEF4",
-    textDim: isLight ? "#86868B" : "rgba(236,238,244,0.5)",
-    inputBg: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
-    catBg: isLight ? "rgba(0,0,0,0.04)" : "rgba(255,255,255,0.06)",
-    hoverBg: isLight ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.08)",
-    border: isLight ? "rgba(0,0,0,0.06)" : "rgba(255,255,255,0.08)",
-    divider: isLight ? "rgba(0,0,0,0.1)" : "rgba(255,255,255,0.12)",
-    badgeBg: isLight ? "rgba(255,255,255,0.95)" : "rgba(30,32,42,0.95)",
-    accent: "#007AFF",
-    red: "#FF3B30",
-    green: "#34C759",
-    deviceBg: isLight ? "rgba(0,122,255,0.08)" : "rgba(0,122,255,0.15)",
-  };
+  // Theme-aware colors — mapped to CSS variables for multi-theme support
+  const t = useMemo(() => ({
+    panelBg: "var(--nav-bg)",
+    stripBg: "var(--nav-bg)",
+    pillBg: "var(--nav-bg)",
+    text: "var(--text)",
+    textDim: "var(--dim)",
+    inputBg: "var(--surface2)",
+    catBg: "var(--surface)",
+    hoverBg: "var(--surface2)",
+    border: "var(--glass-border)",
+    divider: "var(--faint)",
+    badgeBg: "var(--nav-bg)",
+    accent: "var(--accent)",
+    red: "var(--red)",
+    green: "var(--green)",
+    deviceBg: "var(--accent-soft)",
+  }), []);
 
   // Drag feedback
   const [dragToast, setDragToast] = useState<string | null>(null);
@@ -170,7 +171,7 @@ export default function MapFull({ markers, center = [46.2044, 5.226], onClose, d
                 lng: d.lng,
                 emoji: d.emoji || "📱",
                 name: d.device_name,
-                color: "#3DD6C8",
+                color: DEFAULT_MEMBER_COLOR,
                 type: "device" as const,
                 updatedAt: d.updated_at,
               })));

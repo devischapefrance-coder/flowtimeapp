@@ -478,7 +478,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
       <div className="flex items-center gap-3 px-4 py-3" style={{ background: "var(--nav-bg)", backdropFilter: "blur(20px)", borderBottom: "1px solid var(--glass-border)", paddingTop: "max(12px, calc(env(safe-area-inset-top, 0px) + 4px))" }}>
         <div
           className="w-10 h-10 flex items-center justify-center rounded-full text-lg"
-          style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
+          style={{ background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))" }}
         >
           <Logo size={24} />
         </div>
@@ -495,7 +495,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
           <div key={i} className={`max-w-[85%] ${m.role === "user" ? "self-end" : "self-start"} animate-in`}>
             {m.role === "flow" && (
               <div className="flex items-end gap-2">
-                <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}><Logo size={16} /></div>
+                <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))" }}><Logo size={16} /></div>
                 <div>
                   <div
                     className="px-4 py-3 text-sm leading-relaxed"
@@ -510,7 +510,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
                   {m.actions && m.actions.length > 0 && (
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
                       {m.actions.map((a, j) => (
-                        <span key={j} className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: "rgba(94,200,158,0.12)", color: "var(--green)" }}>
+                        <span key={j} className="text-[10px] font-bold px-2 py-1 rounded-lg" style={{ background: "color-mix(in srgb, var(--green) 12%, transparent)", color: "var(--green)" }}>
                           ✓ {actionLabel(a.type)}
                         </span>
                       ))}
@@ -523,7 +523,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
               <div
                 className="text-sm overflow-hidden"
                 style={{
-                  background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
+                  background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))",
                   color: "#fff",
                   borderRadius: "18px 18px 4px 18px",
                 }}
@@ -539,7 +539,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
 
         {loading && (
           <div className="self-start flex items-end gap-2 animate-in">
-            <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}><Logo size={16} /></div>
+            <div className="w-6 h-6 flex items-center justify-center rounded-full text-[10px] flex-shrink-0" style={{ background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))" }}><Logo size={16} /></div>
             <div className="px-4 py-3" style={{ background: "var(--surface)", border: "1px solid var(--glass-border)", borderRadius: "18px 18px 18px 4px" }}>
               <div className="flex gap-1.5">
                 <span className="w-2 h-2 rounded-full animate-bounce" style={{ background: "var(--accent)", animationDelay: "0ms" }} />
@@ -556,7 +556,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
               <button
                 key={s}
                 className="text-xs font-bold px-3 py-2 rounded-xl transition-all"
-                style={{ background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid rgba(124,107,240,0.15)" }}
+                style={{ background: "var(--accent-soft)", color: "var(--accent)", border: "1px solid var(--accent-glow)" }}
                 onClick={() => send(s)}
               >
                 {s}
@@ -601,7 +601,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
               <button
                 className="voice-mic-btn w-16 h-16 flex items-center justify-center rounded-full text-2xl relative z-10"
                 style={{
-                  background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
+                  background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))",
                   color: "#fff",
                   boxShadow: isListening ? "0 0 30px var(--accent-glow)" : "0 4px 20px var(--accent-glow)",
                 }}
@@ -681,7 +681,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
             disabled={loading || !input.trim()}
             className="w-11 h-11 flex items-center justify-center rounded-xl text-white font-bold transition-opacity"
             style={{
-              background: "linear-gradient(135deg, var(--accent), #9B8BFF)",
+              background: "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))",
               flexShrink: 0,
               opacity: loading || !input.trim() ? 0.4 : 1,
             }}

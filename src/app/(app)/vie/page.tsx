@@ -20,8 +20,8 @@ import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, Sh
 
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
-  { value: "important", label: "Important", color: "var(--red, #ef4444)", emoji: "🔴" },
-  { value: "rappel", label: "Code d'usage", color: "var(--warm, #f59e0b)", emoji: "📋" },
+  { value: "important", label: "Important", color: "var(--red)", emoji: "🔴" },
+  { value: "rappel", label: "Code d'usage", color: "var(--warm)", emoji: "📋" },
 ] as const;
 
 function getCategoryStyle(cat: string) {
@@ -226,7 +226,7 @@ function DocumentsTab({ members, familyId }: { members: Member[]; familyId: stri
             )}
             <button
               className="text-xs font-bold py-2 rounded-xl"
-              style={{ background: "rgba(239,68,68,0.1)", color: "var(--red, #ef4444)" }}
+              style={{ background: "color-mix(in srgb, var(--red) 10%, transparent)", color: "var(--red)" }}
               onClick={() => deleteDoc(viewDoc.id)}
             >Supprimer ce document</button>
           </div>
@@ -242,7 +242,7 @@ function DocumentsTab({ members, familyId }: { members: Member[]; familyId: stri
           <img src={viewImage} alt="Document" className="max-w-full max-h-full object-contain" />
           <button
             className="absolute top-4 right-4 w-10 h-10 rounded-full flex items-center justify-center text-white text-xl"
-            style={{ background: "rgba(255,255,255,0.2)" }}
+            style={{ background: "var(--faint)" }}
             onClick={() => setViewImage(null)}
           >✕</button>
         </div>
@@ -302,7 +302,7 @@ function DocumentsTab({ members, familyId }: { members: Member[]; familyId: stri
                   <img src={img} alt="" className="w-full h-full object-cover" />
                   <button
                     className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full flex items-center justify-center text-[10px] text-white"
-                    style={{ background: "rgba(0,0,0,0.6)" }}
+                    style={{ background: "var(--overlay)" }}
                     onClick={() => setAddImages(addImages.filter((_, j) => j !== i))}
                   >✕</button>
                 </div>
@@ -506,7 +506,7 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
               </div>
               <div className="flex items-center gap-2">
                 {allDone && <span className="text-lg">🎉</span>}
-                <button className="text-xs p-1" style={{ color: "var(--red, #ef4444)" }} onClick={() => deleteRoutine(routine.id)}>✕</button>
+                <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteRoutine(routine.id)}>✕</button>
               </div>
             </div>
 
@@ -516,11 +516,11 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
                 className="h-full rounded-full transition-all"
                 style={{
                   width: `${progress}%`,
-                  background: allDone ? "var(--green, #22c55e)" : "var(--accent)",
+                  background: allDone ? "var(--green)" : "var(--accent)",
                 }}
               />
             </div>
-            <p className="text-[10px] font-bold mb-3" style={{ color: allDone ? "var(--green, #22c55e)" : "var(--dim)" }}>
+            <p className="text-[10px] font-bold mb-3" style={{ color: allDone ? "var(--green)" : "var(--dim)" }}>
               {allDone ? "Tout est fait, bravo !" : `${completed}/${total} étapes`}
             </p>
 
@@ -536,7 +536,7 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
                     key={step.id}
                     className="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all text-left w-full relative overflow-hidden"
                     style={{
-                      background: isDone ? "rgba(34,197,94,0.1)" : isTimerActive ? "var(--accent-soft)" : "var(--surface2)",
+                      background: isDone ? "color-mix(in srgb, var(--green) 10%, transparent)" : isTimerActive ? "var(--accent-soft)" : "var(--surface2)",
                       opacity: isDone ? 0.6 : 1,
                     }}
                     onClick={() => {
@@ -569,7 +569,7 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
                     <div
                       className="w-6 h-6 rounded-full flex items-center justify-center text-xs shrink-0 relative z-10"
                       style={{
-                        background: isDone ? "var(--green, #22c55e)" : isTimerActive ? "var(--accent)" : "transparent",
+                        background: isDone ? "var(--green)" : isTimerActive ? "var(--accent)" : "transparent",
                         border: isDone || isTimerActive ? "none" : "2px solid var(--glass-border)",
                         color: "#fff",
                       }}
@@ -584,7 +584,7 @@ function RoutineTab({ members, childMembers, defaultMorning, defaultEvening, loa
                     <span className="text-[10px] font-bold tabular-nums relative z-10 px-2 py-1 rounded-lg"
                       style={{
                         background: isTimerActive ? "var(--accent)" : isDone ? "transparent" : "var(--accent-soft)",
-                        color: isTimerActive ? "#fff" : isDone ? "var(--green, #22c55e)" : "var(--accent)",
+                        color: isTimerActive ? "#fff" : isDone ? "var(--green)" : "var(--accent)",
                       }}
                     >
                       {isDone ? "✓" : isTimerActive ? formatTime(timerLeft) : `${step.duration} min`}
@@ -1062,7 +1062,7 @@ export default function ViePage() {
           >
             {emoji} {label}
             {tab !== key && (newCounts[key] || 0) > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: "var(--red, #ef4444)" }}>
+              <span className="absolute -top-1.5 -right-1.5 min-w-[18px] h-[18px] px-1 rounded-full flex items-center justify-center text-[9px] font-bold text-white" style={{ background: "var(--red)" }}>
                 {newCounts[key] > 9 ? "9+" : newCounts[key]}
               </span>
             )}
@@ -1191,7 +1191,7 @@ export default function ViePage() {
                     </div>
                     <button
                       className="text-xs p-1 rounded-full shrink-0"
-                      style={{ color: "var(--red, #ef4444)" }}
+                      style={{ color: "var(--red)" }}
                       onClick={(e) => { e.stopPropagation(); deleteNote(n.id); }}
                     >
                       🗑️
@@ -1327,7 +1327,7 @@ export default function ViePage() {
                     )}
                     <button
                       className="text-xs p-1 shrink-0"
-                      style={{ color: "var(--red, #ef4444)" }}
+                      style={{ color: "var(--red)" }}
                       onClick={() => deleteShoppingItem(item.id)}
                     >
                       ✕
@@ -1344,7 +1344,7 @@ export default function ViePage() {
                   <p className="text-xs font-bold" style={{ color: "var(--dim)" }}>Coches ({filteredChecked.length})</p>
                   <button
                     className="text-[10px] font-bold px-2 py-1 rounded-full"
-                    style={{ background: "var(--surface2)", color: "var(--red, #ef4444)" }}
+                    style={{ background: "var(--surface2)", color: "var(--red)" }}
                     onClick={clearChecked}
                   >
                     Vider les coches
@@ -1669,7 +1669,7 @@ export default function ViePage() {
               </button>
               <button
                 className="py-2.5 px-4 rounded-xl font-bold text-sm"
-                style={{ background: "var(--surface2)", color: "var(--red, #ef4444)" }}
+                style={{ background: "var(--surface2)", color: "var(--red)" }}
                 onClick={() => deleteNote(detailNote.id)}
               >
                 🗑️
@@ -1777,7 +1777,7 @@ export default function ViePage() {
                   </span>
                   <button
                     className="text-xs p-1"
-                    style={{ color: "var(--red, #ef4444)" }}
+                    style={{ color: "var(--red)" }}
                     onClick={() => removeCheckItem(item.id)}
                   >
                     ✕
@@ -1820,7 +1820,7 @@ export default function ViePage() {
                     )}
                     <button
                       className="absolute -top-1 -right-1 w-5 h-5 rounded-full flex items-center justify-center text-[10px]"
-                      style={{ background: "var(--red, #ef4444)", color: "#fff" }}
+                      style={{ background: "var(--red)", color: "#fff" }}
                       onClick={() => removeAttachment(att.id)}
                     >
                       ✕
@@ -1924,13 +1924,13 @@ export default function ViePage() {
       {previewImage && (
         <div
           className="fixed inset-0 z-[800] flex flex-col"
-          style={{ background: "rgba(0,0,0,0.95)", maxWidth: 430, margin: "0 auto" }}
+          style={{ background: "rgba(0,0,0,0.95)", maxWidth: 430, margin: "0 auto" /* overlay — intentionnellement opaque */ }}
           onClick={() => setPreviewImage(null)}
         >
           <div className="flex justify-end" style={{ padding: "max(16px, env(safe-area-inset-top, 16px)) 16px 8px 16px" }}>
             <button
               className="w-9 h-9 flex items-center justify-center rounded-full text-white text-lg"
-              style={{ background: "rgba(255,255,255,0.15)" }}
+              style={{ background: "var(--faint)" }}
               onClick={(e) => { e.stopPropagation(); setPreviewImage(null); }}
             >
               ✕

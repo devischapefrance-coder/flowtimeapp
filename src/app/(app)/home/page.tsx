@@ -27,6 +27,7 @@ import { exportPDF } from "@/lib/pdf-export";
 import { EVENT_CATEGORIES, getCategoryColor, detectCategory } from "@/lib/categories";
 import { cacheData, getCachedData } from "@/lib/offline";
 import { getWeatherWithGeolocation } from "@/lib/weather";
+import { DEFAULT_MEMBER_COLOR } from "@/lib/constants";
 import type { WeatherData } from "@/lib/weather";
 import { useToast } from "@/components/Toast";
 import EmptyState from "@/components/EmptyState";
@@ -204,9 +205,10 @@ export default function HomePage() {
     return () => clearInterval(interval);
   }, []);
 
-  // Month view state
-  const [monthYear, setMonthYear] = useState(() => new Date().getFullYear());
-  const [monthMonth, setMonthMonth] = useState(() => new Date().getMonth());
+  // Month view state (single state to avoid desync on month navigation)
+  const [monthView, setMonthView] = useState(() => ({ year: new Date().getFullYear(), month: new Date().getMonth() }));
+  const monthYear = monthView.year;
+  const monthMonth = monthView.month;
   const [monthEvents, setMonthEvents] = useState<Event[]>([]);
 
   // Meal state
@@ -949,14 +951,12 @@ export default function HomePage() {
     loadData();
   }
 
-  // Month navigation
+  // Month navigation (atomic update)
   function prevMonth() {
-    if (monthMonth === 0) { setMonthMonth(11); setMonthYear(monthYear - 1); }
-    else setMonthMonth(monthMonth - 1);
+    setMonthView((prev) => prev.month === 0 ? { year: prev.year - 1, month: 11 } : { ...prev, month: prev.month - 1 });
   }
   function nextMonth() {
-    if (monthMonth === 11) { setMonthMonth(0); setMonthYear(monthYear + 1); }
-    else setMonthMonth(monthMonth + 1);
+    setMonthView((prev) => prev.month === 11 ? { year: prev.year + 1, month: 0 } : { ...prev, month: prev.month + 1 });
   }
 
   function selectMonthDay(dateStr: string) {
@@ -1257,8 +1257,7 @@ export default function HomePage() {
                 onClick={() => {
                   if (calendarView === "week") {
                     const d = new Date(selectedDate);
-                    setMonthYear(d.getFullYear());
-                    setMonthMonth(d.getMonth());
+                    setMonthView({ year: d.getFullYear(), month: d.getMonth() });
                     setCalendarView("month");
                   } else setCalendarView("week");
                 }}
@@ -1443,7 +1442,7 @@ export default function HomePage() {
                   {meal ? <p className="text-sm font-bold">{meal.name}</p> : <p className="text-xs" style={{ color: "var(--faint)" }}>Pas encore défini</p>}
                 </div>
                 {meal ? (
-                  <button className="text-xs p-1 rounded-full" style={{ color: "var(--red, #ef4444)" }}
+                  <button className="text-xs p-1 rounded-full" style={{ color: "var(--red)" }}
                     onClick={(e) => { e.stopPropagation(); deleteMeal(meal.id); }}>🗑️</button>
                 ) : <span className="text-lg" style={{ color: "var(--accent)" }}>+</span>}
               </div>
@@ -1486,7 +1485,7 @@ export default function HomePage() {
                   </p>
                 </div>
                 <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
-                  background: b.daysUntil <= 7 ? "rgba(240,107,126,0.15)" : "var(--surface2)",
+                  background: b.daysUntil <= 7 ? "color-mix(in srgb, var(--red) 15%, transparent)" : "var(--surface2)",
                   color: b.daysUntil <= 7 ? "var(--red)" : "var(--dim)",
                 }}>{b.nextBday.toLocaleDateString("fr-FR", { day: "numeric", month: "short" })}</span>
               </div>
@@ -1516,7 +1515,7 @@ export default function HomePage() {
       return {
         id: d.id, lat: d.lat, lng: d.lng,
         emoji: member?.emoji || d.emoji || "📱", name: member?.name || d.device_name,
-        color: "#3DD6C8", type: "device" as const,
+        color: DEFAULT_MEMBER_COLOR, type: "device" as const,
         avatarUrl: d.user_id ? getAvatarUrl(d.user_id) : undefined,
       };
     });
@@ -1563,7 +1562,7 @@ export default function HomePage() {
         <div className="flex items-center justify-between mb-3">
           <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Tâches du jour</p>
           {totalCount > 0 && (
-            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: doneCount === totalCount ? "rgba(94,200,158,0.15)" : "var(--surface2)", color: doneCount === totalCount ? "var(--green)" : "var(--dim)" }}>
+            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: doneCount === totalCount ? "color-mix(in srgb, var(--green) 15%, transparent)" : "var(--surface2)", color: doneCount === totalCount ? "var(--green)" : "var(--dim)" }}>
               {doneCount}/{totalCount} faites
             </span>
           )}
@@ -1600,7 +1599,7 @@ export default function HomePage() {
                   <span className="text-base">{ch.emoji || "🧹"}</span>
                   <span className={`text-xs font-medium flex-1 ${isDone ? "line-through" : ""}`}>{ch.name}</span>
                   {assignedMember && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "rgba(124,107,240,0.12)", color: "var(--accent)" }}>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full shrink-0" style={{ background: "var(--accent-soft)", color: "var(--accent)" }}>
                       {assignedMember.emoji} {assignedMember.name}
                     </span>
                   )}
@@ -1629,7 +1628,7 @@ export default function HomePage() {
       <PullIndicator pullDistance={pullDistance} refreshing={refreshing} />
       {/* Offline banner */}
       {isOffline && (
-        <div className="mb-3 px-3 py-2 rounded-xl text-xs font-bold text-center" style={{ background: "rgba(240,124,74,0.15)", color: "var(--warm)", border: "1px solid rgba(240,124,74,0.2)" }}>
+        <div className="mb-3 px-3 py-2 rounded-xl text-xs font-bold text-center" style={{ background: "color-mix(in srgb, var(--warm) 15%, transparent)", color: "var(--warm)", border: "1px solid color-mix(in srgb, var(--warm) 20%, transparent)" }}>
           📡 Hors ligne — données en cache
         </div>
       )}
@@ -1723,7 +1722,7 @@ export default function HomePage() {
                 <button
                   className="w-9 h-7 rounded-lg flex items-center justify-center text-xs font-bold"
                   style={{
-                    background: w.visible ? "rgba(124,107,240,0.15)" : "var(--surface-solid)",
+                    background: w.visible ? "var(--accent-glow)" : "var(--surface-solid)",
                     color: w.visible ? "var(--accent)" : "var(--faint)",
                   }}
                   onClick={() => toggleWidgetVisibility(w.id)}
@@ -1785,7 +1784,7 @@ export default function HomePage() {
           {/* Conflict warning */}
           {qeConflict && (
             <div className="flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold"
-              style={{ background: "rgba(240,124,74,0.12)", color: "var(--warm)", border: "1px solid rgba(240,124,74,0.2)" }}>
+              style={{ background: "color-mix(in srgb, var(--warm) 12%, transparent)", color: "var(--warm)", border: "1px solid color-mix(in srgb, var(--warm) 20%, transparent)" }}>
               <span>⚠️</span> {qeConflict}
             </div>
           )}
@@ -1913,9 +1912,9 @@ export default function HomePage() {
           width: 58,
           height: 58,
           background: "linear-gradient(135deg, var(--accent), var(--teal))",
-          boxShadow: "0 6px 28px var(--accent-glow), 0 0 16px rgba(94,212,200,0.2)",
+          boxShadow: "0 6px 28px var(--accent-glow), 0 0 16px color-mix(in srgb, var(--teal) 20%, transparent)",
           zIndex: 50,
-          border: "2px solid rgba(255,255,255,0.15)",
+          border: "2px solid var(--faint)",
         }}
         onClick={() => setChatOpen(true)}
       >
@@ -2013,7 +2012,7 @@ export default function HomePage() {
                               </p>
                             </div>
                             <span className="text-xs font-bold px-2 py-0.5 rounded-full" style={{
-                              background: b.daysUntil <= 7 ? "rgba(240,107,126,0.15)" : "var(--surface2)",
+                              background: b.daysUntil <= 7 ? "color-mix(in srgb, var(--red) 15%, transparent)" : "var(--surface2)",
                               color: b.daysUntil <= 7 ? "var(--red)" : "var(--dim)",
                             }}>
                               {b.daysUntil === 0 ? "Aujourd'hui !" : b.daysUntil === 1 ? "Demain" : `J-${b.daysUntil}`}

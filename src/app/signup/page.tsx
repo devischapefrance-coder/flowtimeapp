@@ -112,9 +112,9 @@ export default function SignupPage() {
         <div
           className="mb-4 p-3 rounded-xl text-xs font-bold text-center"
           style={{
-            background: "rgba(255,107,107,0.1)",
+            background: "color-mix(in srgb, var(--red) 10%, transparent)",
             color: "var(--red)",
-            border: "1px solid rgba(255,107,107,0.2)",
+            border: "1px solid color-mix(in srgb, var(--red) 20%, transparent)",
           }}
         >
           {error}

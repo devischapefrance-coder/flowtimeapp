@@ -315,7 +315,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
   return (
     <div
       className="fixed inset-0 z-[700] flex flex-col items-center"
-      style={{ background: "rgba(0,0,0,0.85)", backdropFilter: "blur(8px)" }}
+      style={{ background: "var(--overlay)", backdropFilter: "blur(8px)" }}
       onClick={onClose}
     >
       <div

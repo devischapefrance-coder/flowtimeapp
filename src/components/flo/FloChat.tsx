@@ -120,7 +120,7 @@ function CodeBlock({ code, lang, filePath }: { code: string; lang?: string; file
           onClick={handleCopy}
           className="flex items-center gap-1 px-2 py-1 rounded-md transition-all duration-150"
           style={{
-            background: copied ? "rgba(94, 200, 158, 0.15)" : "var(--surface)",
+            background: copied ? "color-mix(in srgb, var(--green) 15%, transparent)" : "var(--surface)",
             color: copied ? "var(--green)" : "var(--dim)",
           }}
         >
@@ -136,6 +136,40 @@ function CodeBlock({ code, lang, filePath }: { code: string; lang?: string; file
   );
 }
 
+// Rendu sécurisé du markdown inline (sans dangerouslySetInnerHTML)
+function renderInlineMarkdown(text: string): React.ReactNode[] {
+  const nodes: React.ReactNode[] = [];
+  // Regex combinée pour bold et inline code
+  const regex = /\*\*(.+?)\*\*|`([^`]+)`/g;
+  let lastIndex = 0;
+  let match;
+  let key = 0;
+
+  while ((match = regex.exec(text)) !== null) {
+    // Texte avant le match
+    if (match.index > lastIndex) {
+      nodes.push(text.slice(lastIndex, match.index));
+    }
+    if (match[1] !== undefined) {
+      // Bold
+      nodes.push(<strong key={key++}>{match[1]}</strong>);
+    } else if (match[2] !== undefined) {
+      // Inline code
+      nodes.push(
+        <code key={key++} style={{ background: "var(--surface2)", padding: "1px 4px", borderRadius: 4, fontSize: "0.85em", fontFamily: "monospace" }}>
+          {match[2]}
+        </code>
+      );
+    }
+    lastIndex = match.index + match[0].length;
+  }
+  // Texte restant
+  if (lastIndex < text.length) {
+    nodes.push(text.slice(lastIndex));
+  }
+  return nodes;
+}
+
 // Composant pour le rendu du texte markdown simplifié
 function MessageContent({ content }: { content: string }) {
   const parts = parseCodeBlocks(content);
@@ -147,7 +181,7 @@ function MessageContent({ content }: { content: string }) {
           return <CodeBlock key={i} code={part.content} lang={part.lang} filePath={part.filePath} />;
         }
 
-        // Rendu basique du markdown inline
+        // Rendu basique du markdown inline (sécurisé, sans innerHTML)
         const lines = part.content.split("\n");
         return (
           <div key={i}>
@@ -159,23 +193,19 @@ function MessageContent({ content }: { content: string }) {
               if (line.startsWith("## ")) {
                 return <h3 key={j} className="font-bold mt-3 mb-1" style={{ color: "var(--text)" }}>{line.slice(3)}</h3>;
               }
-              // Bold
-              const boldProcessed = line.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
-              // Inline code
-              const processed = boldProcessed.replace(/`([^`]+)`/g, '<code style="background:var(--surface2);padding:1px 4px;border-radius:4px;font-size:0.85em;font-family:monospace">$1</code>');
               // Liste
               if (line.startsWith("- ") || line.startsWith("* ")) {
-                return <div key={j} className="flex gap-2 ml-2 my-0.5"><span style={{ color: "var(--accent)" }}>•</span><span dangerouslySetInnerHTML={{ __html: processed.slice(2) }} /></div>;
+                return <div key={j} className="flex gap-2 ml-2 my-0.5"><span style={{ color: "var(--accent)" }}>•</span><span>{renderInlineMarkdown(line.slice(2))}</span></div>;
               }
               // Numérotée
               const numberedMatch = line.match(/^(\d+)\.\s(.+)/);
               if (numberedMatch) {
-                return <div key={j} className="flex gap-2 ml-2 my-0.5"><span style={{ color: "var(--accent)" }}>{numberedMatch[1]}.</span><span dangerouslySetInnerHTML={{ __html: processed.replace(/^\d+\.\s/, "") }} /></div>;
+                return <div key={j} className="flex gap-2 ml-2 my-0.5"><span style={{ color: "var(--accent)" }}>{numberedMatch[1]}.</span><span>{renderInlineMarkdown(numberedMatch[2])}</span></div>;
               }
               // Ligne vide
               if (!line.trim()) return <div key={j} className="h-2" />;
               // Paragraphe
-              return <p key={j} className="my-0.5" dangerouslySetInnerHTML={{ __html: processed }} />;
+              return <p key={j} className="my-0.5">{renderInlineMarkdown(line)}</p>;
             })}
           </div>
         );
@@ -205,7 +235,7 @@ function MessageBubble({
           ...(isUser
             ? {
                 background: isDev
-                  ? "rgba(245, 197, 99, 0.15)"
+                  ? "color-mix(in srgb, var(--warm) 15%, transparent)"
                   : "var(--accent-soft)",
                 color: "var(--text)",
                 borderBottomRightRadius: "4px",
@@ -217,7 +247,7 @@ function MessageBubble({
                 ...(isReformulation
                   ? {
                       borderLeft: "3px solid var(--warm)",
-                      background: "rgba(245, 197, 99, 0.06)",
+                      background: "color-mix(in srgb, var(--warm) 6%, transparent)",
                     }
                   : {}),
               }),
@@ -231,15 +261,15 @@ function MessageBubble({
             onClick={onGo}
             className="flex items-center gap-2 mt-3 px-4 py-2 rounded-xl text-sm font-medium transition-all duration-150"
             style={{
-              background: "rgba(245, 197, 99, 0.15)",
+              background: "color-mix(in srgb, var(--warm) 15%, transparent)",
               color: "var(--warm)",
-              border: "1px solid rgba(245, 197, 99, 0.25)",
+              border: "1px solid color-mix(in srgb, var(--warm) 25%, transparent)",
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.background = "rgba(245, 197, 99, 0.25)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--warm) 25%, transparent)";
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.background = "rgba(245, 197, 99, 0.15)";
+              e.currentTarget.style.background = "color-mix(in srgb, var(--warm) 15%, transparent)";
             }}
           >
             Go →
@@ -333,7 +363,7 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
       <div
         className="flex items-center justify-between px-4 py-3 shrink-0"
         style={{
-          background: isDev ? "rgba(245, 197, 99, 0.08)" : "var(--surface)",
+          background: isDev ? "color-mix(in srgb, var(--warm) 8%, transparent)" : "var(--surface)",
           borderBottom: "1px solid var(--glass-border)",
         }}
       >
@@ -342,8 +372,8 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
             className="w-9 h-9 rounded-full flex items-center justify-center text-lg"
             style={{
               background: isDev
-                ? "linear-gradient(135deg, var(--warm), #F0A040)"
-                : "linear-gradient(135deg, var(--accent), #9B8BFF)",
+                ? "linear-gradient(135deg, var(--warm), color-mix(in srgb, var(--warm) 70%, #fff))"
+                : "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))",
             }}
           >
             {isDev ? "⚡" : "🌊"}
@@ -357,9 +387,9 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
                 <span
                   className="text-xs font-bold px-2 py-0.5 rounded-md"
                   style={{
-                    background: "rgba(245, 197, 99, 0.15)",
+                    background: "color-mix(in srgb, var(--warm) 15%, transparent)",
                     color: "var(--warm)",
-                    border: "1px solid rgba(245, 197, 99, 0.25)",
+                    border: "1px solid color-mix(in srgb, var(--warm) 25%, transparent)",
                   }}
                 >
                   MODE DEV
@@ -381,7 +411,7 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
             <button
               onClick={cancel}
               className="p-2 rounded-xl transition-all duration-150"
-              style={{ color: "var(--red)", background: "rgba(240, 107, 126, 0.1)" }}
+              style={{ color: "var(--red)", background: "color-mix(in srgb, var(--red) 10%, transparent)" }}
               title="Annuler"
             >
               <IconSquare size={16} />
@@ -412,7 +442,7 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
               className="w-16 h-16 rounded-2xl flex items-center justify-center text-2xl mb-4"
               style={{
                 background: isDev
-                  ? "rgba(245, 197, 99, 0.1)"
+                  ? "color-mix(in srgb, var(--warm) 10%, transparent)"
                   : "var(--accent-soft)",
               }}
             >
@@ -483,8 +513,8 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
               background:
                 input.trim() && !isLoading
                   ? isDev
-                    ? "linear-gradient(135deg, var(--warm), #F0A040)"
-                    : "linear-gradient(135deg, var(--accent), #9B8BFF)"
+                    ? "linear-gradient(135deg, var(--warm), color-mix(in srgb, var(--warm) 70%, #fff))"
+                    : "linear-gradient(135deg, var(--accent), color-mix(in srgb, var(--accent) 70%, #fff))"
                   : "var(--surface2)",
               color: input.trim() && !isLoading ? "#fff" : "var(--dim)",
             }}
@@ -498,9 +528,9 @@ export default function FloChat({ isDev, userId }: FloChatProps) {
           <div
             className="flex items-center gap-2 mt-2 px-3 py-2 rounded-xl text-xs"
             style={{
-              background: "rgba(245, 197, 99, 0.08)",
+              background: "color-mix(in srgb, var(--warm) 8%, transparent)",
               color: "var(--warm)",
-              border: "1px solid rgba(245, 197, 99, 0.15)",
+              border: "1px solid color-mix(in srgb, var(--warm) 15%, transparent)",
             }}
           >
             ⚡

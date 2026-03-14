@@ -9,6 +9,7 @@ import Modal from "@/components/Modal";
 import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
 import { QRCodeSVG } from "qrcode.react";
+import { MEMBER_COLORS, DEFAULT_MEMBER_COLOR } from "@/lib/constants";
 
 function Section({ title, emoji, children, defaultOpen = false, forceOpen = false }: { title: string; emoji: string; children: React.ReactNode; defaultOpen?: boolean; forceOpen?: boolean }) {
   const [open, setOpen] = useState(defaultOpen);
@@ -76,8 +77,6 @@ const ROLE_EMOJIS: Record<string, string[]> = {
   "grand-mere": ["👵","🧓","👩‍🦳","🧶","🌺","☕","🍰"],
   autre: ["🧑","👤","😊","🌟","💫","🎭","🙂","✨"],
 };
-
-const MEMBER_COLORS = ["#3DD6C8","#FF8C42","#FFD166","#FF6B6B","#6BCB77","#B39DDB","#64B5F6","#F48FB1"];
 
 const CONTACT_CATEGORIES: Record<string, string[]> = {
   "Famille": ["Conjoint(e)", "Pere", "Mere", "Fils", "Fille", "Frere", "Soeur", "Grand-pere", "Grand-mere"],
@@ -197,7 +196,7 @@ export default function ReglagesPage() {
   const [codeCopied, setCodeCopied] = useState(false);
 
   const [memberModal, setMemberModal] = useState(false);
-  const [memberForm, setMemberForm] = useState({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
+  const [memberForm, setMemberForm] = useState({ name: "", role: "fils", emoji: "👦", color: DEFAULT_MEMBER_COLOR, birth_date: "", phone: "" });
 
   const [contactModal, setContactModal] = useState(false);
   const [contactForm, setContactForm] = useState({ name: "", phone: "", relation: "Ami(e)" });
@@ -263,7 +262,7 @@ export default function ReglagesPage() {
       await supabase.from("birthdays").insert({ family_id: profile.family_id, name: memberForm.name, date: memberForm.birth_date, emoji: memberForm.emoji, member_id: inserted.id });
     }
     setMemberModal(false);
-    setMemberForm({ name: "", role: "fils", emoji: "👦", color: "#3DD6C8", birth_date: "", phone: "" });
+    setMemberForm({ name: "", role: "fils", emoji: "👦", color: DEFAULT_MEMBER_COLOR, birth_date: "", phone: "" });
   }
 
   async function saveProfile() {
@@ -967,6 +966,15 @@ export default function ReglagesPage() {
       <div className="flex flex-col gap-2">
         {[
           {
+            version: "2.8.0", date: "14 mars 2026", tag: "Thèmes",
+            changes: [
+              "Support multi-thème complet : toutes les couleurs utilisent désormais les variables CSS du système de thèmes",
+              "22 palettes couleur s'appliquent maintenant partout (carte, tutoriel, chat, overlays…)",
+              "Sécurité renforcée : protection anti-bruteforce sur le code famille, correction XSS dans Flow IA",
+              "Performance : suppression du polling redondant, memoization des composants Timeline et carte",
+            ],
+          },
+          {
             version: "2.7.0", date: "7 mars 2026", tag: "Nouveau",
             changes: [
               "Documents familiaux : stockez vos cartes vitales, CNI, passeports, mutuelles, assurances scolaires... avec photos",
@@ -1177,7 +1185,7 @@ export default function ReglagesPage() {
               <div className="flex items-center gap-2">
                 <span className="text-sm font-bold">v{release.version}</span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{
-                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Sécurité" ? "rgba(240,107,126,0.12)" : release.tag === "UX" ? "rgba(94,212,200,0.12)" : "rgba(94,200,158,0.12)",
+                  background: release.tag === "Nouveau" ? "var(--accent-soft)" : release.tag === "Sécurité" ? "color-mix(in srgb, var(--red) 12%, transparent)" : release.tag === "UX" ? "color-mix(in srgb, var(--teal) 12%, transparent)" : "color-mix(in srgb, var(--green) 12%, transparent)",
                   color: release.tag === "Nouveau" ? "var(--accent)" : release.tag === "Sécurité" ? "var(--red)" : release.tag === "UX" ? "var(--teal)" : "var(--green)",
                 }}>{release.tag}</span>
               </div>
