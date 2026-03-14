@@ -242,7 +242,7 @@ async function seedDemoData(familyId: string) {
   await supabase.from("shopping_items").insert(
     shoppingItems.map((item) => ({
       family_id: familyId,
-      name: item.name,
+      text: item.name,
       category: item.category,
       added_by: "Sophie",
     }))
@@ -258,9 +258,9 @@ async function seedDemoData(familyId: string) {
 
   // ── Expenses (current month) ──
   await supabase.from("expenses").insert([
-    { family_id: familyId, amount: 87.5, description: "Courses Carrefour", category: "courses", date: `${yyyy}-${mm}-02` },
-    { family_id: familyId, amount: 65, description: "Essence", category: "transport", date: `${yyyy}-${mm}-05` },
-    { family_id: familyId, amount: 32, description: "Cinema", category: "loisirs", date: `${yyyy}-${mm}-08` },
-    { family_id: familyId, amount: 28, description: "Pediatre Lucas", category: "sante", member_id: memberMap["Lucas"] || null, date: `${yyyy}-${mm}-10` },
+    { family_id: familyId, amount: 87.5, title: "Courses Carrefour", category: "courses", date: `${yyyy}-${mm}-02` },
+    { family_id: familyId, amount: 65, title: "Essence", category: "transport", date: `${yyyy}-${mm}-05` },
+    { family_id: familyId, amount: 32, title: "Cinema", category: "loisirs", date: `${yyyy}-${mm}-08` },
+    { family_id: familyId, amount: 28, title: "Pediatre Lucas", category: "sante", date: `${yyyy}-${mm}-10` },
   ]);
 }

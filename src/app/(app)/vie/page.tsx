@@ -1215,7 +1215,7 @@ export default function ViePage() {
           const detectedCat = detectShoppingCategory(newShoppingText.trim());
           await supabase.from("shopping_items").insert({
             family_id: profile.family_id,
-            name: newShoppingText.trim(),
+            text: newShoppingText.trim(),
             category: detectedCat,
             added_by: profile.first_name || "",
           });
@@ -1320,7 +1320,7 @@ export default function ViePage() {
                     />
                     {cat && <span className="text-sm shrink-0">{cat.emoji}</span>}
                     <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold">{item.name}</p>
+                      <p className="text-sm font-bold">{item.text}</p>
                     </div>
                     {item.added_by && (
                       <span className="text-[10px] shrink-0" style={{ color: "var(--faint)" }}>{item.added_by}</span>
@@ -1359,7 +1359,7 @@ export default function ViePage() {
                         onChange={() => toggleShoppingItem(item)}
                         className="rounded w-5 h-5 shrink-0"
                       />
-                      <span className="text-sm line-through flex-1">{item.name}</span>
+                      <span className="text-sm line-through flex-1">{item.text}</span>
                     </div>
                   ))}
                 </div>

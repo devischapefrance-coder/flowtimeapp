@@ -1,524 +1,357 @@
-# CLAUDE.md — FlowTime (Famly)
+# CLAUDE.md — FlowTime
 
-> Fichier de configuration pour Claude Code. À placer à la racine du projet.
-> Dernière mise à jour : mars 2026
-
----
-
-## 🧭 Contexte du projet
-
-**FlowTime** (alias potentiel : **Famly**) est une application web de planification et coordination familiale. Elle s'adresse aux couples et familles qui veulent organiser leur quotidien ensemble — agenda partagé, tâches, bien-être, et assistant IA intégré.
-
-- **Développeur** : solo-entrepreneur
-- **Stack** : Next.js 14+ (App Router), TypeScript, Tailwind CSS, Supabase
-- **Déploiement** : Vercel
-- **Mobile** : conversion via Capacitor (en cours)
-- **Accès distant** : développement via VS Code Remote SSH + Tailscale
+> Source de verite pour Claude Code. Derniere mise a jour : 14 mars 2026
 
 ---
 
-## 🛠 Stack technique
+## Dernieres modifications (Mars 2026)
+
+- **Separation perso/famille** : champ `scope` sur `events`, filtrage strict par vue, badge perso/famille
+- **Flow IA redefinie** : nouveau prompt systeme, contexte dynamique (membres, events, taches, meteo, heure, mode vocal), actions Supabase (events, taches, notes, repas, theme), reponse vocale TTS
+- **Flo Dev** : assistant developpeur separe (`/api/flo`), genere des prompts Claude Code, separation stricte "go" (code) / "deploy" (git push)
+- **Theme Stone & Amber** : nouveau theme selectionnable dans Reglages > Apparence, variables CSS classe `.stone-amber`, mode sombre et clair
+- **Widget Flow IA** : redesign — orbe animee, icones SVG meteo, variables CSS pures, pas de couleurs hardcodees
+- **Fix carousel** : synchronisation scroll/date, refresh dots apres mutations
+
+### Dette technique identifiee (audit 14/03/2026)
+
+- `schema.sql` desynchronise : 6 colonnes manquantes (`avatar_url`, `theme`, `theme_mode`, `reminder_minutes`, `speed`, `heading`)
+- Interface `Chore` dans types.ts ne correspond pas a la table `chores` en base
+- `ShoppingItem.name` devrait etre `text` (nom colonne en base)
+- `Expense.description` devrait etre `title` (nom colonne en base)
+- 60+ couleurs hardcodees au lieu de `var(--...)`
+
+---
+
+## Contexte
+
+**FlowTime** est une app web de coordination familiale — agenda partage, taches, bien-etre, carte, assistant IA, messagerie.
+
+- **Dev** : solo-entrepreneur
+- **Stack** : Next.js 16.1.6 (App Router), React 19.2.3, TypeScript strict, Tailwind CSS 4
+- **Backend** : Supabase (Auth, PostgreSQL, RLS, Storage, Realtime)
+- **IA** : Claude API (Anthropic) via proxy server-side
+- **Paiement** : Stripe (3 tiers : Free / Plus / Pro)
+- **Deploiement** : Vercel
+- **Repo** : github.com/devischapefrance-coder/flowtimeapp
+
+---
+
+## Stack technique
 
 | Couche | Choix |
 |--------|-------|
-| Framework | Next.js 14+ App Router |
+| Framework | Next.js 16.1.6 App Router |
+| React | 19.2.3 |
 | Langage | TypeScript strict |
-| Styling | Tailwind CSS (pas de CSS-in-JS) |
-| Backend / Auth / DB | Supabase (Auth, PostgreSQL, RLS, Storage) |
-| Icons | Lucide React |
-| Fonts | Sora (display), JetBrains Mono (code/data) |
-| UI libs | shadcn/ui (si nécessaire), composants custom |
-| Animations | Tailwind transitions + Framer Motion si nécessaire |
-| Mobile | Capacitor (à venir) |
-| Déploiement | Vercel |
+| Styling | Tailwind CSS 4 (`@tailwindcss/postcss`) — pas de tailwind.config |
+| Backend / Auth / DB | Supabase (Auth, PostgreSQL, RLS, Realtime, Storage) |
+| Carte | Leaflet 1.9 + react-leaflet 5 (CartoDB Dark, OSM, Esri Satellite) |
+| Paiement | Stripe (checkout, portal, webhooks) |
+| Push | Web Push API (web-push) |
+| Drag & drop | @dnd-kit |
+| QR Code | qrcode.react |
+| Fonts | Nunito (body) + Fraunces (titres) via next/font/google |
+| Deploiement | Vercel (cron jobs inclus) |
 
 ---
 
-## 🎨 Design System
+## Design System — Dark Glassmorphism Purple
 
-### Thème : Dark Premium Warm
-
-L'interface adopte un esthétique **dark warm premium** — sobre, chaleureux, moderne. Pas de violet générique, pas de glassmorphism abusif. Chaque écran doit sembler conçu par un designer, pas généré par une IA.
+### Variables CSS (globals.css)
 
 ```css
-/* Variables CSS globales — globals.css */
 :root {
-  /* Fond principal */
-  --bg-base: #0D0D0F;
-  --bg-surface: #141416;
-  --bg-card: #1A1A1E;
-  --bg-elevated: #222228;
-
-  /* Accents */
-  --accent-primary: #E8A87C;     /* Orange warm — couleur principale */
-  --accent-secondary: #C97D4E;   /* Orange foncé */
-  --accent-glow: rgba(232, 168, 124, 0.15);
-
-  /* Textes */
-  --text-primary: #F0EDE8;
-  --text-secondary: #9B9690;
-  --text-muted: #5C5A56;
-
-  /* Bordures */
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-default: rgba(255, 255, 255, 0.10);
-  --border-accent: rgba(232, 168, 124, 0.3);
-
-  /* États */
-  --success: #4CAF82;
-  --warning: #E8C47C;
-  --error: #E87C7C;
-  --info: #7CA8E8;
+  --bg: #0F1117;
+  --surface: rgba(255, 255, 255, 0.04);
+  --surface2: rgba(255, 255, 255, 0.07);
+  --surface-solid: #1A1C25;
+  --nav-bg: rgba(15, 17, 23, 0.85);
+  --accent: #7C6BF0;           /* Purple — couleur principale */
+  --accent-soft: rgba(124, 107, 240, 0.12);
+  --accent-glow: rgba(124, 107, 240, 0.2);
+  --text: #ECEEF4;
+  --dim: rgba(236, 238, 244, 0.5);
+  --faint: rgba(236, 238, 244, 0.2);
+  --glass: rgba(255, 255, 255, 0.03);
+  --glass-border: rgba(255, 255, 255, 0.06);
+  --radius: 16px;
+  --radius-sm: 12px;
+  --teal: #5ED4C8;
+  --warm: #F5C563;
+  --red: #F06B7E;
+  --green: #5EC89E;
+  --lavender: #B39DDB;
+  --blue: #6BA3F0;
 }
 ```
 
-### Règles de style
+### Regles de style
 
-- **Backgrounds** : toujours en couches (`bg-base` → `bg-surface` → `bg-card` → `bg-elevated`)
-- **Bordures** : fines, semi-transparentes — jamais de bordures grises pleines
-- **Ombres** : warm-tinted, jamais noir pur
-- **Arrondis** : `rounded-xl` (12px) par défaut, `rounded-2xl` (16px) pour les cards majeures
-- **Espacements** : généreux — padding 24px minimum sur les containers principaux
-- **Typographie** : Sora pour les titres/UI, tailles minimum 14px
-- **Animations** : subtiles, 150–300ms, `ease-out` — jamais de bounce ou spring excessif
-- **États hover** : légère élévation de fond + transition douce
-- **Icônes** : Lucide React uniquement, stroke-width 1.5, taille cohérente (16/18/20px)
+- **Glassmorphism** : `.glass` (backdrop-filter blur 16px, surfaces transparentes)
+- **Gradient overlay** : `.gradient-bg` (radial gradient subtil)
+- **Cards** : `.card` (glass + hover elevation)
+- **Boutons** : `.btn-primary` (gradient accent), `.btn-secondary` (glass), `.btn-danger` (rouge)
+- **Arrondis** : `--radius: 16px` par defaut, `--radius-sm: 12px`
+- **Max-width** : 430px (mobile-first)
+- **Min-height** : 100dvh
+- **Animations** : transitions subtiles, pas de bounce excessif
+- **Regle** : toujours utiliser `var(--...)` — jamais de couleurs hardcodees
 
-### Anti-patterns absolus
+### Themes
 
-❌ Pas de violet/purple dans les gradients  
-❌ Pas d'Inter ou Roboto  
-❌ Pas de glassmorphism avec `backdrop-blur` sur chaque élément  
-❌ Pas de bordures `border-gray-700` solides  
-❌ Pas d'emojis en guise d'icônes dans l'UI applicative  
-❌ Pas de `p-2 text-sm` sans spacing réfléchi  
-❌ Pas de layout Bootstrap/Material générique  
+22 palettes couleur (p1-p20 + stone-amber dark + stone-amber light) + mode light default. Changement via classe CSS sur `<html>`.
+- Free : 1 theme
+- Plus : 10 themes
+- Pro : 20 themes
 
 ---
 
-## 📁 Structure du projet
+## Structure du projet
 
 ```
-flowtime/
+src/
 ├── app/
-│   ├── (auth)/
-│   │   ├── login/
-│   │   │   └── page.tsx
-│   │   └── signup/
-│   │       └── page.tsx
+│   ├── layout.tsx              # Root (fonts, metadata, theme script)
+│   ├── globals.css             # Tout le design system (22 palettes)
+│   ├── sw-register.tsx         # Enregistrement service worker
+│   ├── page.tsx                # Splash (non authentifie)
+│   ├── login/page.tsx          # Connexion email/Google
+│   ├── signup/page.tsx         # Inscription
+│   ├── join/page.tsx           # Rejoindre une famille
+│   ├── reset-password/         # Reset mot de passe
+│   ├── demo/page.tsx           # Demo auto-login
 │   ├── (app)/
-│   │   ├── layout.tsx          # Layout principal avec sidebar/nav
-│   │   ├── accueil/
-│   │   │   └── page.tsx        # Dashboard / timeline du jour
-│   │   ├── agenda/
-│   │   │   └── page.tsx        # Calendrier partagé
-│   │   ├── famille/
-│   │   │   └── page.tsx        # Gestion famille, carte, membres
-│   │   ├── taches/
-│   │   │   └── page.tsx        # Tâches partagées
-│   │   ├── bien-etre/
-│   │   │   └── page.tsx        # Suivi humeur/bien-être
-│   │   └── flo/
-│   │       └── page.tsx        # Assistant IA "Flo"
-│   ├── api/
-│   │   └── [endpoint]/
-│   │       └── route.ts
-│   ├── globals.css
-│   └── layout.tsx              # Root layout (fonts, providers)
-├── components/
-│   ├── ui/                     # Composants génériques (Button, Card, Modal...)
-│   ├── layout/                 # Sidebar, Header, Nav
-│   ├── agenda/                 # Composants spécifiques agenda
-│   ├── famille/                # Composants famille
-│   ├── taches/                 # Composants tâches
-│   ├── bien-etre/              # Composants bien-être
-│   └── flo/                    # Composants assistant IA
+│   │   ├── layout.tsx          # Auth guard, ProfileContext, Navbar, FamilyChat
+│   │   ├── home/page.tsx       # Dashboard, timeline, agenda, Flow IA chat, meteo
+│   │   ├── famille/page.tsx    # Membres, contacts, adresses
+│   │   ├── snap/page.tsx       # Carte, localisation, itineraires
+│   │   ├── vie/page.tsx        # Notes, courses, routines, taches
+│   │   ├── reglages/page.tsx   # Profil, securite, themes, abonnement
+│   │   ├── abonnement/page.tsx # Plans et tarifs Stripe
+│   │   ├── onboarding/page.tsx # Premier lancement
+│   │   └── flo/page.tsx        # Interface Flo Dev (is_dev only)
+│   └── api/
+│       ├── flow/route.ts           # Proxy Claude API (Flow IA)
+│       ├── flow/proactive/route.ts # Suggestions proactives
+│       ├── flo/route.ts            # Proxy Claude API (Flo Dev)
+│       ├── account/delete/route.ts # Suppression compte
+│       ├── family/join/route.ts    # Rejoindre famille
+│       ├── cron/morning/route.ts   # Briefing matinal
+│       ├── cron/reminders/route.ts # Rappels
+│       ├── push/subscribe/route.ts # Abonnement push
+│       ├── push/send/route.ts      # Envoi notification
+│       ├── stripe/checkout/route.ts
+│       ├── stripe/portal/route.ts
+│       └── stripe/webhook/route.ts
+├── components/                 # 22 composants
+│   ├── FlowChat.tsx            # Assistant IA calendrier (Flow IA)
+│   ├── flo/FloChat.tsx         # Assistant developpeur (Flo Dev)
+│   ├── MapFull.tsx             # Carte plein ecran
+│   ├── MapView.tsx             # Mini carte
+│   ├── Timeline.tsx            # Timeline evenements (drag-and-drop)
+│   ├── DayAgenda.tsx           # Vue grille journee
+│   ├── TutorialOverlay.tsx     # Tutoriel interactif
+│   ├── SearchOverlay.tsx       # Recherche globale
+│   ├── FamilyChat.tsx          # Messagerie famille temps reel
+│   ├── Navbar.tsx              # Navigation bottom (5 tabs)
+│   ├── Modal.tsx               # Modal generique
+│   ├── AvatarUpload.tsx        # Upload photo profil (crop/zoom)
+│   ├── AddressPickerMap.tsx    # Selection adresse sur carte
+│   ├── NotificationManager.tsx # Notifications
+│   ├── QuickVoice.tsx          # Saisie vocale flottante
+│   ├── PhotoAlbum.tsx          # Album photos
+│   ├── UpgradeNudge.tsx        # Upsell abonnement
+│   ├── Toast.tsx               # Contexte toast
+│   ├── Logo.tsx                # Logo SVG
+│   ├── EmptyState.tsx          # Etat vide reutilisable
+│   └── charts/                 # BarChart, DonutChart
 ├── lib/
-│   ├── supabase/
-│   │   ├── client.ts           # Client Supabase browser
-│   │   ├── server.ts           # Client Supabase server
-│   │   └── middleware.ts       # Auth middleware
-│   ├── hooks/                  # Custom React hooks
-│   ├── utils.ts                # Fonctions utilitaires
-│   └── constants.ts            # Constantes de l'app
-├── types/
-│   └── index.ts                # Types TypeScript centralisés
-├── public/
-├── supabase/
-│   └── migrations/             # Migrations SQL
-├── CLAUDE.md                   # Ce fichier
-├── next.config.ts
-├── tailwind.config.ts
-└── tsconfig.json
+│   ├── supabase.ts             # Client lazy via Proxy
+│   ├── supabase-admin.ts       # Client admin (service role)
+│   ├── server-auth.ts          # Auth serveur
+│   ├── types.ts                # Tous les types TypeScript
+│   ├── subscription.ts         # Plans, limites, prix Stripe
+│   ├── push.ts / push-utils.ts # Push notifications
+│   ├── realtime.ts             # Supabase Realtime hooks
+│   ├── reminders.ts            # Programmation rappels
+│   ├── routing.ts              # Calcul itineraires OSRM
+│   ├── storage.ts              # Avatar storage Supabase
+│   ├── stripe.ts               # Client Stripe
+│   ├── weather.ts              # Meteo (open-meteo)
+│   ├── pdf-export.ts           # Export PDF
+│   ├── ical.ts                 # Export iCalendar
+│   ├── offline.ts              # Cache hors-ligne
+│   ├── categories.ts           # Categories evenements
+│   ├── shopping-categories.ts  # Categories courses
+│   ├── tutorial-data.ts        # Donnees tutoriel
+│   ├── audio.ts                # Utilitaires audio
+│   ├── usePullToRefresh.tsx    # Hook pull-to-refresh
+│   ├── hooks/useFloChat.ts     # Hook chat Flo Dev
+│   ├── hooks/useTheme.ts       # Hook gestion theme
+│   └── i18n/                   # Localisation (fr, en)
+├── middleware.ts                # Auth + rate limiting
+└── types/
+    └── speech.d.ts             # Types Web Speech API
 ```
 
 ---
 
-## 🗄 Base de données Supabase
+## Base de donnees — 17 tables Supabase
+
+| Table | Description |
+|-------|-------------|
+| profiles | Profils utilisateurs (extends auth.users), abonnement Stripe, theme, is_dev |
+| members | Membres de la famille |
+| contacts | Contacts de confiance |
+| addresses | Lieux importants (avec lat/lng) |
+| events | Evenements calendrier (avec scope perso/famille) |
+| wellbeing_sessions | Sessions bien-etre |
+| device_locations | GPS temps reel |
+| notes | Notes partagees |
+| note_comments | Commentaires sur notes |
+| birthdays | Anniversaires |
+| meals | Planning repas |
+| shopping_items | Liste de courses |
+| expenses | Depenses partagees |
+| chores | Taches menageres |
+| family_messages | Messagerie famille |
+| flo_messages | Messages Flo Dev (persistance) |
+| push_subscriptions | Endpoints push |
 
 ### Conventions SQL
 
-- Noms de tables en **snake_case** au pluriel (`user_profiles`, `family_events`)
-- Toujours inclure `id uuid DEFAULT gen_random_uuid() PRIMARY KEY`
-- Toujours inclure `created_at timestamptz DEFAULT now()`
-- Toujours inclure `updated_at timestamptz DEFAULT now()` avec trigger
-- Toujours activer RLS : `ALTER TABLE xxx ENABLE ROW LEVEL SECURITY;`
-
-### Schéma principal
-
-```sql
--- Profils utilisateurs
-CREATE TABLE user_profiles (
-  id uuid REFERENCES auth.users(id) ON DELETE CASCADE PRIMARY KEY,
-  display_name text NOT NULL,
-  avatar_url text,
-  family_id uuid REFERENCES families(id),
-  role text DEFAULT 'member', -- 'admin' | 'member'
-  color text DEFAULT '#E8A87C', -- couleur de l'utilisateur dans l'app
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
--- Familles / groupes
-CREATE TABLE families (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  name text NOT NULL,
-  created_by uuid REFERENCES auth.users(id),
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
--- Événements agenda partagé
-CREATE TABLE family_events (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  family_id uuid REFERENCES families(id) ON DELETE CASCADE NOT NULL,
-  created_by uuid REFERENCES auth.users(id) NOT NULL,
-  title text NOT NULL,
-  description text,
-  start_at timestamptz NOT NULL,
-  end_at timestamptz,
-  all_day boolean DEFAULT false,
-  color text,
-  participants uuid[], -- array d'user ids
-  location text,
-  recurrence text, -- 'none' | 'daily' | 'weekly' | 'monthly'
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
--- Tâches partagées
-CREATE TABLE tasks (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  family_id uuid REFERENCES families(id) ON DELETE CASCADE NOT NULL,
-  created_by uuid REFERENCES auth.users(id) NOT NULL,
-  assigned_to uuid REFERENCES auth.users(id),
-  title text NOT NULL,
-  description text,
-  status text DEFAULT 'todo', -- 'todo' | 'in_progress' | 'done'
-  priority text DEFAULT 'normal', -- 'low' | 'normal' | 'high'
-  due_date date,
-  category text,
-  created_at timestamptz DEFAULT now(),
-  updated_at timestamptz DEFAULT now()
-);
-
--- Suivi bien-être / humeur
-CREATE TABLE wellbeing_entries (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  family_id uuid REFERENCES families(id) ON DELETE CASCADE NOT NULL,
-  mood integer NOT NULL CHECK (mood BETWEEN 1 AND 5),
-  energy integer CHECK (energy BETWEEN 1 AND 5),
-  note text,
-  date date DEFAULT CURRENT_DATE,
-  created_at timestamptz DEFAULT now()
-);
-
--- Messages IA Flo
-CREATE TABLE flo_messages (
-  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
-  family_id uuid REFERENCES families(id),
-  role text NOT NULL, -- 'user' | 'assistant'
-  content text NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-```
-
-### Template RLS standard
-
-Pour chaque table, appliquer ce pattern (adapter selon le contexte) :
-
-```sql
--- Activer RLS
-ALTER TABLE [table] ENABLE ROW LEVEL SECURITY;
-
--- Lecture : membres de la même famille
-CREATE POLICY "select_family" ON [table]
-  FOR SELECT USING (
-    family_id IN (
-      SELECT family_id FROM user_profiles WHERE id = auth.uid()
-    )
-  );
-
--- Insertion : utilisateur authentifié de la famille
-CREATE POLICY "insert_family" ON [table]
-  FOR INSERT WITH CHECK (
-    auth.uid() IS NOT NULL AND
-    family_id IN (
-      SELECT family_id FROM user_profiles WHERE id = auth.uid()
-    )
-  );
-
--- Modification : créateur ou admin famille
-CREATE POLICY "update_own" ON [table]
-  FOR UPDATE USING (created_by = auth.uid());
-
--- Suppression : créateur ou admin famille
-CREATE POLICY "delete_own" ON [table]
-  FOR DELETE USING (created_by = auth.uid());
-```
+- Tables en **snake_case** pluriel
+- `id uuid DEFAULT gen_random_uuid() PRIMARY KEY`
+- `created_at timestamptz DEFAULT now()`
+- RLS active sur toutes les tables, acces filtre par `family_id`
+- Schema complet : `supabase/schema.sql`
 
 ---
 
-## 🧩 Composants UI de base
+## Deux assistants IA — separation stricte
 
-### Conventions composants
+### Flow IA (assistant familial)
+- Route : `POST /api/flow` (non-streaming, JSON)
+- Composant : `FlowChat.tsx`
+- Modele : claude-sonnet-4
+- Personnalite : chaleureux, direct, parle en francais, tutoie
+- Contexte injecte : membres, events, taches, meteo, heure, mode vocal
+- Actions : add_event, delete_event, edit_event, add_recurring, add_task, complete_task, add_meal, create_note, change_theme
+- Suggestions proactives : `POST /api/flow/proactive` (Plus/Pro)
+- Widget : orbe animee sur l'accueil avec message proactif + meteo
 
-```typescript
-// Toujours typer les props explicitement
-interface ButtonProps {
-  variant?: 'primary' | 'secondary' | 'ghost' | 'danger'
-  size?: 'sm' | 'md' | 'lg'
-  loading?: boolean
-  children: React.ReactNode
-  onClick?: () => void
-}
-
-// Utiliser cn() de lib/utils pour combiner les classes
-import { cn } from '@/lib/utils'
-
-// Exports nommés pour les composants UI
-export function Button({ variant = 'primary', size = 'md', loading, children, onClick }: ButtonProps) {
-  return (
-    <button
-      onClick={onClick}
-      disabled={loading}
-      className={cn(
-        'inline-flex items-center justify-center font-medium transition-all duration-150',
-        // variants...
-      )}
-    >
-      {children}
-    </button>
-  )
-}
-```
-
-### Composants existants à réutiliser
-
-- `Button` — variants : primary, secondary, ghost, danger
-- `Card` — wrapper avec bg-card, border, rounded-2xl
-- `Modal` — dialog centré avec backdrop
-- `Input` — input stylisé avec label et état d'erreur
-- `Avatar` — photo profil avec fallback initiales + couleur user
-- `Badge` — pill coloré pour statuts/catégories
-- `Spinner` — loader animé
+### Flo Dev (assistant developpeur)
+- Route : `POST /api/flo` (streaming SSE)
+- Composant : `flo/FloChat.tsx`
+- Hook : `hooks/useFloChat.ts`
+- Acces : `profiles.is_dev = true` uniquement
+- Workflow : reformulation → "go" → prompt Claude Code → "deploy" → commit/push
+- Ne jamais melanger Flow IA et Flo Dev dans le code
 
 ---
 
-## 🔗 Clients Supabase
+## Abonnement Stripe (3 tiers)
 
-```typescript
-// lib/supabase/client.ts — côté navigateur
-import { createBrowserClient } from '@supabase/ssr'
-
-export function createClient() {
-  return createBrowserClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-  )
-}
-
-// lib/supabase/server.ts — côté serveur (Server Components, API routes)
-import { createServerClient } from '@supabase/ssr'
-import { cookies } from 'next/headers'
-
-export async function createClient() {
-  const cookieStore = await cookies()
-  return createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll() },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value, options }) =>
-            cookieStore.set(name, value, options)
-          )
-        },
-      },
-    }
-  )
-}
-```
+| | Free | Plus | Pro |
+|---|---|---|---|
+| Membres | 4 | Illimite | Illimite |
+| Messages Flow | 3/jour | Illimite | Illimite |
+| Routines | 1 | 5 | Illimite |
+| Themes | 1 | 10 | 20 |
+| Suggestions proactives | Non | Oui | Oui |
+| Carte Snap | Non | Oui | Oui |
+| Documents | Oui | Oui | Oui |
+| Export | Oui | Oui | Oui |
+| Partage externe | Oui | Non | Oui |
+| Digest hebdo | Non | Non | Oui |
 
 ---
 
-## 📝 Conventions de code
+## Conventions de code
 
 ### TypeScript
-
-- `strict: true` dans tsconfig — pas de `any` implicite
-- Tous les types centralisés dans `types/index.ts`
-- Préférer les interfaces aux types pour les objets
-- Toujours typer les retours de fonctions async
+- `strict: true` — pas de `any`
+- Types centralises dans `src/lib/types.ts`
+- Path alias : `@/*` → `./src/*`
 
 ### Nommage
-
-| Élément | Convention | Exemple |
-|---------|-----------|---------|
-| Composants | PascalCase | `EventCard`, `FamilyHeader` |
-| Hooks | camelCase + use | `useFamily`, `useCurrentUser` |
-| Fonctions utilitaires | camelCase | `formatDate`, `groupByDate` |
-| Types/Interfaces | PascalCase | `FamilyEvent`, `UserProfile` |
-| Variables, props | camelCase | `isLoading`, `onSubmit` |
-| Constantes | SCREAMING_SNAKE | `MAX_FAMILY_MEMBERS` |
-| Fichiers composants | kebab-case | `event-card.tsx` |
+- Composants : PascalCase (`FlowChat.tsx`)
+- Hooks : camelCase + use (`usePullToRefresh`)
+- Fonctions utilitaires : camelCase (`formatDate`)
+- Types/Interfaces : PascalCase (`FamilyEvent`)
+- Variables, props : camelCase (`isLoading`)
 
 ### Langue
+- **UI** : francais (labels, boutons, messages, placeholders)
+- **Code** : anglais (variables, fonctions, types, fichiers)
+- **Commentaires** : francais
+- **Commits** : francais
 
-- **Textes UI** : français (labels, boutons, messages d'erreur, placeholders)
-- **Code** : anglais (variables, fonctions, types, noms de fichiers)
-- **Commentaires** : français
-- **Commits** : français
-
----
-
-## 🤖 Assistant Flo
-
-L'assistant IA intégré s'appelle **Flo**. Il est accessible via la route `/flo` et potentiellement dans une mini-interface sur l'accueil.
-
-- Personnalité : bienveillant, utile, familier mais pas infantilisant
-- Contexte injecté : données famille (événements, tâches, bien-être) du jour/semaine
-- API : Claude API (`claude-sonnet-4-20250514`)
-- Historique : persisté dans `flo_messages` (Supabase)
-- Limites : pas de données sensibles hors `family_id` de l'utilisateur
-
-**Prompt système de base pour Flo :**
-```
-Tu es Flo, l'assistant IA de FlowTime, une app de coordination familiale.
-Tu aides [nom_famille] à s'organiser au quotidien.
-Tu es bienveillant, direct et utile. Tu parles en français.
-Contexte famille du jour : [données_injectées]
-```
+### Couleurs
+- **Toujours** utiliser `var(--accent)`, `var(--text)`, etc.
+- **Jamais** de hex hardcode (`#7C6BF0`) ni de `rgba(124,107,240,...)` en inline
+- Les animations et gradients doivent aussi utiliser des variables CSS
 
 ---
 
-## 📱 Mobile (Capacitor)
+## Decisions techniques cles
 
-Le projet sera converti en app mobile via **Capacitor**. Garder en tête lors du développement :
-
-- Tous les éléments interactifs minimum **44x44px** (touch targets)
-- Éviter hover-only interactions (pas d'info uniquement au survol)
-- Bottom navigation bar pour mobile (pas de sidebar latérale)
-- Éviter les popups/modals qui nécessitent un clavier sur mobile
-- Tester mentalement sur viewport 390px (iPhone 15)
-- Utiliser `safe-area-inset` pour les notches iOS
+- Supabase client lazy via Proxy (evite crash build Vercel)
+- Leaflet en dynamic import (ssr: false)
+- Carte : tiles gratuits (CartoDB Dark, OSM, Esri Satellite)
+- Geocoding : Nominatim (1 req/sec, France)
+- Routing : OSRM (gratuit, sans API key)
+- Meteo : Open-Meteo (gratuit)
+- ANTHROPIC_API_KEY server-only (pas de NEXT_PUBLIC_)
+- Code famille = 8 premiers chars de family_id UUID
+- Max-width 430px, mobile-first
+- Scrollbar custom, overscroll contained
+- Service worker pour push + offline
+- CSP stricte (Stripe, maps, APIs autorisees)
 
 ---
 
-## ⚙️ Variables d'environnement
+## Variables d'environnement
 
 ```env
-# .env.local
+# Supabase
 NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
-SUPABASE_SERVICE_ROLE_KEY=      # Côté serveur uniquement
-ANTHROPIC_API_KEY=              # Pour l'assistant Flo
-NEXT_PUBLIC_APP_URL=http://localhost:3000
+SUPABASE_SERVICE_ROLE_KEY=
+
+# Claude API
+ANTHROPIC_API_KEY=
+
+# Push notifications
+NEXT_PUBLIC_VAPID_PUBLIC_KEY=
+VAPID_PRIVATE_KEY=
+
+# Stripe
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
+STRIPE_SECRET_KEY=
+STRIPE_WEBHOOK_SECRET=
+STRIPE_PRICE_PLUS_MONTHLY=
+STRIPE_PRICE_PLUS_ANNUAL=
+STRIPE_PRICE_PRO_MONTHLY=
+STRIPE_PRICE_PRO_ANNUAL=
+
+# App
+NEXT_PUBLIC_SITE_URL=
+CRON_SECRET=
 ```
 
 ---
 
-## 🚀 Workflow de développement
+## Carte (Snap) — tout gratuit, sans API key
 
-### Ordre de priorité pour chaque feature
-
-1. **Schema SQL** → migration dans `supabase/migrations/`
-2. **Types TypeScript** → `types/index.ts`
-3. **Hook de données** → `lib/hooks/use[Feature].ts`
-4. **Composants UI** → `components/[feature]/`
-5. **Page** → `app/(app)/[feature]/page.tsx`
-6. **Tests** → Playwright E2E si critique
-
-### Checklist avant de soumettre une feature
-
-- [ ] RLS activé sur toutes les nouvelles tables
-- [ ] Types TypeScript exportés dans `types/index.ts`
-- [ ] Composants accessibles (aria-label sur les icônes seules)
-- [ ] États de chargement gérés (`loading`, `error`, `empty`)
-- [ ] Responsive jusqu'à 390px testé mentalement
-- [ ] Pas de `console.log` oublié en production
-- [ ] Variables d'environnement dans `.env.example`
+- Tiles : CartoDB Dark, OpenStreetMap, Esri Satellite
+- Routing : OSRM (voiture/marche/velo)
+- Geocoding : Nominatim
+- POI : Overpass API
+- GPS : geolocation API + partage temps reel via Supabase Realtime
+- Switcher de style de carte dans MapFull
 
 ---
 
-## 🎯 Fonctionnalités cibles
-
-### MVP (à compléter en priorité)
-
-- [x] Auth (login / signup / logout)
-- [x] Profil utilisateur
-- [ ] Création / invitation famille
-- [ ] Agenda partagé (CRUD événements)
-- [ ] Tâches partagées (CRUD + assignation)
-- [ ] Suivi bien-être quotidien
-- [ ] Assistant Flo (chat basique)
-
-### V2 (après MVP)
-
-- [ ] Notifications push (Capacitor)
-- [ ] Carte interactive famille (Leaflet)
-- [ ] Récurrence d'événements
-- [ ] Flo enrichi (contexte famille complet)
-- [ ] Mode hors-ligne (Capacitor + cache)
-- [ ] Partage de photos famille
-
----
-
-## 🔍 Patterns à éviter
-
-```typescript
-// ❌ Mauvais — any implicite
-const handleData = (data: any) => { ... }
-
-// ✅ Bon — type explicite
-const handleData = (data: FamilyEvent) => { ... }
-
-// ❌ Mauvais — fetch direct dans un composant
-function EventList() {
-  const [events, setEvents] = useState([])
-  useEffect(() => {
-    fetch('/api/events').then(...)
-  }, [])
-}
-
-// ✅ Bon — hook dédié
-function EventList() {
-  const { events, isLoading } = useEvents()
-}
-
-// ❌ Mauvais — classes Tailwind en dur dans les variants
-className="bg-orange-400 text-white"
-
-// ✅ Bon — variables CSS + cn()
-className={cn(
-  "transition-colors duration-150",
-  variant === 'primary' && "bg-[var(--accent-primary)] text-[var(--bg-base)]"
-)}
-```
-
----
-
-*Ce fichier est la source de vérité pour le développement de FlowTime. Le mettre à jour si l'architecture ou les choix techniques évoluent.*
+*Ce fichier reflete l'etat reel du projet. Le mettre a jour si l'architecture evolue.*

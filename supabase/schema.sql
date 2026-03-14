@@ -25,6 +25,9 @@ CREATE TABLE profiles (
   subscription_period_end TIMESTAMPTZ,
   stripe_customer_id TEXT,
   is_dev BOOLEAN DEFAULT false,
+  avatar_url TEXT DEFAULT NULL,
+  theme TEXT DEFAULT 'default',
+  theme_mode TEXT DEFAULT 'dark',
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -85,6 +88,7 @@ CREATE TABLE events (
   category TEXT DEFAULT 'general',
   shared BOOLEAN DEFAULT TRUE,
   scope TEXT NOT NULL DEFAULT 'famille' CHECK (scope IN ('perso', 'famille')),
+  reminder_minutes INTEGER DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
@@ -108,6 +112,8 @@ CREATE TABLE device_locations (
   lat DOUBLE PRECISION NOT NULL,
   lng DOUBLE PRECISION NOT NULL,
   accuracy DOUBLE PRECISION,
+  speed DOUBLE PRECISION,
+  heading DOUBLE PRECISION,
   updated_at TIMESTAMPTZ DEFAULT NOW(),
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -183,15 +189,16 @@ CREATE TABLE expenses (
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- Tâches ménagères
+-- Tâches ménagères (rotation entre membres)
 CREATE TABLE chores (
   id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
   family_id UUID NOT NULL,
-  title TEXT NOT NULL,
-  assigned_to UUID REFERENCES members(id) ON DELETE SET NULL,
-  done BOOLEAN DEFAULT false,
-  due_date DATE,
-  recurring JSONB DEFAULT NULL,
+  name TEXT NOT NULL,
+  emoji TEXT DEFAULT '🧹',
+  frequency TEXT DEFAULT 'weekly' CHECK (frequency IN ('daily', 'weekly')),
+  assigned_members TEXT[] DEFAULT '{}',
+  current_index INTEGER DEFAULT 0,
+  last_rotated TIMESTAMPTZ DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
 );
 

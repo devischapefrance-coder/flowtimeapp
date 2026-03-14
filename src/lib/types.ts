@@ -169,7 +169,7 @@ export interface Meal {
 export interface ShoppingItem {
   id: string;
   family_id: string;
-  name: string;
+  text: string;
   category: string;
   checked: boolean;
   added_by: string;
@@ -179,10 +179,10 @@ export interface ShoppingItem {
 export interface Expense {
   id: string;
   family_id: string;
+  title: string;
   amount: number;
-  description: string;
   category: string;
-  member_id: string | null;
+  paid_by: string | null;
   date: string;
   created_at: string;
 }
