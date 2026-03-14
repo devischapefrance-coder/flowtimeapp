@@ -73,7 +73,7 @@ export function useTutorial() {
   return useContext(TutorialContext);
 }
 
-const TAB_ORDER = ["/home", "/famille", "/snap", "/vie", "/reglages"];
+const TAB_ORDER = ["/home", "/famille", "/flowmap", "/vie", "/reglages"];
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter();

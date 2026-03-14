@@ -125,7 +125,7 @@ src/
 │   │   ├── layout.tsx          # Auth guard, ProfileContext, Navbar, FamilyChat
 │   │   ├── home/page.tsx       # Dashboard, timeline, agenda, Flow IA chat, meteo
 │   │   ├── famille/page.tsx    # Membres, contacts, adresses
-│   │   ├── snap/page.tsx       # Carte, localisation, itineraires
+│   │   ├── flowmap/page.tsx     # Carte, localisation, itineraires
 │   │   ├── vie/page.tsx        # Notes, courses, routines, taches
 │   │   ├── reglages/page.tsx   # Profil, securite, themes, abonnement
 │   │   ├── abonnement/page.tsx # Plans et tarifs Stripe
@@ -260,7 +260,7 @@ src/
 | Routines | 1 | 5 | Illimite |
 | Themes | 1 | 10 | 20 |
 | Suggestions proactives | Non | Oui | Oui |
-| Carte Snap | Non | Oui | Oui |
+| Carte famille | Non | Oui | Oui |
 | Documents | Oui | Oui | Oui |
 | Export | Oui | Oui | Oui |
 | Partage externe | Oui | Non | Oui |
@@ -343,7 +343,7 @@ CRON_SECRET=
 
 ---
 
-## Carte (Snap) — tout gratuit, sans API key
+## Carte (FlowMap) — tout gratuit, sans API key
 
 - Tiles : CartoDB Dark, OpenStreetMap, Esri Satellite
 - Routing : OSRM (voiture/marche/velo)

@@ -7,7 +7,7 @@ export interface PlanLimits {
   maxThemes: number;
   hasProactive: boolean;
   hasDocuments: boolean;
-  hasSnapMap: boolean;
+  hasFlowMap: boolean;
   hasExport: boolean;
   hasExternalShare: boolean;
   hasWeeklyDigest: boolean;
@@ -21,7 +21,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxThemes: 1,
     hasProactive: false,
     hasDocuments: true,
-    hasSnapMap: false,
+    hasFlowMap: false,
     hasExport: true,
     hasExternalShare: true,
     hasWeeklyDigest: false,
@@ -33,7 +33,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxThemes: 10,
     hasProactive: true,
     hasDocuments: true,
-    hasSnapMap: true,
+    hasFlowMap: true,
     hasExport: true,
     hasExternalShare: false,
     hasWeeklyDigest: false,
@@ -45,7 +45,7 @@ export const PLAN_LIMITS: Record<Plan, PlanLimits> = {
     maxThemes: 20,
     hasProactive: true,
     hasDocuments: true,
-    hasSnapMap: true,
+    hasFlowMap: true,
     hasExport: true,
     hasExternalShare: true,
     hasWeeklyDigest: true,

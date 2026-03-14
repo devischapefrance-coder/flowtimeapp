@@ -1521,7 +1521,7 @@ export default function HomePage() {
         ? [profile.lat, profile.lng]
         : allMarkers.length > 0 ? [allMarkers[0].lat, allMarkers[0].lng] : [46.6, 2.5];
     return (
-      <Link href="/snap" className="card !mb-0 block cursor-pointer">
+      <Link href="/flowmap" className="card !mb-0 block cursor-pointer">
         <div className="flex items-center justify-between mb-2">
           <p className="text-[10px] font-bold uppercase" style={{ color: "var(--dim)" }}>Carte famille</p>
           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: "var(--surface2)", color: "var(--dim)" }}>

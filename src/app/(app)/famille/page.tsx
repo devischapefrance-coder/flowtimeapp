@@ -438,7 +438,7 @@ export default function FamillePage() {
   async function toggleLocationSharing() {
     if (!familyId || !profile) return;
 
-    // Gate Snap Map for free users
+    // Gate FlowMap for free users
     const plan = profile?.subscription_status === "active" ? profile?.subscription_plan : "free";
     if (!plan || plan === "free") {
       router.push("/abonnement");
@@ -588,7 +588,7 @@ export default function FamillePage() {
                   className={`flex-1 min-w-0${device ? " cursor-pointer active:opacity-70" : ""}`}
                   onClick={() => {
                     if (device) {
-                      window.location.href = "/snap";
+                      window.location.href = "/flowmap";
                     }
                   }}
                 >
@@ -737,7 +737,7 @@ export default function FamillePage() {
             </button>
           </div>
         </div>
-        <Link href="/snap" className="block cursor-pointer mt-2">
+        <Link href="/flowmap" className="block cursor-pointer mt-2">
           <div className="rounded-xl overflow-hidden" style={{ height: 200, pointerEvents: "none" }}>
             <MapViewDynamic
               markers={mapMarkers}
@@ -748,7 +748,7 @@ export default function FamillePage() {
             />
           </div>
           <p className="text-[10px] text-center mt-1.5" style={{ color: "var(--faint)" }}>
-            Appuie pour ouvrir la Snap Map
+            Appuie pour ouvrir la carte
           </p>
         </Link>
       </div>
@@ -794,7 +794,7 @@ export default function FamillePage() {
               </div>
               <div
                 className="flex-1 min-w-0 cursor-pointer"
-                onClick={() => { if (a.lat && a.lng) window.location.href = "/snap"; }}
+                onClick={() => { if (a.lat && a.lng) window.location.href = "/flowmap"; }}
               >
                 <p className="font-bold text-sm">
                   {a.name}
@@ -804,7 +804,7 @@ export default function FamillePage() {
                   {a.address || "⚠️ Adresse manquante"}
                 </p>
               </div>
-              {a.lat && a.lng && <span className="text-sm shrink-0 cursor-pointer" style={{ color: "var(--faint)" }} onClick={() => { window.location.href = "/snap"; }}>›</span>}
+              {a.lat && a.lng && <span className="text-sm shrink-0 cursor-pointer" style={{ color: "var(--faint)" }} onClick={() => { window.location.href = "/flowmap"; }}>›</span>}
             </div>
           ))}
         </div>

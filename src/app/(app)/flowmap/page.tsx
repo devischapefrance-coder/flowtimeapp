@@ -58,7 +58,7 @@ interface MemberETA {
   duration: number;
 }
 
-export default function SnapPage() {
+export default function FlowMapPage() {
   const { profile } = useProfile();
   const familyId = profile?.family_id;
   const mapStyle = useThemeMapStyle();
@@ -145,7 +145,7 @@ export default function SnapPage() {
   useEffect(() => {
     if (!familyId) return;
     const channel = supabase
-      .channel("snap-devices")
+      .channel("flowmap-devices")
       .on("postgres_changes", {
         event: "*",
         schema: "public",
