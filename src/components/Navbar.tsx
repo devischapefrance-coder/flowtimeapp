@@ -4,7 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useProfile } from "@/app/(app)/layout";
 
-const tabs = [
+const baseTabs = [
   { href: "/home", emoji: "🏠", label: "Accueil" },
   { href: "/famille", emoji: "👨‍👩‍👧‍👦", label: "Famille" },
   { href: "/snap", emoji: "📍", label: "Carte" },
@@ -15,6 +15,10 @@ const tabs = [
 export default function Navbar() {
   const pathname = usePathname();
   const { profile, chatUnread, vieUnread } = useProfile();
+
+  const tabs = profile?.is_dev
+    ? [...baseTabs.slice(0, 4), { href: "/flo", emoji: "⚡", label: "Flo" }, baseTabs[4]]
+    : baseTabs;
 
   return (
     <>

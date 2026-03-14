@@ -15,6 +15,7 @@ export interface Profile {
   subscription_status: "active" | "inactive" | "past_due" | "canceled";
   subscription_period_end: string | null;
   stripe_customer_id: string | null;
+  is_dev: boolean;
   created_at: string;
 }
 
@@ -57,6 +58,8 @@ export interface Address {
   created_at: string;
 }
 
+export type EventScope = "perso" | "famille";
+
 export interface Event {
   id: string;
   family_id: string;
@@ -68,6 +71,7 @@ export interface Event {
   recurring: RecurringConfig | null;
   category: string;
   shared: boolean;
+  scope: EventScope;
   reminder_minutes: number | null;
   created_at: string;
   members?: Member;
@@ -202,6 +206,21 @@ export interface FamilyPhoto {
   event_id: string | null;
   week_label: string | null;
   created_at: string;
+}
+
+export interface FloMessage {
+  id?: string;
+  role: "user" | "assistant";
+  content: string;
+  createdAt?: Date;
+  isReformulation?: boolean;
+}
+
+export interface FloChat {
+  messages: FloMessage[];
+  isLoading: boolean;
+  isDev: boolean;
+  isWaitingValidation: boolean;
 }
 
 export interface FlowAction {
