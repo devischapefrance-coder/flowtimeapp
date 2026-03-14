@@ -148,14 +148,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
     async function uploadPosition(pos: GeolocationPosition) {
       lastUploadRef.current = Date.now();
-      const { error } = await supabase.from("device_locations").update({
+      const { error } = await supabase.from("device_locations").upsert({
+        user_id: profile!.id,
+        family_id: profile!.family_id,
+        device_name: navigator.userAgent.includes("iPhone") ? "iPhone" : navigator.userAgent.includes("Android") ? "Android" : "Web",
+        emoji: profile!.emoji || "📍",
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
         speed: pos.coords.speed,
         heading: pos.coords.heading,
         updated_at: new Date().toISOString(),
-      }).eq("user_id", profile!.id);
+      }, { onConflict: "user_id" });
       if (error) console.warn("[GPS] upload error:", error.message);
     }
 

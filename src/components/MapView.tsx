@@ -128,22 +128,9 @@ function createIcon(marker: MapMarker) {
       ? `<img src="${marker.avatarUrl}" style="width:100%;height:100%;object-fit:cover;border-radius:50%" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'" /><span style="display:none;width:100%;height:100%;align-items:center;justify-content:center;font-size:18px">${marker.emoji}</span>`
       : `<span style="display:flex;width:100%;height:100%;align-items:center;justify-content:center;font-size:18px">${marker.emoji}</span>`;
 
-    // ETA badge
-    const etaBadge = marker.etaMinutes != null
-      ? `<div style="
-          position:absolute;top:-6px;right:-14px;
-          background:var(--accent);color:#fff;
-          font-size:8px;font-weight:800;
-          padding:1px 4px;border-radius:6px;
-          white-space:nowrap;z-index:2;
-          box-shadow:0 1px 4px rgba(0,0,0,0.3);
-        ">${marker.etaMinutes} min</div>`
-      : "";
-
     return L.divIcon({
       className: "",
       html: `<div style="position:relative;display:flex;flex-direction:column;align-items:center">
-        ${etaBadge}
         <span style="position:absolute;width:${size + 10}px;height:${size + 10}px;border-radius:50%;background:${color}25;animation:pulse 2s infinite;top:-5px;left:-5px"></span>
         <div style="
           width:${size}px;height:${size}px;border-radius:50%;overflow:hidden;
@@ -226,7 +213,7 @@ function LiveMarker({ marker: m, interactive }: { marker: MapMarker; interactive
     if (markerRef.current) {
       markerRef.current.setIcon(createIcon(m));
     }
-  }, [m.emoji, m.name, m.color, m.type, m.avatarUrl, m.etaMinutes]);
+  }, [m.emoji, m.name, m.color, m.type, m.avatarUrl]);
 
   return (
     <Marker ref={markerRef} position={[m.lat, m.lng]} icon={createIcon(m)}>
@@ -236,8 +223,7 @@ function LiveMarker({ marker: m, interactive }: { marker: MapMarker; interactive
           <div style={{ color: "#1D1D1F", fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', sans-serif", padding: "2px 0" }}>
             <strong style={{ fontSize: 13 }}>{m.emoji} {m.name}</strong>
             {m.detail && <p style={{ margin: "4px 0 0", fontSize: 12, color: "#86868B" }}>{m.detail}</p>}
-            {m.etaMinutes != null && <p style={{ margin: "2px 0 0", fontSize: 11, color: "#007AFF", fontWeight: 600 }}>🏠 {m.etaMinutes} min</p>}
-            {m.updatedAt && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#AEAEB2" }}>Mis a jour : {new Date(m.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>}
+            {m.updatedAt && <p style={{ margin: "2px 0 0", fontSize: 10, color: "#AEAEB2" }}>Mis à jour : {new Date(m.updatedAt).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</p>}
           </div>
         </Popup>
       )}

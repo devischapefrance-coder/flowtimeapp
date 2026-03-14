@@ -332,7 +332,7 @@ export default function FlowMapPage() {
       type: "member" as const,
       updatedAt: d.updated_at,
       avatarUrl: d.avatarUrl,
-      etaMinutes: memberETAs[d.user_id]?.etaMinutes ?? null,
+      // ETA affiché uniquement dans la barre membres, pas sur les markers
     })),
     ...(homeAddr?.lat && homeAddr?.lng
       ? [{
@@ -461,6 +461,7 @@ export default function FlowMapPage() {
             const isSelected = selectedUserId === d.user_id;
             const eta = memberETAs[d.user_id];
             const speedKmh = d.speed != null ? Math.round(d.speed * 3.6) : null;
+            const isStale = d.updated_at ? (Date.now() - new Date(d.updated_at).getTime()) > 30 * 60 * 1000 : false;
             return (
               <button
                 key={d.user_id}
@@ -469,6 +470,7 @@ export default function FlowMapPage() {
                 style={{
                   border: isSelected ? "2px solid var(--accent)" : "1px solid var(--glass-border)",
                   background: isSelected ? "rgba(124,107,240,0.15)" : undefined,
+                  opacity: isStale ? 0.5 : 1,
                 }}
               >
                 {d.avatarUrl ? (
