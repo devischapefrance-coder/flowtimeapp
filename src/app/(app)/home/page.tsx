@@ -157,7 +157,7 @@ function getGreeting(date: Date): string {
 }
 
 export default function HomePage() {
-  const { profile, chatUnread, openChat } = useProfile();
+  const { profile, chatUnread, openChat, setAppTheme } = useProfile();
   const router = useRouter();
 
   const [failedAvatars, setFailedAvatars] = useState<Set<string>>(new Set());
@@ -725,6 +725,14 @@ export default function HomePage() {
   async function handleFlowAction(action: { type: string; data: Record<string, unknown> }) {
     if (!profile?.family_id) return;
 
+    // Changement de thème — géré côté client uniquement
+    if (action.type === "change_theme") {
+      const theme = (action.data.theme as "default" | "stone-amber") || "default";
+      const mode = (action.data.mode as "dark" | "light") || "dark";
+      setAppTheme(theme, mode);
+      return;
+    }
+
     await executeFlowAction(action);
 
     // Notification famille si scope=famille
@@ -797,6 +805,38 @@ export default function HomePage() {
           });
         }
       }
+    } else if (action.type === "add_task") {
+      const assignedMember = resolveMemberId(action.data.assigned_to as string) || myMember?.id || null;
+      await supabase.from("chores").insert({
+        family_id: profile.family_id,
+        name: action.data.title as string,
+        emoji: "✅",
+        frequency: "daily",
+        assigned_members: assignedMember ? [assignedMember] : [],
+        current_index: 0,
+      });
+    } else if (action.type === "complete_task") {
+      // Rotation de la tâche (passer au membre suivant)
+      const { error } = await supabase.from("chores").update({ last_rotated: new Date().toISOString() }).eq("id", action.data.task_id);
+      if (error) console.error("Flow complete_task failed:", error, "task_id:", action.data.task_id);
+    } else if (action.type === "add_meal") {
+      await supabase.from("meals").insert({
+        family_id: profile.family_id,
+        name: action.data.name as string,
+        type: action.data.type as string,
+        date: (action.data.date as string) || currentDate,
+        emoji: (action.data.emoji as string) || "🍽️",
+      });
+    } else if (action.type === "create_note") {
+      await supabase.from("notes").insert({
+        family_id: profile.family_id,
+        user_id: profile.id,
+        title: action.data.title as string,
+        content: (action.data.content as string) || "",
+      });
+    } else if (action.type === "change_theme") {
+      // Géré côté client via onChangeTheme callback
+      return;
     }
     loadData();
     refreshStripCounts();
@@ -977,6 +1017,7 @@ export default function HomePage() {
     weekEvents: viewEvents.map((e) => ({ id: e.id, title: e.title, time: e.time, date: e.date, member: e.members?.name, category: e.category })),
     addresses: addresses.map((a) => ({ name: a.name, address: a.address })),
     contacts: contacts.map((c) => ({ name: c.name, relation: c.relation, phone: c.phone })),
+    chores: chores.map((c) => ({ id: c.id, name: c.name, emoji: c.emoji, assigned_to: members.find((m) => c.assigned_members.includes(m.id))?.name })),
     selectedDate: currentDate,
     selectedDayName: dateDisplay,
     today: todayStr,

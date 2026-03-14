@@ -37,6 +37,11 @@ function actionLabel(type: string): string {
     case "delete_event": return "Évènement supprimé";
     case "edit_event": return "Évènement modifié";
     case "add_recurring": return "Récurrence créée";
+    case "add_task": return "Tâche ajoutée";
+    case "complete_task": return "Tâche terminée";
+    case "add_meal": return "Repas ajouté";
+    case "create_note": return "Note créée";
+    case "change_theme": return "Thème changé";
     default: return "Action effectuée";
   }
 }
@@ -54,7 +59,7 @@ function cleanForSpeech(text: string): string {
 }
 
 export default function FlowChat({ open, onClose, context, userId, onAction, onActionsDone }: FlowChatProps) {
-  const defaultMsg: Message[] = [{ role: "flow", text: "Salut ! Je suis Flow, ton assistant familial. Dis-moi ce que tu veux organiser, je m'occupe de tout !" }];
+  const defaultMsg: Message[] = [{ role: "flow", text: "Salut ! Je suis Flow IA, ton assistante familiale. Dis-moi ce que tu veux organiser, je m'occupe de tout !" }];
 
   const [messages, setMessages] = useState<Message[]>(() => {
     if (typeof window !== "undefined") {
@@ -206,7 +211,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
         },
         body: JSON.stringify({
           message: userMsg,
-          context,
+          context: { ...context, isVoice: voiceModeRef.current },
           history,
           image: imgBase64 || undefined,
           dailyFlowCount: (() => {
@@ -460,12 +465,12 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
   const showSuggestions = messages.length <= 1;
 
   const voiceStatusLabel = isSpeaking
-    ? "Flow parle..."
+    ? "Flow IA parle..."
     : loading
-      ? "Flow reflechit..."
+      ? "Flow IA réfléchit..."
       : isListening
-        ? "Je t'ecoute..."
-        : "Pret";
+        ? "Je t'écoute..."
+        : "Prêt";
 
   return (
     <div className="fixed inset-0 flex flex-col animate-in" style={{ zIndex: 700, background: "var(--bg)", maxWidth: 430, margin: "0 auto" }}>
@@ -478,7 +483,7 @@ export default function FlowChat({ open, onClose, context, userId, onAction, onA
           <Logo size={24} />
         </div>
         <div className="flex-1">
-          <span className="font-bold text-sm">Flow</span>
+          <span className="font-bold text-sm">Flow IA</span>
           <span className="text-[10px] ml-2 px-2 py-0.5 rounded-full font-bold" style={{ background: "var(--green)", color: "#fff" }}>en ligne</span>
         </div>
         <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-full text-xs" style={{ background: "var(--surface2)" }}>✕</button>
