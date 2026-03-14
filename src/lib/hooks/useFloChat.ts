@@ -184,8 +184,14 @@ export function useFloChat({ isDev, userId }: UseFloChatOptions) {
               lowerText.includes("dis 'go'") ||
               lowerText.includes("dis \"go\"") ||
               lowerText.includes("dis 'go'") ||
+              lowerText.includes("réponds \"go\"") ||
+              lowerText.includes("réponds 'go'") ||
               lowerText.includes("confirme") ||
-              lowerText.includes("valide pour")
+              lowerText.includes("valide pour") ||
+              lowerText.includes("copie-le dans claude code") ||
+              lowerText.includes("dis \"deploy\"") ||
+              lowerText.includes("dis 'deploy'") ||
+              lowerText.includes("reviens me dire")
             ) {
               setIsWaitingValidation(true);
               // Marquer le message comme reformulation
