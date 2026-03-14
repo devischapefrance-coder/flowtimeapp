@@ -128,7 +128,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       // Immediate position update on start / app resume
       navigator.geolocation.getCurrentPosition(
         (pos) => uploadPosition(pos),
-        () => {},
+        (err) => console.warn("[GPS] getCurrentPosition error:", err.message),
         { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
       );
 
@@ -136,17 +136,17 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       locationWatchRef.current = navigator.geolocation.watchPosition(
         (pos) => {
           const now = Date.now();
-          if (now - lastUploadRef.current < 30000) return; // throttle to 30s
+          if (now - lastUploadRef.current < 30000) return; // throttle 30s
           uploadPosition(pos);
         },
-        () => {},
+        (err) => console.warn("[GPS] watchPosition error:", err.message),
         { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
       );
     }
 
-    function uploadPosition(pos: GeolocationPosition) {
+    async function uploadPosition(pos: GeolocationPosition) {
       lastUploadRef.current = Date.now();
-      supabase.from("device_locations").update({
+      const { error } = await supabase.from("device_locations").update({
         lat: pos.coords.latitude,
         lng: pos.coords.longitude,
         accuracy: pos.coords.accuracy,
@@ -154,6 +154,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
         heading: pos.coords.heading,
         updated_at: new Date().toISOString(),
       }).eq("user_id", profile!.id);
+      if (error) console.warn("[GPS] upload error:", error.message);
     }
 
     // Re-sync position when app comes back to foreground
@@ -161,7 +162,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (document.visibilityState === "visible") {
         navigator.geolocation.getCurrentPosition(
           (pos) => uploadPosition(pos),
-          () => {},
+          (err) => console.warn("[GPS] visibility re-sync error:", err.message),
           { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
         );
       }

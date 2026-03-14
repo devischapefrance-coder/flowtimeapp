@@ -20,8 +20,8 @@ export const TRANSPORT_LABELS: Record<TransportMode, string> = {
 
 const OSRM_PROFILES: Record<TransportMode, string> = {
   foot: "foot",
-  bike: "bike",
-  car: "car",
+  bike: "bicycle",
+  car: "driving",
 };
 
 /** Detect transport mode from GPS speed (m/s). Null defaults to car. */

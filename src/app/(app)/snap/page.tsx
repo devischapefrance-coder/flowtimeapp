@@ -178,7 +178,9 @@ export default function SnapPage() {
       lng: d.lng,
       emoji: d.member?.emoji || d.emoji,
       name: d.member?.name || d.device_name,
-      color: selectedUserId === d.user_id ? "#7C6BF0" : "#3DD6C8",
+      color: selectedUserId === d.user_id
+        ? getComputedStyle(document.documentElement).getPropertyValue("--accent").trim() || "#7C6BF0"
+        : getComputedStyle(document.documentElement).getPropertyValue("--teal").trim() || "#5ED4C8",
       type: "member" as const,
       updatedAt: d.updated_at,
       avatarUrl: d.avatarUrl,
