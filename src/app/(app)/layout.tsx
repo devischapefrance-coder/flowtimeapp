@@ -125,11 +125,13 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       if (locationWatchRef.current !== null) return;
       if (!("geolocation" in navigator)) return;
 
+      const highAccuracy = profile!.gps_precision !== "low";
+
       // Immediate position update on start / app resume
       navigator.geolocation.getCurrentPosition(
         (pos) => uploadPosition(pos),
         (err) => console.warn("[GPS] getCurrentPosition error:", err.message),
-        { enableHighAccuracy: true, maximumAge: 30000, timeout: 10000 }
+        { enableHighAccuracy: highAccuracy, maximumAge: 30000, timeout: 10000 }
       );
 
       // Continuous tracking
@@ -140,7 +142,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           uploadPosition(pos);
         },
         (err) => console.warn("[GPS] watchPosition error:", err.message),
-        { enableHighAccuracy: true, maximumAge: 0, timeout: 15000 }
+        { enableHighAccuracy: highAccuracy, maximumAge: highAccuracy ? 0 : 30000, timeout: 15000 }
       );
     }
 

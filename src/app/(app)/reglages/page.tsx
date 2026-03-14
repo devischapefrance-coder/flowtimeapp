@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useProfile, useTutorial } from "../layout";
-import type { AppTheme, ThemeMode } from "@/lib/types";
+import type { AppTheme, ThemeMode, POI } from "@/lib/types";
 import Modal from "@/components/Modal";
 import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
@@ -205,6 +205,29 @@ export default function ReglagesPage() {
   const [addressForm, setAddressForm] = useState({ name: "", emoji: "🏠", address: "" });
   const [searchQuery, setSearchQuery] = useState("");
   const [nominatimResults, setNominatimResults] = useState<{ display_name: string; lat: string; lon: string }[]>([]);
+
+  // Carte settings
+  const [mapPois, setMapPois] = useState<POI[]>([]);
+  const [safeRadius, setSafeRadius] = useState(profile?.safe_radius ?? 500);
+  const [showSafeZone, setShowSafeZone] = useState(profile?.show_safe_zone ?? true);
+  const [gpsPrecision, setGpsPrecision] = useState<"high" | "low">(profile?.gps_precision ?? "high");
+
+  useEffect(() => {
+    if (!profile?.family_id) return;
+    supabase.from("pois").select("*").eq("family_id", profile.family_id)
+      .then(({ data }) => { if (data) setMapPois(data as POI[]); });
+  }, [profile?.family_id]);
+
+  async function updateMapSetting(field: string, value: number | boolean | string) {
+    if (!profile) return;
+    await supabase.from("profiles").update({ [field]: value }).eq("id", profile.id);
+    await refreshProfile();
+  }
+
+  async function deletePOI(id: string) {
+    await supabase.from("pois").delete().eq("id", id);
+    setMapPois((prev) => prev.filter((p) => p.id !== id));
+  }
 
   useEffect(() => {
     if (searchQuery.length < 3) { setNominatimResults([]); return; }
@@ -662,6 +685,111 @@ export default function ReglagesPage() {
           />
         </button>
       </div>
+      </Section>
+
+      {/* Carte */}
+      <Section title="Carte" emoji="🗺️">
+        {/* Rayon de sécurité */}
+        <div className="card mb-2">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium">Rayon de sécurité</span>
+            <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>
+              {safeRadius >= 1000 ? `${(safeRadius / 1000).toFixed(1)} km` : `${safeRadius} m`}
+            </span>
+          </div>
+          <input
+            type="range"
+            min={100}
+            max={2000}
+            step={50}
+            value={safeRadius}
+            onChange={(e) => setSafeRadius(Number(e.target.value))}
+            onPointerUp={() => updateMapSetting("safe_radius", safeRadius)}
+            className="w-full accent-[var(--accent)]"
+            style={{ accentColor: "var(--accent)" }}
+          />
+          <div className="flex justify-between mt-1">
+            <span className="text-[10px]" style={{ color: "var(--faint)" }}>100 m</span>
+            <span className="text-[10px]" style={{ color: "var(--faint)" }}>2 km</span>
+          </div>
+        </div>
+
+        {/* Afficher la zone de sécurité */}
+        <div className="card flex items-center justify-between mb-2">
+          <span className="text-sm">Afficher la zone de sécurité</span>
+          <button
+            className="w-12 h-7 rounded-full relative transition-colors"
+            style={{ background: showSafeZone ? "var(--accent)" : "var(--surface2)" }}
+            onClick={() => {
+              const next = !showSafeZone;
+              setShowSafeZone(next);
+              updateMapSetting("show_safe_zone", next);
+            }}
+          >
+            <span
+              className="absolute w-5 h-5 rounded-full bg-white top-1 transition-all"
+              style={{ left: showSafeZone ? 26 : 4 }}
+            />
+          </button>
+        </div>
+
+        {/* Précision GPS */}
+        <div className="card mb-2">
+          <span className="text-sm font-medium mb-2 block">Précision GPS</span>
+          <div className="flex gap-2">
+            {([
+              { key: "high" as const, label: "Haute précision", icon: "📡" },
+              { key: "low" as const, label: "Économie batterie", icon: "🔋" },
+            ]).map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => {
+                  setGpsPrecision(key);
+                  updateMapSetting("gps_precision", key);
+                }}
+                className="flex-1 flex items-center gap-2 px-3 py-2.5 rounded-xl text-xs font-semibold transition-all"
+                style={{
+                  background: gpsPrecision === key ? "var(--accent)" : "var(--surface)",
+                  color: gpsPrecision === key ? "#fff" : "var(--text)",
+                  border: `1px solid ${gpsPrecision === key ? "var(--accent)" : "var(--glass-border)"}`,
+                }}
+              >
+                {icon} {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Mes points d'intérêt */}
+        <div className="card">
+          <span className="text-sm font-medium mb-2 block">Mes points d&apos;intérêt</span>
+          {mapPois.length === 0 ? (
+            <p className="text-xs py-3 text-center" style={{ color: "var(--dim)" }}>
+              Aucun POI enregistré. Appui long sur la carte pour en ajouter.
+            </p>
+          ) : (
+            <div className="flex flex-col gap-1">
+              {mapPois.map((poi) => (
+                <div key={poi.id} className="flex items-center justify-between px-3 py-2 rounded-xl" style={{ background: "var(--surface)" }}>
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-base">{poi.emoji}</span>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold truncate">{poi.name}</p>
+                      {poi.address && <p className="text-[10px] truncate" style={{ color: "var(--dim)" }}>{poi.address}</p>}
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => deletePOI(poi.id)}
+                    className="text-xs px-2 py-1 rounded-lg shrink-0 ml-2"
+                    style={{ color: "var(--red)" }}
+                  >
+                    ✕
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
       </Section>
 
       {/* Notifications push */}

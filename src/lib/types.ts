@@ -18,6 +18,9 @@ export interface Profile {
   is_dev: boolean;
   theme: AppTheme;
   theme_mode: ThemeMode;
+  safe_radius: number;
+  show_safe_zone: boolean;
+  gps_precision: "high" | "low";
   created_at: string;
 }
 
@@ -222,6 +225,31 @@ export interface FloChat {
   isLoading: boolean;
   isDev: boolean;
   isWaitingValidation: boolean;
+}
+
+export interface POI {
+  id: string;
+  family_id: string;
+  name: string;
+  emoji: string;
+  lat: number;
+  lng: number;
+  address: string;
+  created_by: string | null;
+  created_at: string;
+}
+
+export interface GeofenceAlert {
+  id: string;
+  family_id: string;
+  member_id: string;
+  poi_id: string;
+  alert_type: "enter" | "exit" | "both";
+  radius: number;
+  enabled: boolean;
+  last_state: "inside" | "outside" | null;
+  last_triggered_at: string | null;
+  created_at: string;
 }
 
 export type AppTheme = "default" | "stone-amber";
