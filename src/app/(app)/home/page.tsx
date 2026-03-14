@@ -343,10 +343,11 @@ export default function HomePage() {
   // Load event counts for the entire day strip (carousel dots)
   const [stripCounts, setStripCounts] = useState<Record<string, number>>({});
   const [stripColors, setStripColors] = useState<Record<string, string>>({});
-  useEffect(() => {
+  const refreshStripCounts = useCallback(() => {
     if (!profile?.family_id) return;
-    const stripStart = dayStrip[0].date;
-    const stripEnd = dayStrip[dayStrip.length - 1].date;
+    const strip = getDayStrip();
+    const stripStart = strip[0].date;
+    const stripEnd = strip[strip.length - 1].date;
     supabase
       .from("events")
       .select("date, category, shared, member_id")
@@ -371,8 +372,8 @@ export default function HomePage() {
         }
         setStripColors(colors);
       });
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.family_id]);
+  useEffect(() => { refreshStripCounts(); }, [refreshStripCounts]);
 
   const weekMonthLabel = (() => {
     if (calendarView === "month") {
@@ -676,12 +677,14 @@ export default function HomePage() {
     const ev = events.find((e) => e.id === id);
     await supabase.from("events").delete().eq("id", id);
     loadData();
+    refreshStripCounts();
     if (ev) {
       toastUndo(`"${ev.title}" supprimé`, async () => {
         const { id: _id, members: _m, ...rest } = ev as unknown as Record<string, unknown>;
         void _id; void _m;
         await supabase.from("events").insert(rest);
         loadData();
+        refreshStripCounts();
       });
     }
   }
@@ -702,6 +705,7 @@ export default function HomePage() {
       }
     }
     loadData();
+    refreshStripCounts();
   }
 
   function resolveMemberId(memberName?: string): string | null {
@@ -753,10 +757,12 @@ export default function HomePage() {
         scope,
       });
     } else if (action.type === "delete_event") {
-      await supabase.from("events").delete().eq("id", action.data.event_id);
+      const { error } = await supabase.from("events").delete().eq("id", action.data.event_id);
+      if (error) console.error("Flow delete_event failed:", error, "event_id:", action.data.event_id);
     } else if (action.type === "edit_event") {
       const title = (action.data.title as string) || "";
-      await supabase.from("events").delete().eq("id", action.data.event_id);
+      const { error: delErr } = await supabase.from("events").delete().eq("id", action.data.event_id);
+      if (delErr) console.error("Flow edit_event delete failed:", delErr, "event_id:", action.data.event_id);
       await supabase.from("events").insert({
         family_id: profile.family_id,
         title,
@@ -793,6 +799,7 @@ export default function HomePage() {
       }
     }
     loadData();
+    refreshStripCounts();
   }
 
   // --- Quick event creation ---
@@ -847,6 +854,7 @@ export default function HomePage() {
     }
     setQuickEventModal(false);
     loadData();
+    refreshStripCounts();
   }
 
   // --- Meal CRUD ---
@@ -1780,7 +1788,7 @@ export default function HomePage() {
       </Modal>
 
       {/* Quick Voice */}
-      <QuickVoice context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={() => {}} />
+      <QuickVoice context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={() => refreshStripCounts()} />
 
       {/* FAB */}
       <button
@@ -1804,7 +1812,7 @@ export default function HomePage() {
       <NotificationManager events={events} birthdays={birthdays} enabled={true} />
 
       {/* Chat */}
-      <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={() => {}} />
+      <FlowChat open={chatOpen} onClose={() => setChatOpen(false)} context={flowContext} userId={profile?.id} onAction={handleFlowAction} onActionsDone={() => refreshStripCounts()} />
 
 
 
