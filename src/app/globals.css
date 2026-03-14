@@ -666,4 +666,23 @@
     overflow: hidden;
     box-shadow: 0 2px 8px rgba(0,0,0,0.12) !important;
   }
+
+  /* Leaflet overrides — popups */
+  .leaflet-popup-tip,
+  .leaflet-popup-tip-container {
+    display: none !important;
+  }
+  .leaflet-popup-close-button {
+    display: none !important;
+  }
+  .leaflet-popup-content-wrapper {
+    box-shadow: none !important;
+    border: none !important;
+    border-radius: 12px !important;
+    background: var(--card, #1A1A1E) !important;
+    padding: 0 !important;
+  }
+  .leaflet-popup-content {
+    margin: 0 !important;
+  }
 }
