@@ -31,7 +31,19 @@
       "WebSearch",
       "WebFetch(domain:getsense.ai)",
       "WebFetch(domain:www.growmaple.com)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(git clone:*)",
+      "Bash(bash:*)",
+      "Bash(npx playwright:*)",
+      "Bash($B goto:*)",
+      "Bash($B status:*)",
+      "Bash(timeout 15 goto:*)",
+      "Bash(PLAYWRIGHT_BROWSERS_PATH=\"$HOME/AppData/Local/ms-playwright\" $B goto:*)",
+      "Bash(bun run:*)",
+      "Bash(BROWSE_SERVER_SCRIPT=src/server.ts bun run:*)",
+      "Bash(gh api:*)",
+      "Bash(vercel env:*)",
+      "Bash(gh auth:*)"
     ]
   }
 }
