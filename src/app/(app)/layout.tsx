@@ -12,6 +12,8 @@ import FamilyChat from "@/components/FamilyChat";
 import TutorialOverlay from "@/components/TutorialOverlay";
 import { TUTORIAL_STEPS, TUTORIAL_SECTIONS, getFirstStepIndex } from "@/lib/tutorial-data";
 import { subscribeToPush, isPushSubscribed } from "@/lib/push";
+import { useTheme } from "@/lib/hooks/useTheme";
+import type { AppTheme, ThemeMode } from "@/lib/types";
 
 interface ProfileContextType {
   profile: Profile | null;
@@ -20,6 +22,9 @@ interface ProfileContextType {
   openChat: () => void;
   vieUnread: number;
   setVieUnread: (n: number) => void;
+  appTheme: AppTheme;
+  appThemeMode: ThemeMode;
+  setAppTheme: (theme: AppTheme, mode: ThemeMode) => Promise<void>;
 }
 
 const ProfileContext = createContext<ProfileContextType>({
@@ -29,6 +34,9 @@ const ProfileContext = createContext<ProfileContextType>({
   openChat: () => {},
   vieUnread: 0,
   setVieUnread: () => {},
+  appTheme: "default",
+  appThemeMode: "dark",
+  setAppTheme: async () => {},
 });
 
 export function useProfile() {
@@ -76,6 +84,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [chatUnread, setChatUnread] = useState(0);
   const handleUnread = useCallback((n: number) => setChatUnread(n), []);
   const [vieUnread, setVieUnread] = useState(0);
+
+  const { theme: appTheme, themeMode: appThemeMode, setTheme: setAppTheme } = useTheme({ userId: profile?.id });
 
   // Page transition direction
   const prevPathRef = useRef(pathname);
@@ -380,7 +390,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <I18nProvider initialLang={initialLang}>
-      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread }}>
+      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread, appTheme, appThemeMode, setAppTheme }}>
         <TutorialContext.Provider value={{ tutorialActive, tutorialStep, currentSection, completedSections, startTutorial, startTutorialAtSection, stopTutorial, nextStep, prevStep, skipSection }}>
           <ToastProvider>
             <div

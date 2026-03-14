@@ -232,6 +232,60 @@
     --overlay: rgba(0, 0, 0, 0.5);
   }
 
+  /* Stone & Amber — dark */
+  :root.stone-amber {
+    --bg: #090908;
+    --surface: rgba(255, 255, 255, 0.03);
+    --surface2: rgba(255, 255, 255, 0.05);
+    --surface-solid: #171715;
+    --nav-bg: rgba(9, 9, 8, 0.85);
+    --accent: #E8A87C;
+    --accent-soft: rgba(232, 168, 124, 0.12);
+    --accent-glow: rgba(232, 168, 124, 0.10);
+    --teal: #5A7E9E;
+    --warm: #E8C47C;
+    --red: #E87C7C;
+    --green: #5A8E6E;
+    --lavender: #A87C58;
+    --blue: #5A7E9E;
+    --text: #E8E6E2;
+    --dim: rgba(232, 230, 226, 0.48);
+    --faint: rgba(232, 230, 226, 0.18);
+    --glass: rgba(255, 255, 255, 0.02);
+    --glass-border: rgba(255, 255, 255, 0.04);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --card-hover: rgba(232, 168, 124, 0.08);
+    --overlay: rgba(0, 0, 0, 0.5);
+  }
+
+  /* Stone & Amber — light */
+  :root.stone-amber.light {
+    --bg: #F7F4F0;
+    --surface: rgba(0, 0, 0, 0.03);
+    --surface2: rgba(0, 0, 0, 0.05);
+    --surface-solid: #EDE7DA;
+    --nav-bg: rgba(247, 244, 240, 0.85);
+    --accent: #C8803C;
+    --accent-soft: rgba(200, 128, 60, 0.10);
+    --accent-glow: rgba(200, 128, 60, 0.10);
+    --teal: #3C80C8;
+    --warm: #C8803C;
+    --red: #C85050;
+    --green: #3A7E5A;
+    --lavender: #A86028;
+    --blue: #3C80C8;
+    --text: #1A1714;
+    --dim: rgba(26, 23, 20, 0.50);
+    --faint: rgba(26, 23, 20, 0.18);
+    --glass: rgba(255, 255, 255, 0.6);
+    --glass-border: rgba(0, 0, 0, 0.05);
+    --radius: 16px;
+    --radius-sm: 12px;
+    --card-hover: rgba(200, 128, 60, 0.08);
+    --overlay: rgba(0, 0, 0, 0.3);
+  }
+
   :root.light {
     --bg: #F4F5F9;
     --surface: rgba(0, 0, 0, 0.03);

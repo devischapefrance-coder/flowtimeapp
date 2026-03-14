@@ -16,6 +16,8 @@ export interface Profile {
   subscription_period_end: string | null;
   stripe_customer_id: string | null;
   is_dev: boolean;
+  theme: AppTheme;
+  theme_mode: ThemeMode;
   created_at: string;
 }
 
@@ -221,6 +223,14 @@ export interface FloChat {
   isLoading: boolean;
   isDev: boolean;
   isWaitingValidation: boolean;
+}
+
+export type AppTheme = "default" | "stone-amber";
+export type ThemeMode = "dark" | "light";
+
+export interface ThemePreference {
+  theme: AppTheme;
+  themeMode: ThemeMode;
 }
 
 export interface FlowAction {

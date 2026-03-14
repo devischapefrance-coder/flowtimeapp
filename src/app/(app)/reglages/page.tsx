@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useProfile, useTutorial } from "../layout";
+import type { AppTheme, ThemeMode } from "@/lib/types";
 import Modal from "@/components/Modal";
 import AvatarUpload from "@/components/AvatarUpload";
 import { subscribeToPush, unsubscribeFromPush, isPushSubscribed } from "@/lib/push";
@@ -113,7 +114,7 @@ const PROFILE_EMOJIS = [
 
 export default function ReglagesPage() {
   const router = useRouter();
-  const { profile, refreshProfile } = useProfile();
+  const { profile, refreshProfile, appTheme, appThemeMode, setAppTheme } = useProfile();
   const { tutorialActive, currentSection, startTutorial, startTutorialAtSection, completedSections } = useTutorial();
 
   const [firstName, setFirstName] = useState(profile?.first_name || "");
@@ -462,8 +463,104 @@ export default function ReglagesPage() {
 
       {/* Apparence */}
       <Section title="Apparence" emoji="🎨">
+
+      {/* Sélecteur de thème global */}
+      <div className="card no-press" style={{ borderRadius: 24 }}>
+        <p className="label">STYLE</p>
+        <div className="flex gap-3">
+          {/* Miniature Défaut */}
+          <button
+            className="flex-1 relative rounded-2xl overflow-hidden transition-all"
+            style={{
+              border: appTheme === "default" ? "2px solid var(--accent)" : "2px solid var(--glass-border)",
+              background: "var(--surface)",
+            }}
+            onClick={() => {
+              setAppTheme("default", "dark");
+              changeTheme(theme === "stone-amber" ? "dark" : theme);
+            }}
+          >
+            <div className="p-2">
+              <div className="rounded-xl w-full h-[52px] flex items-center justify-center gap-2" style={{ background: "#1a1a2e" }}>
+                <div className="w-[36px] h-[28px] rounded-lg" style={{ background: "rgba(124,107,240,0.15)", border: "1px solid rgba(124,107,240,0.3)" }} />
+                <div className="flex flex-col gap-1">
+                  <div className="w-[28px] h-[4px] rounded-full" style={{ background: "rgba(255,255,255,0.3)" }} />
+                  <div className="w-[20px] h-[4px] rounded-full" style={{ background: "#7C6BF0" }} />
+                </div>
+              </div>
+            </div>
+            <div className="px-2 pb-2 text-center">
+              <p className="text-xs font-bold" style={{ color: "var(--text)" }}>Défaut</p>
+              <p className="text-[10px]" style={{ color: "var(--dim)" }}>Thème original</p>
+            </div>
+            {appTheme === "default" && (
+              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "var(--accent)" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              </div>
+            )}
+          </button>
+
+          {/* Miniature Stone & Amber */}
+          <button
+            className="flex-1 relative rounded-2xl overflow-hidden transition-all"
+            style={{
+              border: appTheme === "stone-amber" ? "2px solid #E8A87C" : "2px solid var(--glass-border)",
+              background: "var(--surface)",
+            }}
+            onClick={() => setAppTheme("stone-amber", appThemeMode)}
+          >
+            <div className="p-2">
+              <div className="rounded-xl w-full h-[52px] flex items-center justify-center gap-2" style={{ background: "#090908" }}>
+                <div className="w-[36px] h-[28px] rounded-lg" style={{ background: "rgba(232,168,124,0.12)", border: "1px solid rgba(232,168,124,0.25)" }} />
+                <div className="flex flex-col gap-1">
+                  <div className="w-[28px] h-[4px] rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+                  <div className="w-[20px] h-[4px] rounded-full" style={{ background: "#E8A87C" }} />
+                </div>
+              </div>
+            </div>
+            <div className="px-2 pb-2 text-center">
+              <p className="text-xs font-bold" style={{ color: "var(--text)" }}>Stone & Amber</p>
+              <p className="text-[10px]" style={{ color: "var(--dim)" }}>Chaud & raffiné</p>
+            </div>
+            {appTheme === "stone-amber" && (
+              <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "#E8A87C" }}>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+              </div>
+            )}
+          </button>
+        </div>
+
+        {/* Sélecteur de mode — seulement pour Stone & Amber */}
+        {appTheme === "stone-amber" && (
+          <div className="mt-3">
+            <div className="flex gap-2">
+              {([["dark", "Sombre"], ["light", "Clair"]] as const).map(([mode, label]) => (
+                <button
+                  key={mode}
+                  className="flex-1 py-2 rounded-xl text-xs font-bold transition-all text-center"
+                  style={{
+                    background: appThemeMode === mode ? "rgba(232, 168, 124, 0.15)" : "var(--surface2)",
+                    color: appThemeMode === mode ? "#E8A87C" : "var(--dim)",
+                    border: appThemeMode === mode ? "1px solid rgba(232, 168, 124, 0.25)" : "1px solid transparent",
+                  }}
+                  onClick={() => setAppTheme("stone-amber", mode)}
+                >
+                  {mode === "dark" ? "🌙" : "☀️"} {label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <p className="text-center text-[10px] mt-3" style={{ color: "var(--dim)" }}>
+          L&apos;apparence est synchronisée sur tous tes appareils
+        </p>
+      </div>
+
+      {/* Thème mode / palette (visible seulement en mode Défaut) */}
+      {appTheme === "default" && (
       <div className="card">
-        <p className="text-sm font-bold mb-3">Thème</p>
+        <p className="text-sm font-bold mb-3">Mode</p>
         <div className="grid grid-cols-3 gap-2">
           {([
             ["dark", "🌙", "Sombre"],
@@ -528,6 +625,7 @@ export default function ReglagesPage() {
           );
         })()}
       </div>
+      )}
 
       {/* Langue */}
       <div className="card">
