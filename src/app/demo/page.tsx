@@ -158,7 +158,7 @@ async function seedDemoData(familyId: string) {
       time: "08:30",
       date: monday,
       category: "education",
-      shared: true,
+      scope: "famille",
       recurring: { days: [1, 2, 3, 4, 5], time_start: "08:30", time_end: "16:30" },
     },
     {
@@ -199,7 +199,7 @@ async function seedDemoData(familyId: string) {
       time: "15:00",
       date: saturday,
       category: "loisirs",
-      shared: true,
+      scope: "famille",
     },
   ]);
 

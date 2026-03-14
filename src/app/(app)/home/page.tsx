@@ -352,7 +352,7 @@ export default function HomePage() {
     const stripEnd = strip[strip.length - 1].date;
     supabase
       .from("events")
-      .select("date, category, shared, member_id")
+      .select("date, category, member_id")
       .eq("family_id", profile.family_id)
       .gte("date", stripStart)
       .lte("date", stripEnd)
@@ -751,7 +751,6 @@ export default function HomePage() {
 
     // Déterminer le scope : priorité à action.data.scope, sinon déduit du viewMode
     const scope = (action.data.scope as EventScope) || (viewMode === "famille" ? "famille" : "perso");
-    const shared = scope === "famille";
 
     if (action.type === "add_event") {
       const title = action.data.title as string;
@@ -763,7 +762,6 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
-        shared,
         scope,
       });
     } else if (action.type === "delete_event") {
@@ -781,7 +779,6 @@ export default function HomePage() {
         member_id: resolveFlowMemberId(action.data.member_name as string),
         description: action.data.description || "",
         category: (action.data.category as string) || detectCategory(title),
-        shared,
         scope,
       });
     } else if (action.type === "add_recurring") {
@@ -802,7 +799,6 @@ export default function HomePage() {
             member_id: memberId,
             recurring: { days: recurringDays, time_start: action.data.time_start, time_end: action.data.time_end },
             category,
-            shared,
             scope,
           });
         }
@@ -868,7 +864,6 @@ export default function HomePage() {
       member_id: qeMember || null,
       description: qeDescription.trim(),
       category,
-      shared: qeScope === "famille",
       scope: qeScope,
       reminder_minutes: qeReminder,
     };

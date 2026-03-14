@@ -72,7 +72,6 @@ export interface Event {
   member_id: string | null;
   recurring: RecurringConfig | null;
   category: string;
-  shared: boolean;
   scope: EventScope;
   reminder_minutes: number | null;
   created_at: string;

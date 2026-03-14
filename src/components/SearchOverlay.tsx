@@ -100,7 +100,7 @@ export default function SearchOverlay({ open, onClose, familyId }: SearchOverlay
       .from("events")
       .select("title, date, time, category")
       .eq("family_id", familyId)
-      .eq("shared", true)
+      .eq("scope", "famille")
       .gte("date", today)
       .order("date", { ascending: true })
       .order("time", { ascending: true })

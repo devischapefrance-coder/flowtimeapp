@@ -86,7 +86,6 @@ CREATE TABLE events (
   member_id UUID REFERENCES members(id) ON DELETE SET NULL,
   recurring JSONB DEFAULT NULL,
   category TEXT DEFAULT 'general',
-  shared BOOLEAN DEFAULT TRUE,
   scope TEXT NOT NULL DEFAULT 'famille' CHECK (scope IN ('perso', 'famille')),
   reminder_minutes INTEGER DEFAULT NULL,
   created_at TIMESTAMPTZ DEFAULT NOW()
@@ -223,6 +222,22 @@ CREATE TABLE flo_messages (
 );
 
 CREATE INDEX IF NOT EXISTS flo_messages_user_created ON flo_messages (user_id, created_at DESC);
+
+-- ===========================================
+-- Index de performance
+-- ===========================================
+
+-- Events : requête principale (famille + date)
+CREATE INDEX IF NOT EXISTS idx_events_family_date ON events (family_id, date);
+
+-- Events : filtrage par scope
+CREATE INDEX IF NOT EXISTS idx_events_scope ON events (scope, family_id);
+
+-- Family messages : affichage chronologique par famille
+CREATE INDEX IF NOT EXISTS idx_family_messages_family_id ON family_messages (family_id, created_at);
+
+-- Stripe webhook lookups
+CREATE INDEX IF NOT EXISTS idx_profiles_stripe_customer_id ON profiles (stripe_customer_id) WHERE stripe_customer_id IS NOT NULL;
 
 -- Abonnements push notifications
 CREATE TABLE push_subscriptions (
