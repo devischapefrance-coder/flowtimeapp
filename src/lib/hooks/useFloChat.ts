@@ -24,6 +24,8 @@ export function useFloChat({ isDev, userId }: UseFloChatOptions) {
   const [isLoading, setIsLoading] = useState(false);
   const [isWaitingValidation, setIsWaitingValidation] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
+  const messagesRef = useRef<FloMessage[]>([]);
+  messagesRef.current = messages;
 
   // Charger les messages depuis Supabase (mode normal uniquement)
   const loadMessages = useCallback(async () => {
@@ -84,8 +86,8 @@ export function useFloChat({ isDev, userId }: UseFloChatOptions) {
       // Persister le message user (mode normal)
       await persistMessage("user", text.trim());
 
-      // Construire l'historique pour l'API
-      const history = [...messages, userMessage].map((m) => ({
+      // Construire l'historique pour l'API (utiliser le ref pour éviter la closure stale)
+      const history = [...messagesRef.current, userMessage].map((m) => ({
         role: m.role,
         content: m.content,
       }));
@@ -228,7 +230,7 @@ export function useFloChat({ isDev, userId }: UseFloChatOptions) {
         abortRef.current = null;
       }
     },
-    [isDev, isLoading, messages, persistMessage]
+    [isDev, isLoading, persistMessage]
   );
 
   // Effacer la conversation

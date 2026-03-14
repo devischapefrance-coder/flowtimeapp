@@ -106,7 +106,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const body = await req.json();
+    const body = await req.json().catch(() => null);
+    if (!body) {
+      return new Response(JSON.stringify({ error: "Body JSON invalide" }), {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
     const { messages, isDev, projectContext } = body as {
       messages: ChatMessage[];
       isDev: boolean;
@@ -114,6 +121,7 @@ export async function POST(req: Request) {
     };
 
     if (!messages || !Array.isArray(messages) || messages.length === 0) {
+      console.error("Flo API: messages vides ou invalides", { hasMessages: !!messages, isArray: Array.isArray(messages), length: messages?.length });
       return new Response(JSON.stringify({ error: "Messages requis" }), {
         status: 400,
         headers: { "Content-Type": "application/json" },
