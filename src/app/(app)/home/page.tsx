@@ -1104,53 +1104,126 @@ export default function HomePage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [profile?.id]);
 
+  function WeatherSvgIcon({ description }: { description: string }) {
+    const d = description.toLowerCase();
+    const props = { width: 14, height: 14, viewBox: "0 0 24 24", fill: "none", stroke: "currentColor", strokeWidth: 1.5, strokeLinecap: "round" as const, strokeLinejoin: "round" as const };
+
+    if (d.includes("orage") || d.includes("tonnerre")) {
+      return <svg {...props}><path d="M6 16.326A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 .5 8.973" /><path d="m13 12-3 5h4l-3 5" /></svg>;
+    }
+    if (d.includes("neige")) {
+      return <svg {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M8 15h.01M8 19h.01M12 17h.01M12 21h.01M16 15h.01M16 19h.01" /></svg>;
+    }
+    if (d.includes("pluie") || d.includes("averse") || d.includes("bruine")) {
+      return <svg {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M16 14v6M8 14v6M12 16v6" /></svg>;
+    }
+    if (d.includes("brouillard") || d.includes("brume")) {
+      return <svg {...props}><path d="M4 14.899A7 7 0 1 1 15.71 8h1.79a4.5 4.5 0 0 1 2.5 8.242" /><path d="M16 17H7M17 21H9" /></svg>;
+    }
+    if (d.includes("nuage") || d.includes("couvert")) {
+      return <svg {...props}><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z" /></svg>;
+    }
+    // Soleil par défaut
+    return <svg {...props}><circle cx="12" cy="12" r="4" /><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" /></svg>;
+  }
+
   function renderFlow() {
     return (
-      <div
-        className="card !mb-0 !p-0 overflow-hidden"
+      <button
+        onClick={() => setChatOpen(true)}
+        className="w-full text-left cursor-pointer rounded-3xl p-4"
         data-tutorial="flow-chat-widget"
-        style={{ background: "var(--accent-soft)", border: "1px solid rgba(124,107,240,0.15)" }}
+        style={{
+          background: "var(--surface)",
+          border: "1px solid var(--glass-border)",
+        }}
+        aria-label="Ouvrir Flow IA"
       >
-        {/* Flow message row */}
-        <div className="flex items-center gap-3 p-3">
-          <button
-            onClick={() => setChatOpen(true)}
-            className="w-11 h-11 flex-shrink-0 flex items-center justify-center rounded-full text-xl cursor-pointer"
-            style={{ background: "linear-gradient(135deg, var(--accent), #9B8BFF)" }}
-            aria-label="Ouvrir Flow"
+        {/* Ligne principale : orbe + textes */}
+        <div className="flex items-start gap-3">
+          {/* Orbe animée */}
+          <div
+            className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center"
+            style={{
+              background: "var(--surface2)",
+              animation: "flow-ia-float 3s ease-in-out infinite",
+            }}
           >
-            <Logo size={24} />
-          </button>
+            <div
+              className="w-3 h-3 rounded-full"
+              style={{
+                background: "var(--accent)",
+                animation: "flow-ia-pulse 3s ease-in-out infinite",
+              }}
+            />
+          </div>
+
+          {/* Textes */}
           <div className="flex-1 min-w-0">
+            <p
+              className="text-[10px] font-bold uppercase"
+              style={{
+                color: "var(--accent)",
+                letterSpacing: "0.07em",
+              }}
+            >
+              FLOW IA
+            </p>
             {proactiveLoading && !proactiveMsg ? (
-              <div className="space-y-1.5">
-                <div className="h-3 w-3/4 rounded-full animate-pulse" style={{ background: "rgba(124,107,240,0.2)" }} />
-                <div className="h-2.5 w-1/2 rounded-full animate-pulse" style={{ background: "rgba(124,107,240,0.12)" }} />
+              <div className="space-y-1.5 mt-1.5">
+                <div
+                  className="h-3 w-3/4 rounded-full animate-pulse"
+                  style={{ background: "var(--accent-soft)" }}
+                />
+                <div
+                  className="h-2.5 w-1/2 rounded-full animate-pulse"
+                  style={{ background: "var(--accent-soft)" }}
+                />
               </div>
             ) : proactiveMsg ? (
               <>
-                <p className="text-[12px] leading-snug" style={{ color: "var(--text)" }}>{proactiveMsg.main}</p>
-                {proactiveMsg.sub && <p className="text-[10px] mt-0.5 truncate" style={{ color: "var(--dim)" }}>{proactiveMsg.sub}</p>}
+                <p
+                  className="text-[12.5px] mt-1"
+                  style={{ color: "var(--text)", lineHeight: "1.45" }}
+                >
+                  {proactiveMsg.main}
+                </p>
+                {proactiveMsg.sub && (
+                  <p
+                    className="text-[11px] mt-0.5 truncate"
+                    style={{ color: "var(--dim)" }}
+                  >
+                    {proactiveMsg.sub}
+                  </p>
+                )}
               </>
             ) : (
-              <p className="text-[11px]" style={{ color: "var(--dim)" }}>Demande-moi n&apos;importe quoi !</p>
+              <p
+                className="text-[12.5px] mt-1"
+                style={{ color: "var(--dim)", lineHeight: "1.45" }}
+              >
+                Demande-moi n&apos;importe quoi !
+              </p>
             )}
           </div>
         </div>
-        {/* Weather bar */}
+
+        {/* Météo */}
         {weather && (
-          <button
-            onClick={() => setWeatherOpen(true)}
-            className="w-full flex items-center gap-2 px-3 py-2 cursor-pointer"
-            style={{ borderTop: "1px solid rgba(124,107,240,0.1)", background: "rgba(124,107,240,0.03)" }}
+          <div
+            className="mt-3 pt-3 flex items-center gap-1.5"
+            style={{ borderTop: "0.5px solid var(--glass-border)", color: "var(--dim)" }}
           >
-            <span className="text-lg">{weather.icon}</span>
-            <span className="text-xs font-bold">{weather.temperature}°C</span>
-            <span className="text-[10px] flex-1 text-left truncate" style={{ color: "var(--dim)" }}>{weather.description}</span>
-            <span className="text-[10px]" style={{ color: "var(--faint)" }}>›</span>
-          </button>
+            <WeatherSvgIcon description={weather.description} />
+            <span className="text-[11px]">
+              {weather.description}
+            </span>
+            <span className="text-[11px]">
+              · {weather.temperature}°C
+            </span>
+          </div>
         )}
-      </div>
+      </button>
     );
   }
 
