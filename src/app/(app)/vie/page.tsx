@@ -16,7 +16,20 @@ import { useToast } from "@/components/Toast";
 import { notifyFamily } from "@/lib/push";
 import { usePullToRefresh, PullIndicator } from "@/lib/usePullToRefresh";
 import EmptyState from "@/components/EmptyState";
-import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Chore } from "@/lib/types";
+import type { Note, Birthday, Member, NoteComment, ChecklistItem, Attachment, ShoppingItem, Chore, GameType } from "@/lib/types";
+
+interface GameScoreInfo {
+  myBest: number;
+  familyBest: number;
+  familyBestName: string;
+  familyBestEmoji: string;
+}
+
+const GAMES: { id: GameType; name: string; emoji: string; description: string; multi?: boolean }[] = [
+  { id: "snake", name: "Snake", emoji: "🐍", description: "Mange les pommes sans te mordre !" },
+  { id: "tetris", name: "Tetris", emoji: "🧱", description: "Empile et complète les lignes", multi: true },
+  { id: "flappy", name: "Flappy Bird", emoji: "🐤", description: "Passe entre les tuyaux" },
+];
 
 const NOTE_CATEGORIES = [
   { value: "info", label: "Info", color: "var(--teal)", emoji: "💡" },
@@ -708,6 +721,9 @@ export default function ViePage() {
   // Comment counts per note
   const [commentCounts, setCommentCounts] = useState<Record<string, number>>({});
 
+  // Game scores
+  const [gameScores, setGameScores] = useState<Record<string, GameScoreInfo>>({});
+
   const fileInputRef = useRef<HTMLInputElement>(null);
   const dataLoadedRef = useRef(false);
 
@@ -825,7 +841,38 @@ export default function ViePage() {
     setMembers(loadedMembers);
     if (shopRes.data) setShoppingItems(shopRes.data as ShoppingItem[]);
     if (choreRes.data) setChores(choreRes.data as Chore[]);
-  }, [profile?.family_id]);
+
+    // Fetch game scores (non-bloquant)
+    supabase
+      .from("game_scores")
+      .select("user_id, game, score")
+      .eq("family_id", profile.family_id)
+      .order("score", { ascending: false })
+      .then(({ data: allScores }) => {
+        if (!allScores) return;
+        const memberMap = new Map<string, { name: string; emoji: string }>();
+        for (const m of loadedMembers) {
+          if (m.user_id) memberMap.set(m.user_id, { name: m.name, emoji: m.emoji });
+        }
+        const result: Record<string, GameScoreInfo> = {};
+        for (const game of GAMES) {
+          const gs = allScores.filter((s) => s.game === game.id);
+          const my = gs.filter((s) => s.user_id === profile?.id);
+          const myBest = my.length > 0 ? Math.max(...my.map((s) => s.score)) : 0;
+          let familyBest = 0;
+          let familyBestName = "";
+          let familyBestEmoji = "";
+          if (gs.length > 0) {
+            familyBest = gs[0].score;
+            const mem = memberMap.get(gs[0].user_id);
+            familyBestName = mem?.name || "Joueur";
+            familyBestEmoji = mem?.emoji || "👤";
+          }
+          result[game.id] = { myBest, familyBest, familyBestName, familyBestEmoji };
+        }
+        setGameScores(result);
+      });
+  }, [profile?.family_id, profile?.id]);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -1563,36 +1610,52 @@ export default function ViePage() {
 
       {/* Jeux tab */}
       {tab === "jeux" && (
-        <div>
-          <div className="flex flex-col gap-3">
-            {([
-              { id: "snake", name: "Snake", emoji: "🐍", desc: "Mange les pommes sans te mordre" },
-              { id: "tetris", name: "Tetris", emoji: "🧱", desc: "Empile et complète les lignes", multi: true },
-              { id: "flappy", name: "Flappy Bird", emoji: "🐤", desc: "Passe entre les tuyaux" },
-            ] as const).map((game) => (
+        <div className="flex flex-col gap-3">
+          {GAMES.map((game) => {
+            const info = gameScores[game.id];
+            return (
               <button
                 key={game.id}
                 className="card !mb-0 text-left active:scale-[0.98] transition-transform"
                 onClick={() => router.push(`/vie/jeux/${game.id}`)}
               >
-                <div className="flex items-center gap-4">
-                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0" style={{ background: "var(--accent-soft)" }}>
+                <div className="flex items-start gap-4">
+                  <div
+                    className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl shrink-0"
+                    style={{ background: "var(--accent-soft)" }}
+                  >
                     {game.emoji}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="text-sm font-bold">{game.name}</p>
-                      {"multi" in game && game.multi && (
-                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "color-mix(in srgb, var(--teal) 15%, transparent)", color: "var(--teal)" }}>MULTI</span>
+                      {game.multi && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "color-mix(in srgb, var(--teal) 15%, transparent)", color: "var(--teal)" }}>
+                          MULTI
+                        </span>
                       )}
                     </div>
-                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>{game.desc}</p>
+                    <p className="text-[10px] mb-2" style={{ color: "var(--dim)" }}>{game.description}</p>
+                    {info && (
+                      <div className="flex gap-4">
+                        {info.myBest > 0 && (
+                          <p className="text-[10px]" style={{ color: "var(--accent)" }}>
+                            👤 {info.myBest.toLocaleString("fr-FR")} pts
+                          </p>
+                        )}
+                        {info.familyBest > 0 && (
+                          <p className="text-[10px]" style={{ color: "var(--warm)" }}>
+                            🏆 {info.familyBestEmoji} {info.familyBestName} · {info.familyBest.toLocaleString("fr-FR")}
+                          </p>
+                        )}
+                      </div>
+                    )}
                   </div>
-                  <span className="text-sm shrink-0" style={{ color: "var(--faint)" }}>›</span>
+                  <span className="text-sm mt-2 shrink-0" style={{ color: "var(--faint)" }}>›</span>
                 </div>
               </button>
-            ))}
-          </div>
+            );
+          })}
         </div>
       )}
 
