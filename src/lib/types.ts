@@ -268,6 +268,36 @@ export interface PrivateMessage {
   created_at: string;
 }
 
+export type GameType = "snake" | "tetris" | "flappy";
+
+export interface GameScore {
+  id: string;
+  user_id: string;
+  family_id: string;
+  game: GameType;
+  score: number;
+  level?: number;
+  lines?: number;
+  duration_seconds?: number;
+  played_at: string;
+}
+
+export interface GameSession {
+  id: string;
+  family_id: string;
+  game: GameType;
+  host_id: string;
+  guest_id: string | null;
+  status: "waiting" | "playing" | "finished";
+  host_score: number;
+  guest_score: number;
+  host_alive: boolean;
+  guest_alive: boolean;
+  winner_id: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface FlowAction {
   type: "add_event" | "delete_event" | "edit_event" | "add_recurring";
   data: Record<string, unknown>;

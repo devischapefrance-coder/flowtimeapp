@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 
 function localDateStr(d: Date): string {
@@ -647,7 +647,8 @@ export default function ViePage() {
   const { toast, toastUndo } = useToast();
   const { pullDistance, refreshing } = usePullToRefresh(() => loadData());
   const searchParams = useSearchParams();
-  const validTabs = ["notes", "courses", "taches", "routines", "documents"] as const;
+  const router = useRouter();
+  const validTabs = ["notes", "courses", "taches", "routines", "documents", "jeux"] as const;
   type Tab = typeof validTabs[number];
   const [tab, setTab] = useState<Tab>(() => {
     if (typeof window !== "undefined") {
@@ -711,7 +712,7 @@ export default function ViePage() {
   const dataLoadedRef = useRef(false);
 
   // --- Badge "nouveautés" helpers ---
-  const TAB_KEYS = ["notes", "courses", "taches", "routines", "documents"] as const;
+  const TAB_KEYS = ["notes", "courses", "taches", "routines", "documents", "jeux"] as const;
 
   function getLastSeen(t: string): string {
     return localStorage.getItem(`flowtime_vie_lastSeen_${t}`) || "1970-01-01T00:00:00.000Z";
@@ -1049,6 +1050,7 @@ export default function ViePage() {
           ["taches", "🧹", "Tâches"],
           ["routines", "🌅", "Routines"],
           ["documents", "📄", "Docs"],
+          ["jeux", "🎮", "Jeux"],
         ] as const).map(([key, emoji, label]) => (
           <button
             key={key}
@@ -1557,6 +1559,41 @@ export default function ViePage() {
       {/* Documents tab */}
       {tab === "documents" && (
         <DocumentsTab members={members} familyId={profile?.family_id || ""} />
+      )}
+
+      {/* Jeux tab */}
+      {tab === "jeux" && (
+        <div>
+          <div className="flex flex-col gap-3">
+            {([
+              { id: "snake", name: "Snake", emoji: "🐍", desc: "Mange les pommes sans te mordre" },
+              { id: "tetris", name: "Tetris", emoji: "🧱", desc: "Empile et complète les lignes", multi: true },
+              { id: "flappy", name: "Flappy Bird", emoji: "🐤", desc: "Passe entre les tuyaux" },
+            ] as const).map((game) => (
+              <button
+                key={game.id}
+                className="card !mb-0 text-left active:scale-[0.98] transition-transform"
+                onClick={() => router.push(`/vie/jeux/${game.id}`)}
+              >
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-2xl flex items-center justify-center text-2xl shrink-0" style={{ background: "var(--accent-soft)" }}>
+                    {game.emoji}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <p className="text-sm font-bold">{game.name}</p>
+                      {"multi" in game && game.multi && (
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "color-mix(in srgb, var(--teal) 15%, transparent)", color: "var(--teal)" }}>MULTI</span>
+                      )}
+                    </div>
+                    <p className="text-[10px]" style={{ color: "var(--dim)" }}>{game.desc}</p>
+                  </div>
+                  <span className="text-sm shrink-0" style={{ color: "var(--faint)" }}>›</span>
+                </div>
+              </button>
+            ))}
+          </div>
+        </div>
       )}
 
       {/* Note Detail Modal */}
