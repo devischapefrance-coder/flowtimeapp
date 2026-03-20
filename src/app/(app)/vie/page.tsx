@@ -1382,7 +1382,7 @@ export default function ViePage() {
             frequency: choreFreq,
             assigned_members: choreMembers,
             current_index: 0,
-            last_rotated: localDateStr(new Date()),
+            last_rotated: null,
           });
           notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`);
           setChoreModal(false);
@@ -1395,27 +1395,6 @@ export default function ViePage() {
         async function deleteChore(id: string) {
           await supabase.from("chores").delete().eq("id", id);
           loadData();
-        }
-
-        async function rotateChore(chore: Chore) {
-          const nextIndex = (chore.current_index + 1) % (chore.assigned_members.length || 1);
-          await supabase.from("chores").update({
-            current_index: nextIndex,
-            last_rotated: localDateStr(new Date()),
-          }).eq("id", chore.id);
-          loadData();
-        }
-
-        // Auto-rotate check
-        for (const chore of chores) {
-          if (chore.assigned_members.length < 2) continue;
-          const lastRotated = chore.last_rotated ? new Date(chore.last_rotated) : new Date(0);
-          const now = new Date();
-          const daysSince = Math.floor((now.getTime() - lastRotated.getTime()) / 86400000);
-          const shouldRotate = chore.frequency === "daily" ? daysSince >= 1 : daysSince >= 7;
-          if (shouldRotate && chore.last_rotated) {
-            rotateChore(chore);
-          }
         }
 
         return (
@@ -1433,8 +1412,9 @@ export default function ViePage() {
 
             <div className="flex flex-col gap-2">
               {chores.map((chore) => {
-                const currentMemberId = chore.assigned_members[chore.current_index];
-                const currentMember = members.find((m) => m.id === currentMemberId);
+                const assignedMember = chore.assigned_members.length > 0
+                  ? members.find((m) => m.id === chore.assigned_members[0])
+                  : null;
                 return (
                   <div key={chore.id} className="card !mb-0">
                     <div className="flex items-center gap-3">
@@ -1445,27 +1425,14 @@ export default function ViePage() {
                           {chore.frequency === "daily" ? "Quotidien" : "Hebdomadaire"}
                         </p>
                       </div>
-                      {currentMember && (
+                      {assignedMember && (
                         <div className="text-center">
-                          <span className="text-lg">{currentMember.emoji}</span>
-                          <p className="text-[10px] font-bold" style={{ color: "var(--accent)" }}>{currentMember.name}</p>
+                          <span className="text-lg">{assignedMember.emoji}</span>
+                          <p className="text-[10px] font-bold" style={{ color: "var(--accent)" }}>{assignedMember.name}</p>
                         </div>
                       )}
                       <button className="text-xs p-1" style={{ color: "var(--red)" }} onClick={() => deleteChore(chore.id)}>✕</button>
                     </div>
-                    {/* Rotation preview */}
-                    {chore.assigned_members.length > 1 && (
-                      <div className="flex items-center gap-1 mt-2 pl-10">
-                        {chore.assigned_members.map((mId, i) => {
-                          const m = members.find((mem) => mem.id === mId);
-                          return (
-                            <span key={mId} className="text-[10px] px-1.5 py-0.5 rounded-full" style={{ background: i === chore.current_index ? "var(--accent-soft)" : "var(--surface2)", color: i === chore.current_index ? "var(--accent)" : "var(--dim)", fontWeight: i === chore.current_index ? 700 : 400 }}>
-                              {m?.emoji} {m?.name?.split(" ")[0]}
-                            </span>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
               })}
@@ -1499,12 +1466,15 @@ export default function ViePage() {
           </div>
           {members.length > 0 && (
             <div>
-              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Participants (rotation)</label>
+              <label className="text-xs font-bold block mb-1" style={{ color: "var(--dim)" }}>Assigné à (optionnel)</label>
               <div className="flex flex-wrap gap-1.5">
+                <button className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: choreMembers.length === 0 ? "var(--accent-soft)" : "var(--surface2)", color: choreMembers.length === 0 ? "var(--accent)" : "var(--dim)", border: choreMembers.length === 0 ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setChoreMembers([])}>
+                  Personne
+                </button>
                 {members.map((m) => {
                   const sel = choreMembers.includes(m.id);
                   return (
-                    <button key={m.id} className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: sel ? "var(--accent-soft)" : "var(--surface2)", color: sel ? "var(--accent)" : "var(--dim)", border: sel ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setChoreMembers(sel ? choreMembers.filter((id) => id !== m.id) : [...choreMembers, m.id])}>
+                    <button key={m.id} className="px-3 py-1.5 rounded-xl text-xs font-bold" style={{ background: sel ? "var(--accent-soft)" : "var(--surface2)", color: sel ? "var(--accent)" : "var(--dim)", border: sel ? "1px solid var(--accent)" : "1px solid transparent" }} onClick={() => setChoreMembers(sel ? [] : [m.id])}>
                       {m.emoji} {m.name}
                     </button>
                   );
@@ -1512,7 +1482,7 @@ export default function ViePage() {
               </div>
             </div>
           )}
-          <button className="btn btn-primary" onClick={() => { const addChore = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: localDateStr(new Date()) }); notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; addChore(); }}>
+          <button className="btn btn-primary" onClick={() => { const doAdd = async () => { if (!profile?.family_id || !choreName.trim()) return; await supabase.from("chores").insert({ family_id: profile.family_id, name: choreName.trim(), emoji: choreEmoji, frequency: choreFreq, assigned_members: choreMembers, current_index: 0, last_rotated: null }); notifyFamily("FlowTime 🧹", `${profile.first_name || "Quelqu'un"} a ajouté une tâche : ${choreEmoji} ${choreName.trim()}`); setChoreModal(false); setChoreName(""); setChoreEmoji("🧹"); setChoreMembers([]); loadData(); }; doAdd(); }}>
             Ajouter
           </button>
         </div>

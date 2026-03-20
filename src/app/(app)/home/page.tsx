@@ -1549,13 +1549,14 @@ export default function HomePage() {
     );
   }
 
-  async function completeChore(choreId: string, currentIndex: number) {
-    await supabase.from("chores").update({ current_index: currentIndex + 1, last_rotated: localDateStr(new Date()) }).eq("id", choreId);
+  async function toggleChore(choreId: string, isDone: boolean) {
+    await supabase.from("chores").update({
+      last_rotated: isDone ? null : localDateStr(new Date()),
+    }).eq("id", choreId);
     loadData();
   }
 
   function renderChores() {
-    // Show all chores: daily always, weekly if within rotation window
     const displayChores = chores;
     const doneCount = displayChores.filter((ch) => ch.last_rotated === todayStr).length;
     const totalCount = displayChores.length;
@@ -1574,19 +1575,14 @@ export default function HomePage() {
             {displayChores.map((ch) => {
               const isDone = ch.last_rotated === todayStr;
               const assignedMember = ch.assigned_members.length > 0
-                ? members.find((m) => m.id === ch.assigned_members[
-                    isDone
-                      ? (ch.current_index - 1 + ch.assigned_members.length) % ch.assigned_members.length
-                      : ch.current_index % ch.assigned_members.length
-                  ])
+                ? members.find((m) => m.id === ch.assigned_members[0])
                 : null;
               return (
                 <button
                   key={ch.id}
                   className="flex items-center gap-3 w-full text-left px-3 py-2.5 rounded-xl transition-all active:scale-[0.98]"
-                  style={{ background: "var(--surface2)", opacity: isDone ? 0.4 : 1 }}
-                  onClick={() => !isDone && completeChore(ch.id, ch.current_index)}
-                  disabled={isDone}
+                  style={{ background: "var(--surface2)", opacity: isDone ? 0.5 : 1 }}
+                  onClick={() => toggleChore(ch.id, isDone)}
                 >
                   <span
                     className="w-6 h-6 rounded-full border-2 flex items-center justify-center text-[11px] shrink-0 transition-all"
