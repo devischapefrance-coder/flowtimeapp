@@ -360,11 +360,10 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
 
       {/* Boutons tactiles */}
       {started && !gameOver && (
-        <div className="grid grid-cols-4 gap-2 w-full" style={{ maxWidth: 280 }}>
+        <div className="grid grid-cols-5 gap-2 w-full" style={{ maxWidth: 340 }}>
           <button
             className="h-12 rounded-xl flex items-center justify-center text-xl font-bold active:scale-90 transition-transform"
             style={{ background: "var(--surface2)", color: "var(--text)" }}
-            onTouchStart={(e) => { e.preventDefault(); moveLeft(); }}
             onClick={moveLeft}
           >
             ←
@@ -372,7 +371,6 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
           <button
             className="h-12 rounded-xl flex items-center justify-center text-xl font-bold active:scale-90 transition-transform"
             style={{ background: "var(--surface2)", color: "var(--text)" }}
-            onTouchStart={(e) => { e.preventDefault(); moveDown(); }}
             onClick={moveDown}
           >
             ↓
@@ -380,7 +378,6 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
           <button
             className="h-12 rounded-xl flex items-center justify-center text-xl font-bold active:scale-90 transition-transform"
             style={{ background: "var(--accent-soft)", color: "var(--accent)" }}
-            onTouchStart={(e) => { e.preventDefault(); rotatePiece(); }}
             onClick={rotatePiece}
           >
             ↻
@@ -388,10 +385,16 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
           <button
             className="h-12 rounded-xl flex items-center justify-center text-xl font-bold active:scale-90 transition-transform"
             style={{ background: "var(--surface2)", color: "var(--text)" }}
-            onTouchStart={(e) => { e.preventDefault(); moveRight(); }}
             onClick={moveRight}
           >
             →
+          </button>
+          <button
+            className="h-12 rounded-xl flex items-center justify-center text-xl font-bold active:scale-90 transition-transform"
+            style={{ background: "color-mix(in srgb, var(--warm) 15%, transparent)", color: "var(--warm)" }}
+            onClick={hardDrop}
+          >
+            ⤓
           </button>
         </div>
       )}

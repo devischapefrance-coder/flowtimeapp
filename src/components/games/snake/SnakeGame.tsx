@@ -229,10 +229,16 @@ export default function SnakeGame({ onGameOver }: SnakeGameProps) {
       e.preventDefault();
     }
 
+    function onTouchMove(e: TouchEvent) {
+      e.preventDefault();
+    }
+
     canvas.addEventListener("touchstart", onTouchStart, { passive: false });
+    canvas.addEventListener("touchmove", onTouchMove, { passive: false });
     canvas.addEventListener("touchend", onTouchEnd, { passive: false });
     return () => {
       canvas.removeEventListener("touchstart", onTouchStart);
+      canvas.removeEventListener("touchmove", onTouchMove);
       canvas.removeEventListener("touchend", onTouchEnd);
     };
   }, []);

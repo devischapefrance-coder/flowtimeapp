@@ -27,6 +27,8 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
   const [joinCode, setJoinCode] = useState("");
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const myScoreRef = useRef(0);
+  const myAliveRef = useRef(true);
 
   // Créer une session
   const createSession = useCallback(async () => {
@@ -60,8 +62,8 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
         }, (payload) => {
           const updated = payload.new as GameSession;
           setSession(updated);
-          if (updated.guest_id && updated.status === "waiting") {
-            // Un joueur a rejoint
+          if (updated.guest_id && updated.status === "playing") {
+            // Le guest a rejoint et la partie commence
             loadOpponentName(updated.guest_id);
           }
           if (updated.status === "finished") {
@@ -120,6 +122,10 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
   }, [familyId]);
 
   const setupBroadcast = useCallback((sessionId: string) => {
+    // Cleanup précédent si existant
+    if (channelRef.current) supabase.removeChannel(channelRef.current);
+    if (intervalRef.current) clearInterval(intervalRef.current);
+
     const channel = supabase
       .channel(`tetris-play-${sessionId}`)
       .on("broadcast", { event: "game_update" }, (payload) => {
@@ -133,15 +139,15 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
 
     channelRef.current = channel;
 
-    // Envoyer son état régulièrement
+    // Envoyer son état régulièrement (via refs pour eviter stale closure)
     intervalRef.current = setInterval(() => {
       channel.send({
         type: "broadcast",
         event: "game_update",
-        payload: { score: myScore, alive: myAlive, userId },
+        payload: { score: myScoreRef.current, alive: myAliveRef.current, userId },
       });
     }, 1000);
-  }, [userId, myScore, myAlive]);
+  }, [userId]);
 
   // Lancer la partie quand un joueur rejoint (côté host)
   useEffect(() => {
@@ -179,6 +185,8 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
   function handleGameOver(score: number, level: number, lines: number) {
     setMyScore(score);
     setMyAlive(false);
+    myScoreRef.current = score;
+    myAliveRef.current = false;
     onSaveScore(score, level, lines);
 
     // Broadcast qu'on a perdu

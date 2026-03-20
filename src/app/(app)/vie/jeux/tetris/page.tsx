@@ -51,7 +51,7 @@ export default function TetrisPage() {
         <button
           className="w-10 h-10 flex items-center justify-center rounded-full text-lg active:scale-90 transition-transform"
           style={{ background: "var(--surface2)" }}
-          onClick={() => router.back()}
+          onClick={() => router.push("/vie/jeux")}
         >
           ←
         </button>
