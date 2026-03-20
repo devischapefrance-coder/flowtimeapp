@@ -9,18 +9,19 @@ interface TetrisGameProps {
 const COLS = 10;
 const ROWS = 20;
 const BASE_SPEED = 800;
+const PREVIEW_WIDTH = 72;
 
 type Board = number[][];
 type Piece = { shape: number[][]; color: string; x: number; y: number };
 
 const PIECES: { shape: number[][]; color: string }[] = [
-  { shape: [[1, 1, 1, 1]], color: "#5ED4C8" },                     // I - teal
-  { shape: [[1, 1], [1, 1]], color: "#F5C563" },                   // O - warm
-  { shape: [[0, 1, 0], [1, 1, 1]], color: "#7C6BF0" },             // T - accent
-  { shape: [[0, 1, 1], [1, 1, 0]], color: "#5EC89E" },             // S - green
-  { shape: [[1, 1, 0], [0, 1, 1]], color: "#F06B7E" },             // Z - red
-  { shape: [[1, 0, 0], [1, 1, 1]], color: "#6BA3F0" },             // J - blue
-  { shape: [[0, 0, 1], [1, 1, 1]], color: "#B39DDB" },             // L - lavender
+  { shape: [[1, 1, 1, 1]], color: "#5ED4C8" },
+  { shape: [[1, 1], [1, 1]], color: "#F5C563" },
+  { shape: [[0, 1, 0], [1, 1, 1]], color: "#7C6BF0" },
+  { shape: [[0, 1, 1], [1, 1, 0]], color: "#5EC89E" },
+  { shape: [[1, 1, 0], [0, 1, 1]], color: "#F06B7E" },
+  { shape: [[1, 0, 0], [1, 1, 1]], color: "#6BA3F0" },
+  { shape: [[0, 0, 1], [1, 1, 1]], color: "#B39DDB" },
 ];
 
 const PIECE_COLORS = ["", "#5ED4C8", "#F5C563", "#7C6BF0", "#5EC89E", "#F06B7E", "#6BA3F0", "#B39DDB"];
@@ -91,6 +92,8 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
   const [lines, setLines] = useState(0);
   const [gameOver, setGameOver] = useState(false);
   const [started, setStarted] = useState(false);
+  const [cellSize, setCellSize] = useState(20);
+  const [nextPieceDisplay, setNextPieceDisplay] = useState<{ shape: number[][]; color: string } | null>(null);
 
   const boardRef = useRef<Board>(createBoard());
   const pieceRef = useRef<Piece>(randomPiece());
@@ -109,6 +112,93 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
 
   const getSpeed = useCallback(() => {
     return Math.max(100, BASE_SPEED - (levelRef.current - 1) * 70);
+  }, []);
+
+  // Calcul dynamique de la taille des cellules
+  useEffect(() => {
+    const resize = () => {
+      const availableW = window.innerWidth - 32 - PREVIEW_WIDTH - 8;
+      const maxByWidth = Math.floor(availableW / COLS);
+      const availableH = window.innerHeight - 280;
+      const maxByHeight = Math.floor(availableH / ROWS);
+      const size = Math.max(12, Math.min(maxByWidth, maxByHeight));
+      setCellSize(size);
+      cellSizeRef.current = size;
+    };
+    resize();
+    window.addEventListener("resize", resize);
+    return () => window.removeEventListener("resize", resize);
+  }, []);
+
+  // Redimensionner le canvas quand cellSize change
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    canvas.width = COLS * cellSize;
+    canvas.height = ROWS * cellSize;
+  }, [cellSize]);
+
+  const render = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const cell = cellSizeRef.current;
+
+    ctx.fillStyle = "#0F1117";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Grille
+    ctx.strokeStyle = "rgba(255,255,255,0.04)";
+    ctx.lineWidth = 0.5;
+    for (let r = 0; r <= ROWS; r++) {
+      ctx.beginPath();
+      ctx.moveTo(0, r * cell);
+      ctx.lineTo(COLS * cell, r * cell);
+      ctx.stroke();
+    }
+    for (let c = 0; c <= COLS; c++) {
+      ctx.beginPath();
+      ctx.moveTo(c * cell, 0);
+      ctx.lineTo(c * cell, ROWS * cell);
+      ctx.stroke();
+    }
+
+    // Cellules du board
+    const board = boardRef.current;
+    for (let r = 0; r < ROWS; r++) {
+      for (let c = 0; c < COLS; c++) {
+        if (board[r][c]) {
+          ctx.fillStyle = PIECE_COLORS[board[r][c]] || "#7C6BF0";
+          ctx.fillRect(c * cell + 1, r * cell + 1, cell - 2, cell - 2);
+        }
+      }
+    }
+
+    // Piece active
+    const piece = pieceRef.current;
+    for (let r = 0; r < piece.shape.length; r++) {
+      for (let c = 0; c < piece.shape[r].length; c++) {
+        if (!piece.shape[r][c]) continue;
+        ctx.fillStyle = piece.color;
+        ctx.fillRect((piece.x + c) * cell + 1, (piece.y + r) * cell + 1, cell - 2, cell - 2);
+      }
+    }
+
+    // Ombre (ghost piece)
+    let ghostY = piece.y;
+    while (!collides(board, { ...piece, y: ghostY + 1 })) ghostY++;
+    if (ghostY !== piece.y) {
+      ctx.globalAlpha = 0.2;
+      for (let r = 0; r < piece.shape.length; r++) {
+        for (let c = 0; c < piece.shape[r].length; c++) {
+          if (!piece.shape[r][c]) continue;
+          ctx.fillStyle = piece.color;
+          ctx.fillRect((piece.x + c) * cell + 1, (ghostY + r) * cell + 1, cell - 2, cell - 2);
+        }
+      }
+      ctx.globalAlpha = 1;
+    }
   }, []);
 
   const placePiece = useCallback(() => {
@@ -133,11 +223,10 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
       }
     }
 
-    // Prochaine pièce
     pieceRef.current = nextPieceRef.current;
     nextPieceRef.current = randomPiece();
+    setNextPieceDisplay({ shape: nextPieceRef.current.shape.map((r) => [...r]), color: nextPieceRef.current.color });
 
-    // Vérifier game over
     if (collides(boardRef.current, pieceRef.current)) {
       gameOverRef.current = true;
       setGameOver(true);
@@ -171,7 +260,6 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
     const piece = pieceRef.current;
     const rotated = rotate(piece.shape);
     const test = { ...piece, shape: rotated };
-    // Wall kicks
     if (!collides(boardRef.current, test)) {
       pieceRef.current = test;
     } else if (!collides(boardRef.current, { ...test, x: test.x - 1 })) {
@@ -190,105 +278,6 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
     pieceRef.current = test;
     placePiece();
   }, [placePiece]);
-
-  const render = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-    const cell = cellSizeRef.current;
-    const boardW = COLS * cell;
-    const boardH = ROWS * cell;
-    const offsetX = (canvas.width - boardW) / 2;
-    const offsetY = (canvas.height - boardH) / 2;
-
-    // Background
-    ctx.fillStyle = "#0F1117";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Board background
-    ctx.fillStyle = "rgba(255,255,255,0.02)";
-    ctx.fillRect(offsetX, offsetY, boardW, boardH);
-
-    // Grille
-    ctx.strokeStyle = "rgba(255,255,255,0.04)";
-    ctx.lineWidth = 0.5;
-    for (let r = 0; r <= ROWS; r++) {
-      ctx.beginPath();
-      ctx.moveTo(offsetX, offsetY + r * cell);
-      ctx.lineTo(offsetX + boardW, offsetY + r * cell);
-      ctx.stroke();
-    }
-    for (let c = 0; c <= COLS; c++) {
-      ctx.beginPath();
-      ctx.moveTo(offsetX + c * cell, offsetY);
-      ctx.lineTo(offsetX + c * cell, offsetY + boardH);
-      ctx.stroke();
-    }
-
-    // Board cells
-    const board = boardRef.current;
-    for (let r = 0; r < ROWS; r++) {
-      for (let c = 0; c < COLS; c++) {
-        if (board[r][c]) {
-          ctx.fillStyle = PIECE_COLORS[board[r][c]] || "#7C6BF0";
-          ctx.fillRect(offsetX + c * cell + 1, offsetY + r * cell + 1, cell - 2, cell - 2);
-        }
-      }
-    }
-
-    // Pièce active
-    const piece = pieceRef.current;
-    for (let r = 0; r < piece.shape.length; r++) {
-      for (let c = 0; c < piece.shape[r].length; c++) {
-        if (!piece.shape[r][c]) continue;
-        ctx.fillStyle = piece.color;
-        ctx.fillRect(offsetX + (piece.x + c) * cell + 1, offsetY + (piece.y + r) * cell + 1, cell - 2, cell - 2);
-      }
-    }
-
-    // Ombre (ghost piece)
-    let ghostY = piece.y;
-    while (!collides(board, { ...piece, y: ghostY + 1 })) ghostY++;
-    if (ghostY !== piece.y) {
-      ctx.globalAlpha = 0.2;
-      for (let r = 0; r < piece.shape.length; r++) {
-        for (let c = 0; c < piece.shape[r].length; c++) {
-          if (!piece.shape[r][c]) continue;
-          ctx.fillStyle = piece.color;
-          ctx.fillRect(offsetX + (piece.x + c) * cell + 1, offsetY + (ghostY + r) * cell + 1, cell - 2, cell - 2);
-        }
-      }
-      ctx.globalAlpha = 1;
-    }
-
-    // Prochaine pièce (en haut à droite)
-    const nextX = offsetX + boardW + 10;
-    const nextY = offsetY;
-    ctx.fillStyle = "rgba(255,255,255,0.05)";
-    ctx.fillRect(nextX, nextY, cell * 5, cell * 4);
-    ctx.fillStyle = "rgba(236,238,244,0.4)";
-    ctx.font = "bold 10px sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText("SUIVANT", nextX + 4, nextY - 4);
-    const next = nextPieceRef.current;
-    for (let r = 0; r < next.shape.length; r++) {
-      for (let c = 0; c < next.shape[r].length; c++) {
-        if (!next.shape[r][c]) continue;
-        ctx.fillStyle = next.color;
-        ctx.fillRect(nextX + 8 + c * (cell * 0.8), nextY + 8 + r * (cell * 0.8), cell * 0.8 - 2, cell * 0.8 - 2);
-      }
-    }
-
-    // Info en haut
-    ctx.fillStyle = "rgba(236,238,244,0.5)";
-    ctx.font = "bold 12px sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText(`Score: ${scoreRef.current}`, offsetX, offsetY - 24);
-    ctx.fillText(`Niv: ${levelRef.current}`, offsetX, offsetY - 8);
-    ctx.textAlign = "right";
-    ctx.fillText(`Lignes: ${linesRef.current}`, offsetX + boardW, offsetY - 8);
-  }, []);
 
   const gameLoop = useCallback((timestamp: number) => {
     if (gameOverRef.current) return;
@@ -314,22 +303,9 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
     setLines(0);
     setGameOver(false);
     setStarted(true);
+    setNextPieceDisplay({ shape: nextPieceRef.current.shape.map((r) => [...r]), color: nextPieceRef.current.color });
     animFrameRef.current = requestAnimationFrame(gameLoop);
   }, [gameLoop]);
-
-  // Resize canvas
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const parent = canvas.parentElement;
-    if (!parent) return;
-    const maxW = Math.min(parent.clientWidth, 400);
-    const cell = Math.floor((maxW - 80) / COLS); // marge pour la pièce suivante
-    cellSizeRef.current = cell;
-    canvas.width = maxW;
-    canvas.height = cell * ROWS + 50;
-    render();
-  }, [render]);
 
   // Keyboard
   useEffect(() => {
@@ -350,17 +326,76 @@ export default function TetrisGame({ onGameOver }: TetrisGameProps) {
     return () => cancelAnimationFrame(animFrameRef.current);
   }, []);
 
+  const boardWidth = COLS * cellSize;
+
   return (
     <div className="flex flex-col items-center gap-3">
-      <canvas
-        ref={canvasRef}
-        className="rounded-2xl"
-        style={{ background: "#0F1117", border: "1px solid var(--glass-border)", touchAction: "none" }}
-      />
+      {/* Score / Niveau / Lignes */}
+      <div
+        className="flex justify-between w-full px-1"
+        style={{ maxWidth: boardWidth + PREVIEW_WIDTH + 8 }}
+      >
+        <span className="text-xs font-bold" style={{ color: "var(--accent)" }}>
+          Score: {score}
+        </span>
+        <span className="text-xs font-bold" style={{ color: "var(--dim)" }}>
+          Niv: {level}
+        </span>
+        <span className="text-xs font-bold" style={{ color: "var(--dim)" }}>
+          Lignes: {lines}
+        </span>
+      </div>
+
+      {/* Board + Preview cote a cote */}
+      <div className="flex gap-2 items-start">
+        <canvas
+          ref={canvasRef}
+          className="rounded-xl"
+          style={{
+            background: "#0F1117",
+            border: "1px solid var(--glass-border)",
+            touchAction: "none",
+            width: boardWidth,
+            height: ROWS * cellSize,
+          }}
+        />
+
+        {/* Panneau piece suivante */}
+        <div
+          className="rounded-xl flex flex-col items-center gap-1 pt-2 pb-3 shrink-0"
+          style={{ background: "var(--surface)", width: PREVIEW_WIDTH, border: "1px solid var(--glass-border)" }}
+        >
+          <p className="text-[9px] font-bold uppercase tracking-wide" style={{ color: "var(--dim)" }}>
+            Suivant
+          </p>
+          <div className="flex flex-col items-center justify-center mt-1">
+            {nextPieceDisplay ? (
+              nextPieceDisplay.shape.map((row, ri) => (
+                <div key={ri} className="flex">
+                  {row.map((cell, ci) => (
+                    <div
+                      key={ci}
+                      style={{
+                        width: 14,
+                        height: 14,
+                        margin: 1,
+                        borderRadius: 2,
+                        background: cell ? nextPieceDisplay.color : "transparent",
+                      }}
+                    />
+                  ))}
+                </div>
+              ))
+            ) : (
+              <div style={{ width: 48, height: 32 }} />
+            )}
+          </div>
+        </div>
+      </div>
 
       {/* Boutons tactiles */}
       {started && !gameOver && (
-        <div className="grid grid-cols-5 gap-2 w-full" style={{ maxWidth: 340 }}>
+        <div className="grid grid-cols-5 gap-2 w-full" style={{ maxWidth: boardWidth + PREVIEW_WIDTH + 8 }}>
           <button
             className="h-12 rounded-xl flex items-center justify-center text-xl font-bold active:scale-90 transition-transform"
             style={{ background: "var(--surface2)", color: "var(--text)" }}

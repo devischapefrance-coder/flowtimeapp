@@ -46,7 +46,14 @@ export default function TetrisPage() {
   }, [saveScore]);
 
   return (
-    <div className="px-4 py-4 animate-in gradient-bg" style={{ minHeight: "100dvh", paddingBottom: 40 }}>
+    <div
+      className="px-4 py-4 animate-in gradient-bg"
+      style={{
+        minHeight: "100dvh",
+        paddingBottom: "calc(65px + env(safe-area-inset-bottom, 0px))",
+        overflowY: "auto",
+      }}
+    >
       <div className="flex items-center gap-3 mb-4">
         <button
           className="w-10 h-10 flex items-center justify-center rounded-full text-lg active:scale-90 transition-transform"
