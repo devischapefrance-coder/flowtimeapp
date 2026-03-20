@@ -352,15 +352,22 @@ export default function HomePage() {
     const stripEnd = strip[strip.length - 1].date;
     supabase
       .from("events")
-      .select("date, category, member_id")
+      .select("date, category, member_id, scope")
       .eq("family_id", profile.family_id)
       .gte("date", stripStart)
       .lte("date", stripEnd)
       .then(({ data }) => {
         if (!data) return;
+        // Filtrer par scope/viewMode comme pour viewEvents
+        const myMemberId = members.find((m) => m.user_id === profile?.id)?.id
+          || members.find((m) => m.name.toLowerCase() === (profile?.first_name || "").toLowerCase())?.id
+          || null;
+        const filtered = viewMode === "perso" && myMemberId
+          ? data.filter((ev) => (ev.scope === "perso" && ev.member_id === myMemberId) || ev.scope === "famille")
+          : data.filter((ev) => ev.scope === "famille");
         const counts: Record<string, number> = {};
         const cats: Record<string, Record<string, number>> = {};
-        for (const ev of data) {
+        for (const ev of filtered) {
           counts[ev.date] = (counts[ev.date] || 0) + 1;
           if (!cats[ev.date]) cats[ev.date] = {};
           const cat = ev.category || "general";
@@ -374,7 +381,7 @@ export default function HomePage() {
         }
         setStripColors(colors);
       });
-  }, [profile?.family_id]);
+  }, [profile?.family_id, profile?.id, profile?.first_name, viewMode, members]);
   useEffect(() => { refreshStripCounts(); }, [refreshStripCounts]);
 
   const weekMonthLabel = (() => {

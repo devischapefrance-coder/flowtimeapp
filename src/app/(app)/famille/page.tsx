@@ -599,6 +599,16 @@ export default function FamillePage() {
                     {ago !== null && ` · ${ago < 1 ? "En ligne" : ago < 60 ? `il y a ${ago} min` : ago < 1440 ? `il y a ${Math.floor(ago / 60)}h` : `il y a ${Math.floor(ago / 1440)}j`}`}
                   </p>
                 </div>
+                {m.user_id && m.user_id !== profile?.id && (
+                  <button
+                    className="w-9 h-9 flex items-center justify-center rounded-full text-lg shrink-0 active:scale-90 transition-transform"
+                    style={{ background: "color-mix(in srgb, var(--accent) 12%, transparent)" }}
+                    onClick={(e) => { e.stopPropagation(); router.push(`/chat/${m.user_id}`); }}
+                    aria-label={`Discuter avec ${m.name}`}
+                  >
+                    💬
+                  </button>
+                )}
                 {m.phone && (
                   <a
                     href={`tel:${m.phone}`}

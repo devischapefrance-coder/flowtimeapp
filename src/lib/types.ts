@@ -260,6 +260,14 @@ export interface ThemePreference {
   themeMode: ThemeMode;
 }
 
+export interface PrivateMessage {
+  id: string;
+  sender_id: string;
+  receiver_id: string;
+  message: string;
+  created_at: string;
+}
+
 export interface FlowAction {
   type: "add_event" | "delete_event" | "edit_event" | "add_recurring";
   data: Record<string, unknown>;
