@@ -27,89 +27,11 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
   const [joinCode, setJoinCode] = useState("");
   const channelRef = useRef<ReturnType<typeof supabase.channel> | null>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  const pollingRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const myScoreRef = useRef(0);
   const myAliveRef = useRef(true);
-
-  // Créer une session
-  const createSession = useCallback(async () => {
-    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
-    const { data } = await supabase
-      .from("game_sessions")
-      .insert({
-        family_id: familyId,
-        host_id: userId,
-        status: "waiting",
-        game: "tetris",
-      })
-      .select()
-      .single();
-
-    if (data) {
-      setSession(data as GameSession);
-      setSessionCode(code);
-      setState("waiting");
-      // Stocker le code dans localStorage pour le mapping
-      localStorage.setItem(`game_session_${code}`, data.id);
-
-      // Ecouter les changements de session
-      const channel = supabase
-        .channel(`tetris-session-${data.id}`)
-        .on("postgres_changes", {
-          event: "UPDATE",
-          schema: "public",
-          table: "game_sessions",
-          filter: `id=eq.${data.id}`,
-        }, (payload) => {
-          const updated = payload.new as GameSession;
-          setSession(updated);
-          if (updated.guest_id && updated.status === "playing") {
-            // Le guest a rejoint et la partie commence
-            loadOpponentName(updated.guest_id);
-          }
-          if (updated.status === "finished") {
-            setState("finished");
-            if (updated.winner_id === userId) setWinner("Toi");
-            else setWinner(opponentName);
-          }
-        })
-        .subscribe();
-
-      channelRef.current = channel;
-    }
-  }, [familyId, userId, opponentName]);
-
-  // Rejoindre une session
-  const joinSession = useCallback(async () => {
-    if (!joinCode.trim()) return;
-    // Chercher la session par le code localStorage (simplifié)
-    // En vrai on cherche les sessions en attente de la famille
-    const { data: sessions } = await supabase
-      .from("game_sessions")
-      .select("*")
-      .eq("family_id", familyId)
-      .eq("status", "waiting")
-      .is("guest_id", null)
-      .order("created_at", { ascending: false })
-      .limit(5);
-
-    if (!sessions || sessions.length === 0) return;
-
-    // Prendre la première session disponible (pas la sienne)
-    const target = sessions.find((s: GameSession) => s.host_id !== userId);
-    if (!target) return;
-
-    await supabase
-      .from("game_sessions")
-      .update({ guest_id: userId, status: "playing" })
-      .eq("id", target.id);
-
-    setSession(target as GameSession);
-    loadOpponentName(target.host_id);
-    setState("playing");
-
-    // Broadcast channel
-    setupBroadcast(target.id);
-  }, [joinCode, familyId, userId]);
+  const stateRef = useRef<MultiState>("menu");
+  const sessionIdRef = useRef<string | null>(null);
 
   const loadOpponentName = useCallback(async (oppId: string) => {
     const { data } = await supabase
@@ -122,7 +44,7 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
   }, [familyId]);
 
   const setupBroadcast = useCallback((sessionId: string) => {
-    // Cleanup précédent si existant
+    console.log("[TetrisMulti] setupBroadcast pour session:", sessionId);
     if (channelRef.current) supabase.removeChannel(channelRef.current);
     if (intervalRef.current) clearInterval(intervalRef.current);
 
@@ -139,7 +61,6 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
 
     channelRef.current = channel;
 
-    // Envoyer son état régulièrement (via refs pour eviter stale closure)
     intervalRef.current = setInterval(() => {
       channel.send({
         type: "broadcast",
@@ -149,15 +70,120 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
     }, 1000);
   }, [userId]);
 
-  // Lancer la partie quand un joueur rejoint (côté host)
-  useEffect(() => {
-    if (session?.guest_id && state === "waiting") {
-      setState("playing");
-      if (session.id) setupBroadcast(session.id);
-      // Mettre à jour le status
-      supabase.from("game_sessions").update({ status: "playing" }).eq("id", session.id);
+  // Fonction directe pour démarrer la partie (côté host)
+  const startGameAsHost = useCallback((sessionId: string, guestId: string) => {
+    console.log("[TetrisMulti] startGameAsHost — sessionId:", sessionId, "guestId:", guestId);
+    if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+    setState("playing");
+    stateRef.current = "playing";
+    loadOpponentName(guestId);
+    setupBroadcast(sessionId);
+  }, [loadOpponentName, setupBroadcast]);
+
+  // Créer une session
+  const createSession = useCallback(async () => {
+    const code = Math.random().toString(36).substring(2, 8).toUpperCase();
+    const { data } = await supabase
+      .from("game_sessions")
+      .insert({
+        family_id: familyId,
+        host_id: userId,
+        status: "waiting",
+        game: "tetris",
+      })
+      .select()
+      .single();
+
+    if (data) {
+      console.log("[TetrisMulti] Session créée:", data.id, "code:", code);
+      setSession(data as GameSession);
+      setSessionCode(code);
+      setState("waiting");
+      stateRef.current = "waiting";
+      sessionIdRef.current = data.id;
+      localStorage.setItem(`game_session_${code}`, data.id);
+
+      // Ecouter les changements de session via Realtime
+      const channel = supabase
+        .channel(`tetris-session-${data.id}`)
+        .on("postgres_changes", {
+          event: "UPDATE",
+          schema: "public",
+          table: "game_sessions",
+          filter: `id=eq.${data.id}`,
+        }, (payload) => {
+          const updated = payload.new as GameSession;
+          console.log("[TetrisMulti] Realtime UPDATE reçu:", updated.status, "guest:", updated.guest_id, "state actuel:", stateRef.current);
+          setSession(updated);
+
+          // Démarrer directement si un guest a rejoint
+          if (updated.guest_id && stateRef.current === "waiting") {
+            startGameAsHost(updated.id, updated.guest_id);
+          }
+          if (updated.status === "finished") {
+            setState("finished");
+            stateRef.current = "finished";
+            if (updated.winner_id === userId) setWinner("Toi");
+            else setWinner(opponentName);
+          }
+        })
+        .subscribe();
+
+      channelRef.current = channel;
+
+      // Polling fallback toutes les 2s au cas où Realtime ne trigger pas
+      pollingRef.current = setInterval(async () => {
+        if (stateRef.current !== "waiting") {
+          if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; }
+          return;
+        }
+        console.log("[TetrisMulti] Polling fallback — vérification session...");
+        const { data: fresh } = await supabase
+          .from("game_sessions")
+          .select("*")
+          .eq("id", data.id)
+          .single();
+        if (fresh && fresh.guest_id && stateRef.current === "waiting") {
+          console.log("[TetrisMulti] Polling détecte guest_id:", fresh.guest_id);
+          setSession(fresh as GameSession);
+          startGameAsHost(fresh.id, fresh.guest_id);
+        }
+      }, 2000);
     }
-  }, [session?.guest_id, state, session?.id, setupBroadcast]);
+  }, [familyId, userId, opponentName, startGameAsHost]);
+
+  // Rejoindre une session
+  const joinSession = useCallback(async () => {
+    if (!joinCode.trim()) return;
+    const { data: sessions } = await supabase
+      .from("game_sessions")
+      .select("*")
+      .eq("family_id", familyId)
+      .eq("status", "waiting")
+      .is("guest_id", null)
+      .order("created_at", { ascending: false })
+      .limit(5);
+
+    if (!sessions || sessions.length === 0) return;
+
+    const target = sessions.find((s: GameSession) => s.host_id !== userId);
+    if (!target) return;
+
+    console.log("[TetrisMulti] Rejoindre session:", target.id);
+
+    // Mettre à jour avec updated_at pour garantir le trigger Realtime
+    await supabase
+      .from("game_sessions")
+      .update({ guest_id: userId, status: "playing", updated_at: new Date().toISOString() })
+      .eq("id", target.id);
+
+    setSession(target as GameSession);
+    loadOpponentName(target.host_id);
+    setState("playing");
+    stateRef.current = "playing";
+
+    setupBroadcast(target.id);
+  }, [joinCode, familyId, userId]);
 
   // Détecter fin de partie
   useEffect(() => {
@@ -179,6 +205,7 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
     return () => {
       if (channelRef.current) supabase.removeChannel(channelRef.current);
       if (intervalRef.current) clearInterval(intervalRef.current);
+      if (pollingRef.current) clearInterval(pollingRef.current);
     };
   }, []);
 
@@ -249,7 +276,7 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
         <button
           className="block mx-auto mt-6 text-xs"
           style={{ color: "var(--faint)" }}
-          onClick={() => { setState("menu"); if (session) supabase.from("game_sessions").delete().eq("id", session.id); }}
+          onClick={() => { setState("menu"); stateRef.current = "menu"; if (pollingRef.current) { clearInterval(pollingRef.current); pollingRef.current = null; } if (session) supabase.from("game_sessions").delete().eq("id", session.id); }}
         >
           Annuler
         </button>
@@ -275,7 +302,7 @@ export default function TetrisMulti({ familyId, userId, userName, onSaveScore }:
         <button
           className="px-6 py-3 rounded-xl font-bold text-sm"
           style={{ background: "var(--accent)", color: "#fff" }}
-          onClick={() => { setState("menu"); setSession(null); setMyScore(0); setMyAlive(true); setOpponentScore(0); setOpponentAlive(true); }}
+          onClick={() => { setState("menu"); stateRef.current = "menu"; setSession(null); setMyScore(0); setMyAlive(true); myAliveRef.current = true; myScoreRef.current = 0; setOpponentScore(0); setOpponentAlive(true); }}
         >
           Retour au menu
         </button>
