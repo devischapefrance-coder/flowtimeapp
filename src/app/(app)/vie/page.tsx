@@ -823,7 +823,7 @@ export default function ViePage() {
         emoji: m.emoji || "🎂",
         member_id: m.id,
       }));
-      const { data: newBdays } = await supabase.from("birthdays").insert(inserts).select("*");
+      const { data: newBdays } = await supabase.from("birthdays").upsert(inserts, { onConflict: "member_id" }).select("*");
       if (newBdays) loadedBdays.push(...(newBdays as Birthday[]));
     }
     // Sync: update existing linked birthdays if member name/date/emoji changed

@@ -987,11 +987,19 @@ export default function HomePage() {
   // ---- Computed data for widgets ----
   const totalWeekEvents = viewEvents.length;
 
-  // Birthdays: all sorted by upcoming, widget shows 3
+  // Birthdays: deduplicate by member_id, then sort by upcoming
   const allBirthdaysSorted = (() => {
     const today = new Date();
     const thisYear = today.getFullYear();
-    return birthdays
+    // Deduplicate: keep first entry per member_id
+    const seen = new Set<string>();
+    const unique = birthdays.filter((b) => {
+      if (!b.member_id) return true;
+      if (seen.has(b.member_id)) return false;
+      seen.add(b.member_id);
+      return true;
+    });
+    return unique
       .map((b) => {
         const [birthYear, m, d] = b.date.split("-").map(Number);
         let nextBday = new Date(thisYear, m - 1, d);
