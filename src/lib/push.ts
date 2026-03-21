@@ -84,3 +84,15 @@ export async function notifyFamily(title: string, body: string): Promise<void> {
     });
   } catch { /* silent — don't block UI for push failures */ }
 }
+
+/** Send a push notification to a specific user */
+export async function notifyUser(recipientId: string, title: string, body: string, url?: string): Promise<void> {
+  try {
+    const authHeaders = await getAuthHeaders();
+    await fetch("/api/push/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders },
+      body: JSON.stringify({ title, body, userId: recipientId, url, tag: `private-${recipientId}` }),
+    });
+  } catch { /* silent */ }
+}

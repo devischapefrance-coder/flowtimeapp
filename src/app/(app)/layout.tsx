@@ -13,6 +13,7 @@ import TutorialOverlay from "@/components/TutorialOverlay";
 import { TUTORIAL_STEPS, TUTORIAL_SECTIONS, getFirstStepIndex } from "@/lib/tutorial-data";
 import { subscribeToPush, isPushSubscribed } from "@/lib/push";
 import { useTheme } from "@/lib/hooks/useTheme";
+import { useUnreadPrivateMessages } from "@/lib/hooks/useUnreadPrivateMessages";
 import type { AppTheme, ThemeMode } from "@/lib/types";
 
 interface ProfileContextType {
@@ -22,6 +23,7 @@ interface ProfileContextType {
   openChat: () => void;
   vieUnread: number;
   setVieUnread: (n: number) => void;
+  privateUnread: number;
   appTheme: AppTheme;
   appThemeMode: ThemeMode;
   setAppTheme: (theme: AppTheme, mode: ThemeMode) => Promise<void>;
@@ -34,6 +36,7 @@ const ProfileContext = createContext<ProfileContextType>({
   openChat: () => {},
   vieUnread: 0,
   setVieUnread: () => {},
+  privateUnread: 0,
   appTheme: "default",
   appThemeMode: "dark",
   setAppTheme: async () => {},
@@ -86,6 +89,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [vieUnread, setVieUnread] = useState(0);
 
   const { theme: appTheme, themeMode: appThemeMode, setTheme: setAppTheme } = useTheme({ userId: profile?.id });
+  const privateUnread = useUnreadPrivateMessages(profile?.id ?? null);
 
   // Page transition direction
   const prevPathRef = useRef(pathname);
@@ -397,7 +401,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   return (
     <I18nProvider initialLang={initialLang}>
-      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread, appTheme, appThemeMode, setAppTheme }}>
+      <ProfileContext.Provider value={{ profile, refreshProfile: loadProfile, chatUnread, openChat: () => setChatOpen(true), vieUnread, setVieUnread, privateUnread, appTheme, appThemeMode, setAppTheme }}>
         <TutorialContext.Provider value={{ tutorialActive, tutorialStep, currentSection, completedSections, startTutorial, startTutorialAtSection, stopTutorial, nextStep, prevStep, skipSection }}>
           <ToastProvider>
             <div

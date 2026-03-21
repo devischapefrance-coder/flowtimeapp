@@ -11,7 +11,7 @@ export async function POST(req: NextRequest) {
 
   try {
     const push = getWebPush();
-    const { title, body, userId, familyId } = await req.json();
+    const { title, body, userId, familyId, url, tag } = await req.json();
     if (!title) {
       return NextResponse.json({ error: "Missing title" }, { status: 400 });
     }
@@ -75,6 +75,8 @@ export async function POST(req: NextRequest) {
       body: body || "",
       icon: "/icons/icon-192.png",
       badge: "/icons/icon-192.png",
+      url: url || "/home",
+      tag: tag || "flowtime",
     });
 
     let sent = 0;

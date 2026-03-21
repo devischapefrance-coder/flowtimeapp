@@ -265,6 +265,7 @@ export interface PrivateMessage {
   sender_id: string;
   receiver_id: string;
   message: string;
+  read_at: string | null;
   created_at: string;
 }
 

@@ -245,6 +245,8 @@ export default function FamilyChat({ open, onClose, familyId, userId, userName, 
             ➤
           </button>
         </div>
+        {/* Spacer pour ne pas passer sous la bottom nav */}
+        <div style={{ height: "calc(40px + env(safe-area-inset-bottom, 0px))" }} />
       </div>
     </Modal>
   );

@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useProfile } from "../../layout";
+import { notifyUser } from "@/lib/push";
 import type { PrivateMessage } from "@/lib/types";
 
 const MAX_MESSAGES = 100;
@@ -66,6 +67,21 @@ export default function PrivateChatPage() {
     loadMessages();
   }, [loadMessages]);
 
+  // Marquer les messages comme lus à l'ouverture
+  const markAsRead = useCallback(async () => {
+    if (!myId || !userId) return;
+    await supabase
+      .from("private_messages")
+      .update({ read_at: new Date().toISOString() })
+      .eq("receiver_id", myId)
+      .eq("sender_id", userId)
+      .is("read_at", null);
+  }, [myId, userId]);
+
+  useEffect(() => {
+    markAsRead();
+  }, [markAsRead]);
+
   // Realtime : ecouter les nouveaux messages de cette conversation
   useEffect(() => {
     if (!myId || !userId) return;
@@ -86,6 +102,10 @@ export default function PrivateChatPage() {
             if (prev.some((m) => m.id === msg.id)) return prev;
             return [...prev, msg];
           });
+          // Marquer comme lu si c'est un message reçu
+          if (msg.sender_id === userId) {
+            markAsRead();
+          }
         }
       )
       .subscribe();
@@ -111,6 +131,7 @@ export default function PrivateChatPage() {
       sender_id: myId,
       receiver_id: userId,
       message: trimmed,
+      read_at: null,
       created_at: new Date().toISOString(),
     };
 
@@ -124,6 +145,15 @@ export default function PrivateChatPage() {
       receiver_id: msg.receiver_id,
       message: msg.message,
     });
+
+    // Push notification au destinataire (non bloquant)
+    const senderName = profile?.first_name || "Quelqu'un";
+    notifyUser(
+      userId,
+      senderName,
+      trimmed.length > 60 ? trimmed.slice(0, 57) + "..." : trimmed,
+      `/chat/${myId}`,
+    );
   }
 
   function formatTime(ts: string) {
@@ -245,7 +275,7 @@ export default function PrivateChatPage() {
         className="flex gap-2 px-4 shrink-0"
         style={{
           paddingTop: 12,
-          paddingBottom: "calc(12px + env(safe-area-inset-bottom, 0px))",
+          paddingBottom: "calc(65px + 12px + env(safe-area-inset-bottom, 0px))",
           background: "var(--surface-solid)",
           borderTop: "1px solid var(--glass-border)",
         }}
