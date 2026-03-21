@@ -268,7 +268,7 @@ export interface PrivateMessage {
   created_at: string;
 }
 
-export type GameType = "snake" | "tetris" | "flappy" | "breakout";
+export type GameType = "snake" | "tetris" | "flappy" | "breakout" | "missile";
 
 export interface GameScore {
   id: string;

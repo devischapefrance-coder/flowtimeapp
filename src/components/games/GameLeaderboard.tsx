@@ -23,6 +23,7 @@ const GAME_LABELS: Record<GameType, string> = {
   tetris: "Tetris",
   flappy: "Flappy Bird",
   breakout: "Breakout",
+  missile: "Missile Command",
 };
 
 const MEDALS = ["🥇", "🥈", "🥉"];

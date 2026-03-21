@@ -30,6 +30,7 @@ const GAMES: { id: GameType; name: string; emoji: string; description: string; m
   { id: "tetris", name: "Tetris", emoji: "🧱", description: "Empile et complète les lignes", multi: true },
   { id: "flappy", name: "Flappy Bird", emoji: "🐤", description: "Passe entre les tuyaux" },
   { id: "breakout", name: "Breakout", emoji: "🧱", description: "Casse toutes les briques !", multi: true },
+  { id: "missile", name: "Missile Command", emoji: "🎯", description: "Protège ta ville des missiles ennemis", multi: true },
 ];
 
 const NOTE_CATEGORIES = [
